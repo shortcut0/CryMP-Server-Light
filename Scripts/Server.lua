@@ -83,35 +83,9 @@ Server.Initialize = function(self)
     end
 
     -----
-    ServerLog("Initializing Components...")
 
     self:CreateComponents()
-    for sComponent, hFunction in pairs(self.InitializeList) do
-
-        local bOk, sError = pcall(hFunction, self[sComponent])
-        if (bOk == false) then -- No, we are not PirateSoftware, but we don't want 'nil' returns to cause mayhem!
-            ServerLogFatal("Failed to Initialize Component '%s'", sComponent)
-            ServerLogFatal("> %s", (sError or "<Null>"))
-            return false
-        end
-
-        local aComponentExternal = self.ComponentExternal[sComponent]
-        if (aComponentExternal) then
-            local hData
-            for _, aKeyInfo in pairs(aComponentExternal) do
-                bOk, hData = self.FileLoader:ExecuteFile(aKeyInfo.Name, aKeyInfo.Path, {}, eFileType_Data)
-                if (not bOk) then
-                    ServerLogFatal("Failed to Import External Data for Component '%s'", sComponent)
-                    ServerLogFatal("Aborting Initialization to Preserve Data!")
-                    return false
-                end
-
-                self[sComponent][aKeyInfo.Key] = hData
-                ServerLog("restore %s",table.tostring(hData or {}))
-            end
-        end
-        self[sComponent].Initialized = true
-    end
+    self:InitializeComponents()
 
     self.Initialized = true
     ServerLog("Script Fully Initialized!")
@@ -134,18 +108,7 @@ Server.PostInitialize = function(self)
     g_sGameRules = g_gameRules.class
     g_pGame = g_gameRules.game
 
-    ServerLog("Post-Initializing Components...")
-    for sComponent, hFunction in pairs(self.PostInitializeList) do
-
-        local bOk, sError = pcall(hFunction, self[sComponent])
-        if (bOk == false) then
-            ServerLogError("Failed to Post-Initialize Component '%s'")
-            ServerLogError("> %s", (sError or "<Null>"))
-            return false
-        end
-
-        self[sComponent].PostInitialized = true
-    end
+    self:PostInitializeComponents()
 
     self.PostInitialized = true
     ServerLog("Script Fully Post-Initialized!")
@@ -192,6 +155,53 @@ Server.OnTimerQuarterHour = function(self)
 end
 
 ----------------------------------
+Server.InitializeComponents = function(self)
+    ServerLog("Initializing Components...")
+    for sComponent, hFunction in pairs(self.InitializeList) do
+
+        local bOk, sError = pcall(hFunction, self[sComponent])
+        if (bOk == false) then -- No, we are not PirateSoftware, but we don't want 'nil' returns to cause mayhem!
+            ServerLogFatal("Failed to Initialize Component '%s'", sComponent)
+            ServerLogFatal("> %s", (sError or "<Null>"))
+            return false
+        end
+
+        local aComponentExternal = self.ComponentExternal[sComponent]
+        if (aComponentExternal) then
+            local hData
+            for _, aKeyInfo in pairs(aComponentExternal) do
+                bOk, hData = self.FileLoader:ExecuteFile(aKeyInfo.Name, aKeyInfo.Path, {}, eFileType_Data)
+                if (not bOk) then
+                    ServerLogFatal("Failed to Import External Data for Component '%s'", sComponent)
+                    ServerLogFatal("Aborting Initialization to Preserve Data!")
+                    return false
+                end
+
+                self[sComponent][aKeyInfo.Key] = hData
+                ServerLog("restore %s",table.tostring(hData or {}))
+            end
+        end
+        self[sComponent].Initialized = true
+    end
+end
+
+----------------------------------
+Server.PostInitializeComponents = function(self)
+    ServerLog("Post-Initializing Components...")
+    for sComponent, hFunction in pairs(self.PostInitializeList) do
+
+        local bOk, sError = pcall(hFunction, self[sComponent])
+        if (bOk == false) then
+            ServerLogError("Failed to Post-Initialize Component '%s'")
+            ServerLogError("> %s", (sError or "<Null>"))
+            return false
+        end
+
+        self[sComponent].PostInitialized = true
+    end
+end
+
+----------------------------------
 Server.ExportComponentData = function(self)
 
     local bOk
@@ -213,7 +223,7 @@ end
 ----------------------------------
 Server.CreateComponents = function(self)
 
-    self.FFF=1
+    ServerLog("Creating Components..")
 
     for _, aComponent in pairs(self.ComponentList) do
         local sName = aComponent.Name
