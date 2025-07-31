@@ -1,0 +1,199 @@
+-- ===================================================================================
+--          ____            __  __ ____            ____                             --
+--         / ___|_ __ _   _|  \/  |  _ \          / ___|  ___ _ ____   _____ _ __   --
+--        | |   | '__| | | | |\/| | |_) |  _____  \___ \ / _ \ '__\ \ / / _ \ '__|  --
+--        | |___| |  | |_| | |  | |  __/  |_____|  ___) |  __/ |   \ V /  __/ |     --
+--         \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|     --
+--                    |___/          by: shortcut0                                  --
+-- This is the Server Event and Callback Handler
+-- ===================================================================================
+
+Server:CreateComponent({
+    Name = "Events",
+    Body = {
+
+        Properties = {
+
+            -- Error Threshold after which a specific event gets disabled
+            ErrorCountThreshold = 10,
+        },
+
+        Callbacks = {
+
+            OnUpdate = function()
+                Server.Events:CallEvent(ServerEvent_OnUpdate, System.GetFrameTime(), System.GetFrameID())
+            end,
+
+            OnTimer = function(self, iTimerID)
+
+                if (iTimerID == 1) then
+                    Server:OnTimerSecond()
+                    Server.Events:CallEvent(ServerEvent_OnTimerSecond, iTimerID)
+
+                elseif (iTimerID == 2) then
+                    Server.Events:CallEvent(ServerEvent_OnTimerMinute, iTimerID)
+
+                elseif (iTimerID == 3) then
+                    Server.Events:CallEvent(ServerEvent_OnTimerHourly, iTimerID)
+
+                end
+            end,
+
+            OnCheat                 = function()
+            end,
+            RequestDropWeapon       = function()
+            end,
+            RequestPickWeapon       = function()
+            end,
+            RequestUseWeapon        = function() end,
+            OnWeaponDropped         = function() end,
+            OnShoot                 = function() end,
+            OnStartReload           = function() end,
+            OnEndReload             = function() end,
+            OnMelee                 = function() end,
+            RequestPickObject       = function() end,
+            OnObjectPicked          = function() end,
+            OnExplosivePlaced       = function() end,
+            OnExplosiveRemoved      = function() end,
+            OnHitAssistance         = function() end,
+            OnConnection            = function(this, iChannel)
+                Server.Network:OnChannelCreated(iChannel)
+            end,
+            OnChannelDisconnect     = function(this, iChannel)
+                Server.Network:OnChannelDisconnect(iChannel)end,
+            OnClientDisconnect      = function() end,
+            OnClientEnteredGame     = function() end,
+            OnWallJump              = function() end,
+            OnChatMessage           = function() end,
+            OnEntityCollision       = function() end,
+            OnSwitchAccessory       = function() end,
+            OnProjectileHit         = function() end,
+            OnLeaveWeaponModify     = function() end,
+            OnProjectileExplosion   = function() end,
+            CanStartNextLevel       = function() end,
+            OnRadarScanComplete     = function() end,
+            OnGameShutdown          = function() end,
+            OnMapStarted            = function() end,
+            OnEntitySpawn           = function(this, hEntity, hEntityId, bVehicle, bItem, bActor, iType)
+                if (bActor) then
+                    Server.ActorHandler:OnActorSpawn(hEntity)
+                end
+                if (bVehicle) then
+                end
+                if (bItem) then
+                end
+            end,
+            OnVehicleSpawn          = function() end,
+            OnScriptLoaded          = function() end,
+            OnMapCommand            = function() end,
+            OnScriptError            = function(this, sError)
+                Server.ErrorHandler:HandleError(sError)
+            end,
+
+        },
+
+        LinkedEvents = {
+
+        },
+
+        Initialize = function(self)
+            for hEvent = 1, ServerEvent_MAX do
+                table.checkM(self.LinkedEvents, hEvent, {})
+            end
+            return true
+        end,
+
+        PostInitialize = function(self)
+        end,
+
+        TestOne = function(MASTER, ...)
+            ServerLog("MASTER=%s, PUSHED=%s",ToString(MASTER),table.concat({...},","))
+        end,
+
+        CheckEvent = function(self, hEvent)
+            --return (hEvent ~= nil and table.find(self.EventList, hEvent))
+            return (IsNumber(hEvent) and hEvent > 0 and hEvent < ServerEvent_MAX)
+        end,
+
+        CallEvent = function(self, hEvent, ...)
+
+            if (not self:CheckEvent(hEvent)) then
+                return self:LogError("Attempt to call Invalid Event '%s'", ToString(hEvent))
+            end
+
+            local aReturns = {}
+            local aReturn, bOk, sError
+
+            for _, aInfo in pairs(self.LinkedEvents[hEvent]) do
+
+                if (aInfo.Active) then
+                    local aPushArguments = { ... }
+                    if (aInfo.PushArgs) then
+                        -- keep push arguments first
+                        aPushArguments = table.appendA(table.copy(aInfo.PushArgs), aPushArguments)
+                    end
+                    if (aInfo.Object) then
+                        table.insertFirst(aPushArguments, aInfo.Object)
+                    end
+
+                    aReturn = { pcall(aInfo.Function, unpack(aPushArguments)) }
+                    bOk, sError = aReturn[1], aReturn[2]
+                    if (not bOk) then
+
+                        self:LogError("Error while Calling Event %s", ToString(hEvent))
+                        self:LogError("> %s", ToString(sError or "<Null>"))
+
+                        aInfo.ErrorCount = (aInfo.ErrorCount + 1)
+                        if (aInfo.ErrorCount >= self.Properties.ErrorCountThreshold) then
+                            aInfo.Active = false
+                            self:LogError("Disabled Link %s for Event %s (Error Overflow)", ToString(_), ToString(hEvent))
+                        end
+                    else
+                        table.insert(aReturns, aReturn)
+                    end
+                end
+            end
+
+            return aReturns
+        end,
+
+        LinkEvent = function(self, hEvent, pObject, pFunction, ...)
+
+            if (not hEvent or not self:CheckEvent(hEvent)) then
+                return self:LogError("Attempt to link NO Event")
+            end
+
+            if (not pFunction) then
+                return self:LogError("Attempt to link NO Function to event '%s'", ToString(hEvent))
+            end
+
+            local hFunction = (IsFunction(pFunction) and pFunction or CheckGlobal(pFunction))
+            if (not IsFunction(hFunction)) then
+                return self:LogError("Attempt to link NON Function to event '%s'", ToString(hEvent))
+            end
+
+            local hObject = pObject
+            if (hObject) then
+                if (IsString(pObject)) then
+                    hObject = CheckGlobal(pObject)
+                end
+                if (not IsArray(hObject)) then
+                    return self:LogError("Attempt to push NON Object to event '%s'", ToString(hObject))
+                end
+            end
+
+            table.insert(self.LinkedEvents[hEvent], {
+
+                Active = true,
+                ErrorTimer = TimerNew(),
+                ErrorCount = 0,
+
+                Function = hFunction,
+                PushArgs = { ... },
+                Object = hObject,
+            })
+
+        end
+
+    }
+})

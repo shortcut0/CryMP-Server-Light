@@ -1,0 +1,6 @@
+/Logs
+*.lnk
+CryMP-Server-Light.iml
+.idea/vcs.xml
+/.idea
+/Sources/C++/.vs
