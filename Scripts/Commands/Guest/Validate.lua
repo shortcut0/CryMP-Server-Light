@@ -5,17 +5,27 @@
 --        | |___| |  | |_| | |  | |  __/  |_____|  ___) |  __/ |   \ V /  __/ |     --
 --         \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|     --
 --                    |___/          by: shortcut0                                  --
--- This is the DLL Configuration File
+--                          This file Contains Chat-Commands
 -- ===================================================================================
 
-Server_CPPConfig = {
+Server.ChatCommands:Add({
 
-    -- The Main Server Script to load in Server::LoadScript()
-    ServerScript = "\\Scripts\\Server.lua",
+    Name = "validate",
+    Arguments = {
+        { Name = "arg_profileId", Required = true, Type = CommandArg_TypeNumber },
+        { Name = "arg_hash",      Required = true },
+        { Name = "arg_name",      Required = true }
+    },
 
-    -- The host for Script events (don't forget the dot at the end!)
-    EventHost = "Server.Events.Callbacks.",
+    Properties = {
+        IsQuiet = true
+    },
 
-    -- If Server should always enforce HTTP on all Network Requests
-    ForceHTTPOverHTTPs = false,
-}
+    Function = function(self, iProfileId, sHash, sName)
+        if (Server.Network:ValidateProfile(self, iProfileId, sHash, sName)) then
+            return true
+        end
+
+        return false
+    end
+})

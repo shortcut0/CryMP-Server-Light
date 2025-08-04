@@ -62,7 +62,15 @@ Date.Init = function(self)
     DebugLog("test1_expired     :", DATE_FUTURE:Expired())
     DebugLog("past      now     :",DATE_past:DiffNow(),DATE_past:DiffNowFmt())
     DebugLog("test1_expired     :", DATE_past:Expired())
-    DebugLog("diff OLD and FUT  :",DATE_FUTURE:Diff(DATE_past))]]
+    DebugLog("diff OLD and FUT  :",DATE_FUTURE:Diff(DATE_past))
+
+    DebugLog(Date:Format(math.random(9,99)))
+    DebugLog(Date:Format(math.random(99,999)))
+    DebugLog(Date:Format(math.random(999,9999)))
+    DebugLog(Date:Format(math.random(9999,99999)))
+    DebugLog(Date:Format(math.random(99999,999999)))
+    DebugLog(Date:Format(math.random(999999,9999999)))
+    ]]
 
 end
 
@@ -185,6 +193,10 @@ Date.Format = function(self, iTime, iType, iUnitLimit)
         iTime = (iTime * -1)
     end
 
+    if (iTime < 1) then
+        return ("%dms"):format(iTime * 1000)
+    end
+
     local aUnits = {
         --{ name = "millennia", value = 86400 * 365 * 100 * 100 * 100 },  -- Decades
         --{ name = "c", 		  value = 86400 * 365 * 100 * 100 },		-- Decades
@@ -193,7 +205,7 @@ Date.Format = function(self, iTime, iType, iUnitLimit)
         { Name = "d", 		  Value = 86400 },           			 	-- Days
         { Name = "h", 		  Value = 3600 },            				-- Hours
         { Name = "m", 		  Value = 60 },               			 	-- Minutes
-        { Name = "s", 		  Value = 1 }                			    -- Seconds
+        { Name = "s", 		  Value = 1 },                			    -- Seconds
     }
 
     local iUnits = table.size(aUnits)
@@ -215,8 +227,27 @@ Date.Format = function(self, iTime, iType, iUnitLimit)
     local function Format(iStyle)
 
         local aFormatted = {}
-        local bIncludeNext = false
+        local iFirstNonZero = #aResult
 
+        for i, aUnit in ipairs(aResult) do
+            if (aUnit.Value > 0) then
+                iFirstNonZero = i
+                break
+            end
+        end
+        for i = iFirstNonZero, #aResult do
+            table.insert(aFormatted, string.format("%02d%s", aResult[i].Value, aResult[i].Name))
+        end
+
+        if (iStyle == DateFormat_Comma) then
+            return table.concat(aFormatted, ", ")
+        end
+        return table.concat(aFormatted, ": ")
+
+        --[[
+
+        local aFormatted = {}
+        local bIncludeNext = false
         for i, aUnit in ipairs(aResult) do
             if (aUnit.Value > 0) then
                 bIncludeNext = true
@@ -225,7 +256,6 @@ Date.Format = function(self, iTime, iType, iUnitLimit)
                 table.insert(aFormatted, string.format("%d%s", aUnit.Value, aUnit.Name))
             end
         end
-
         local sForced4 = string.match(table.concat(aFormatted, ": "), "^(%d+%w+:?%s+%d+%w+:?%s+%d+%w+:?%s+%d+%w+).*")
         local sForced3 = string.match(table.concat(aFormatted, ": "), "^(%d+%w+:?%s+%d+%w+:?%s+%d+%w+).*")
         local sForced2 = string.match(table.concat(aFormatted, ": "), "^(%d+%w+:?%s+%d+%w+).*")
@@ -249,11 +279,14 @@ Date.Format = function(self, iTime, iType, iUnitLimit)
             return sForced2
 
         else
-            return table.concat(aFormatted, ":")
+            return table.concat(aFormatted, ": ")
         end
+        --]]
     end
 
-    local bNoAttachments = false
+    -- TODO
+    -- FIXME
+    local bNoAttachments = true
     if (bNoAttachments) then
         return Format(iType)
     end

@@ -305,7 +305,7 @@ end
 string.replace = function(s, iLen, sRepeater)
 
 	--------
-	if (not IsNumberber(iLen) or iLen < 1) then
+	if (not IsNumber(iLen) or iLen < 1) then
 		return s end
 
 	--------
@@ -319,7 +319,7 @@ end
 string.lreplace = function(s, iLen, sRepeater)
 
 	--------
-	if (not IsNumberber(iLen) or iLen < 1) then
+	if (not IsNumber(iLen) or iLen < 1) then
 		return s end
 
 	--------
@@ -451,6 +451,16 @@ string.matchand = function(s, ...)
 
 	--------
 	return bMatched
+end
+
+---------------------------
+string.MatchesNone = function(str, none_of_this)
+	for _, not_this in pairs(none_of_this) do
+		if (string.match(str, not_this)) then
+			return false
+		end
+	end
+	return true
 end
 
 ---------------------------
@@ -781,10 +791,10 @@ string.ip_resolvecountry = function(s, sCsv)
 		if (dec_end) then
 			dec_end = tonumber(dec_end)
 		end
-		if (not IsNumberber(dec_start) or dec_start > 4294967295 or dec_start <= 0) then
+		if (not IsNumber(dec_start) or dec_start > 4294967295 or dec_start <= 0) then
 			bOk = false
 		end
-		if (not IsNumberber(dec_end) or dec_end > 4294967295 or dec_end < dec_start or dec_end <= 0) then
+		if (not IsNumber(dec_end) or dec_end > 4294967295 or dec_end < dec_start or dec_end <= 0) then
 			bOk = false
 		end
 		
@@ -802,7 +812,7 @@ string.ip_resolvecountry = function(s, sCsv)
 	if (string.isip(iDec)) then
 		iDec = string.ip2dec(iDec)
 	end
-	if (not IsNumberber(iDec)) then
+	if (not IsNumber(iDec)) then
 		return sCC, sCountry
 	end
 	
@@ -885,7 +895,7 @@ string.isip = function(s)
 	local w, x, y, z =
 	tonumber(a), tonumber(b), tonumber(c), tonumber(d)
 
-	if (not IsNumberberAll(w, x, y, z)) then -- true of w, x, y, z is number
+	if (not IsNumberAll(w, x, y, z)) then -- true of w, x, y, z is number
 		return false
 	end
 
@@ -1102,7 +1112,7 @@ string.frombytes = function(aBytes)
 	---------
 	if (IsArray(aBytes)) then
 		for i, iBytes in pairs(aBytes) do
-			if (IsNumberber(iBytes) and (iBytes >= 0 and iBytes <= 255)) then
+			if (IsNumber(iBytes) and (iBytes >= 0 and iBytes <= 255)) then
 				sString = sString .. string.char(iBytes)
 			end
 		end
@@ -1154,18 +1164,25 @@ end
 ---------------------------
 -- string.empty
 
-string.empty = function(s)
-	if (IsNull(s)) then
-		return true end
-
-	return (string.stripws(s) == "")
+string.empty = function(s, d)
+	local empty = IsNull(s) or (string.stripws(s) == "")
+	if (d and empty) then
+		return d
+	end
+	return empty
 end
 
 ---------------------------
 -- string.emptyN
 
-string.emptyN = function(s)
-	return not string.empty(s)
+string.emptyN = function(s, d)
+	if (not string.empty(s)) then
+		if (d) then
+			return d
+		end
+		return true
+	end
+	return false
 end
 
 ---------------------------

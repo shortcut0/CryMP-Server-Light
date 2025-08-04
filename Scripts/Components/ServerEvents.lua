@@ -20,6 +20,21 @@ Server:CreateComponent({
 
         Callbacks = {
 
+            -- ============================================================================
+            -- Script Callbacks
+
+            OnValidationFailed = function(this, hPlayer, sProfile, sError, iHTTPCode)
+                Server.AccessHandler:OnValidationFailed(hPlayer)
+            end,
+
+            OnProfileValidated = function(this, hPlayer, sProfile)
+                Server.AccessHandler:OnProfileValidated(hPlayer, sProfile)
+                Server.ActorHandler:OnProfileValidated(hPlayer, sProfile)
+            end,
+
+            -- ============================================================================
+            -- C++ Callbacks
+
             OnUpdate = function()
                 Server.Events:CallEvent(ServerEvent_OnUpdate, System.GetFrameTime(), System.GetFrameID())
             end,
@@ -56,15 +71,18 @@ Server:CreateComponent({
             OnExplosivePlaced       = function() end,
             OnExplosiveRemoved      = function() end,
             OnHitAssistance         = function() end,
-            OnConnection            = function(this, iChannel)
-                Server.Network:OnChannelCreated(iChannel)
+            OnConnection            = function(this, iChannel, sIPAddress)
+                Server.Network:OnChannelCreated(iChannel, sIPAddress)
             end,
-            OnChannelDisconnect     = function(this, iChannel)
-                Server.Network:OnChannelDisconnect(iChannel)end,
+            OnChannelDisconnect     = function(this, iChannel, sDescription)
+                Server.Network:OnChannelDisconnect(iChannel, sDescription)
+            end,
             OnClientDisconnect      = function() end,
             OnClientEnteredGame     = function() end,
             OnWallJump              = function() end,
-            OnChatMessage           = function() end,
+            OnChatMessage           = function(self, hSender, hTarget, sMessage, iType)
+                return Server.Chat:OnChatMessage(hSender, hTarget, sMessage, iType)
+            end,
             OnEntityCollision       = function() end,
             OnSwitchAccessory       = function() end,
             OnProjectileHit         = function() end,
@@ -108,6 +126,16 @@ Server:CreateComponent({
 
         TestOne = function(MASTER, ...)
             ServerLog("MASTER=%s, PUSHED=%s",ToString(MASTER),table.concat({...},","))
+        end,
+
+        Call = function(self, hEvent, ...)
+            local hFunction = self.Callbacks[hEvent]
+            if (not hFunction) then
+                self:LogError("Attempt to call invalid Event %s", ToString(hEvent))
+                return
+            end
+
+            hFunction(self, ...)
         end,
 
         CheckEvent = function(self, hEvent)

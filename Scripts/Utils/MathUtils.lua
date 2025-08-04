@@ -5,17 +5,13 @@
 --        | |___| |  | |_| | |  | |  __/  |_____|  ___) |  __/ |   \ V /  __/ |     --
 --         \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|     --
 --                    |___/          by: shortcut0                                  --
--- This is the DLL Configuration File
+--                             Contains math utilities
 -- ===================================================================================
 
-Server_CPPConfig = {
+math.GetMin = function(a, b)
+    return (a<b and a or b)
+end
 
-    -- The Main Server Script to load in Server::LoadScript()
-    ServerScript = "\\Scripts\\Server.lua",
-
-    -- The host for Script events (don't forget the dot at the end!)
-    EventHost = "Server.Events.Callbacks.",
-
-    -- If Server should always enforce HTTP on all Network Requests
-    ForceHTTPOverHTTPs = false,
-}
+math.GetMax = function(a, b)
+    return (a>b and a or b)
+end

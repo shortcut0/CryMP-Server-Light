@@ -15,8 +15,12 @@ Server:CreateComponent({
     Name = "Network",
     Body = {
 
-        SaveToFile = {
+        ExternalData = {
             { Key = "SavedGeoData", Name = "GeoData.lua", Path = SERVER_DIR_DATA }
+        },
+
+        CCommands = {
+            { Name = "push_update", FunctionName = "UpdateServer", Description = "Directly pushes for a Server Update bypassing all restrictions" },
         },
 
         Protected = {
@@ -40,7 +44,8 @@ Server:CreateComponent({
 
             EndPoints = {
                 Register = "/reg.php",
-                Updater  = "/up.php,"
+                Updater  = "/up.php",
+                Validate = "/validate.php",
             },
 
             -- The info sent to the Master Server
@@ -86,6 +91,7 @@ Server:CreateComponent({
 
         TimerUpdate = TimerNew(0),
         TimerUpdateFail = TimerNew(0),
+        TimerUpdateLog = TimerNew(HALF_HOUR),
         TimerRegisterFail = TimerNew(0),
 
         Initialize = function(self)
@@ -96,6 +102,7 @@ Server:CreateComponent({
 
             self.TimerRegisterFail.setexpiry(self.Properties.RecoveryInterval)
             self.TimerUpdateFail.setexpiry(self.Properties.RecoveryInterval)
+            self.TimerUpdateLog.expire()
             self.TimerUpdate.setexpiry(self.Properties.UpdateInterval)
 
             self:Log("Initialized")
@@ -104,9 +111,54 @@ Server:CreateComponent({
         PostInitialize = function(self)
         end,
 
+        OnProfileValidated = function(self, hPlayer, sProfile, sError, sResponse, iCode)
+
+            if (not Server.Utils:GetEntity(hPlayer)) then
+                self:LogEvent({ Event = self:GetName(), Recipients = Server.AccessHandler:GetAdministrators(), Message = "@user_notValidatedQuit", MessageFormat = {{ UserName = ToString(hPlayer:GetName()) }} })
+                return
+            end
+
+            hPlayer:SetProfileValidated(false)
+
+            iCode = 69
+            if (iCode ~= 200 or sResponse ~= "%Validation:Successful%") then
+                self:LogEvent({ Event = self:GetName(), Recipients = Server.AccessHandler:GetAdministrators(), Message = "@user_notValidated", MessageFormat = {{ ProfileId = sProfile, UserName = ToString(hPlayer:GetName()) }} })
+                Server.Events:Call(ServerScriptEvent_OnValidationFailed, hPlayer, sResponse, iCode)
+                return
+            end
+
+            Server.Events:Call(ServerScriptEvent_OnProfileValidated, hPlayer, sProfile)
+        end,
+
+        ValidateProfile = function(self, hPlayer, sProfile, sHash, sName)
+
+            if (hPlayer.Info.IsValidating) then
+                return true
+            end
+
+            if (hPlayer.Info.ValidationFailed) then
+                return false
+            end
+
+            ServerDLL.Request({
+                url = (self.Properties.MasterServerAPI .. self.Properties.EndPoints.Validate),
+                method = "GET",
+                body = self.ServerReport:BodyToString({
+                    prof = sProfile,
+                    uid = sHash
+                }),
+                headers = self.Properties.Headers.Default,
+                timeout = self.Properties.MasterServerTimeout,
+            }, function(...)
+                self:OnProfileValidated(hPlayer, sProfile, ...)
+            end)
+
+            hPlayer.Info.IsValidating = true
+        end,
+
         OnChannelCreated = function(self, iChannel)
 
-            local sIPAddress = "77.200.75.23" or ServerDLL.GetChannelIP(iChannel)
+            local sIPAddress = ServerDLL.GetChannelIP(iChannel)
             local sNickname = ServerDLL.GetChannelNick(iChannel)
             local aGeoInfo = self:GetGeoInfo(sIPAddress, iChannel)
 
@@ -119,28 +171,46 @@ Server:CreateComponent({
                 GeoInfo   = aGeoInfo
             }
 
-            -- This if kind of redundant, but for the sake of readability we shall step into Thors Region here!
+            -- This if kind of redundant, but for the sake of readability we shall step out of Thor's Region here!
             self.ActiveConnections[iChannel] = {
                 Timer    = TimerNew(),
                 NickNick = sNickname,
             }
 
             self:Log("Created Channel %d with Name %s$9 (IP: %s, Country: [%s] %s)", iChannel, sNickname, sIPAddress, sCountryCode, sCountryName)
-            self:LogEvent(ServerLogEvent_Network, [[channel_created]], { Channel = iChannel, Nick = sNickname, IP = sIPAddress, CountryCode = sCountryCode, Country = sCountryName })
+            self:LogEvent({
+                Event = ServerLogEvent_Network,
+                Recipients = Server.Utils:GetPlayers(),
+                Message = [[channel_created]],
+                MessageFormat = { Channel = iChannel, Nick = sNickname, IP = sIPAddress, CountryCode = sCountryCode, Country = sCountryName }
+            })
         end,
 
-        OnChannelDisconnect = function(self, iChannel)
+        ParseDisconnectReason = function(self, sDescription)
+            local sShort = "Disconnected"
+            return sShort, sDescription
+        end,
+
+        OnChannelDisconnect = function(self, iChannel, sDescription)
+
+            local sReasonShort, sReason = self:ParseDisconnectReason(sDescription)
+            self:Log("Channel %d Disconnected (%s, %s)", iChannel, sReasonShort, sReason)
 
             -- Channels NEVER decrement, so this is fine
             self.ActiveConnections[iChannel] = nil
             self.ChannelCache[iChannel]      = nil
             self.ActiveQueries[iChannel]     = nil
+
+            if (Server.Utils:GetPlayerCount() == 0) then
+                Server:OnServerEmptied()
+            end
         end,
 
         GetGeoInfo = function(self, sIPAddress, iChannel)
 
             -- Assumable an NPC
-            if (iChannel == 0) then
+            if (iChannel == 0 or string.matchany({ sIPAddress }, { "127%.0%.0%.1", "localhost", "192%.168%.%d+.%d+"})) then
+                self:Log("Invalid IP-Address, Skipping Query")
                 return table.copy(self.DefaultGeoData)
             end
 
@@ -228,7 +298,7 @@ Server:CreateComponent({
                 self.ChannelCache[iChannel].GeoInfo = self.SavedGeoData
             end
 
-            local hPlayer = Server.Utils.GetPlayerByChannel(iChannel)
+            local hPlayer = Server.Utils:GetPlayerByChannel(iChannel)
             if (hPlayer) then
                 hPlayer.Info.GeoData = self.SavedGeoData[sIPAddress]
             end
@@ -259,6 +329,7 @@ Server:CreateComponent({
             end
 
             if (self.UpdateFailed) then
+                self.TimerUpdateLog.expire() -- So next successful update will correctly show up
                 if (not self.TimerUpdateFail.expired()) then
                     return
                 end
@@ -325,9 +396,6 @@ Server:CreateComponent({
                 self:OnRegistered(...)
             end)
 
-            self.Exposed = true
-            self.ExposedSuccess = false
-
             self:Log("Registering Server at %s...", (self.Properties.MasterServerAPI .. self.Properties.EndPoints.Register))
         end,
 
@@ -347,7 +415,9 @@ Server:CreateComponent({
             end
 
             self.UpdateFailed = false
-            self:Log("Successfully Updated!")
+            if (self.TimerUpdateLog.expired_refresh()) then
+                self:Log("Successfully Updated!")
+            end
         end,
 
         UpdateServer = function(self)
@@ -366,7 +436,7 @@ Server:CreateComponent({
             end
 
             ServerDLL.Request({
-                url = (self.Properties.MasterServerAPI .. self.Properties.EndPoints.Updater),
+                url = string.gsub(self.Properties.MasterServerAPI .. self.Properties.EndPoints.Updater, "^https://", "http://"),
                 method = "POST",
                 body = sBody,
                 headers = aHeaders,
@@ -375,10 +445,9 @@ Server:CreateComponent({
                 self:OnUpdated(...)
             end)
 
-            self.Exposed = true
-            self.ExposedSuccess = false
-
-            self:Log("Updating Server Info at %s", (self.Properties.MasterServerAPI .. self.Properties.EndPoints.Updater))
+            if (self.TimerUpdateLog.expired()) then
+                self:Log("Updating Server Info at %s", (self.Properties.MasterServerAPI .. self.Properties.EndPoints.Updater))
+            end
         end,
 
         ServerReport = {
@@ -402,7 +471,7 @@ Server:CreateComponent({
             Get = function(self, iType, bReturnArray)
 
                 -- Server Config
-                local sName         = Server.Utils.GetCVar("sv_servername")
+                local sName         = Server.Utils:GetCVar("sv_servername")
                 local sPakLink      = self:GetServerPakLink()
                 local sDesc         = self:ConvertFormatTags(self:GetServerDescription())
                 local sLocal        = "localhost"
@@ -417,7 +486,7 @@ Server:CreateComponent({
                 local iTimeLeft     = (g_pGame:GetRemainingGameTime())
 
                 -- Player Config
-                local iMaxPlayers   = Server.Utils.GetCVar("sv_maxPlayers")
+                local iMaxPlayers   = Server.Utils:GetCVar("sv_maxPlayers")
                 local hPlayerList   = self:GetPlayers()
                 local iPlayerCount  = table.count(hPlayerList)
                 if (IsString(hPlayerList)) then
@@ -425,16 +494,16 @@ Server:CreateComponent({
                 end
 
                 -- Net Config
-                local iPort         = Server.Utils.GetCVar("sv_port")
-                local iPublicPort   = Server.Utils.GetCVar("sv_port")
+                local iPort         = Server.Utils:GetCVar("sv_port")
+                local iPublicPort   = Server.Utils:GetCVar("sv_port")
                 local bGameSpy      = "0"
 
                 -- General Config
-                local iVoiceChat    = Server.Utils.GetCVar("net_enable_voice_chat") >= 1
+                local iVoiceChat    = Server.Utils:GetCVar("net_enable_voice_chat") >= 1
                 local iIsDedicated  = (ServerDLL.IsDedicated() and 1 or 0)
-                local iAntiCheat    = ToString(Server.Utils.GetCVar("sv_cheatprotection"))
+                local iAntiCheat    = ToString(Server.Utils:GetCVar("sv_cheatprotection"))
                 local iGPOnly       = "0" -- FIXME
-                local iFriendlyFire = ToString(Server.Utils.GetCVar("g_friendlyFireRatio"))
+                local iFriendlyFire = ToString(Server.Utils:GetCVar("g_friendlyFireRatio"))
                 local iRanked       = "1"
 
                 local aBody = {
@@ -482,7 +551,7 @@ Server:CreateComponent({
             BodyToString = function(self, aBody)
                 local aTemp = {}
                 for i, v in pairs(aBody) do
-                    table.insert(aTemp, ToString(i) .. "=" .. ServerDLL.URLEncode(ToString(v)))
+                    table.insert(aTemp, tostring(i) .. "=" .. ServerDLL.URLEncode(tostring(v)))
                 end
                 return (table.concat(aTemp, "&"))
             end,
@@ -517,7 +586,8 @@ Server:CreateComponent({
                     end
                 end
 
-                for _, hClient in pairs(Server.Utils.GetPlayers()) do
+                for _, hClient in pairs(Server.Utils:GetPlayers()) do
+                    --[[
                     sName    = ServerNames:RemoveCrypt(hClient:GetName())
                     sRank    = hClient:GetRank()
                     sKills   = hClient:GetKills() if (sKills < 0) then sKills = 0 end
@@ -535,6 +605,7 @@ Server:CreateComponent({
                         profile_id = sProfile,
                         team       = sTeam
                     })
+                    ]]
                 end
 
                 -- TODO: INCOMING CONNECTIONS !!
@@ -551,7 +622,7 @@ Server:CreateComponent({
             end,
 
             GetServerPassword = function(self)
-                local sPass = Server.Utils.GetCVar("sv_password")
+                local sPass = Server.Utils:GetCVar("sv_password")
                 if (string.empty(sPass)) then
                     return "0"
                 end
@@ -559,7 +630,7 @@ Server:CreateComponent({
             end,
 
             GetMapTitle = function(self, sMap)
-                local sForced = Server.Utils.GetCVar("server_maptitle")
+                local sForced = Server.Utils:GetCVar("server_maptitle")
                 if (string.len(sForced) < 1 or sForced == "0") then
                     local sTitle = (string.match(string.lower(sMap), ".-/.-/(.*)") or sMap)
                     return string.capitalN(sTitle)

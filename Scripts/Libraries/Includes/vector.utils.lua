@@ -81,9 +81,9 @@ vector.newvec = function(x, y, z)
 		vNew.y = x.y
 		vNew.z = x.z
 	else
-		vNew.x = checkNumber(x, 0)
-		vNew.y = checkNumber(y, 0)
-		vNew.z = checkNumber(z, 0)
+		vNew.x = CheckNumber(x, 0)
+		vNew.y = CheckNumber(y, 0)
+		vNew.z = CheckNumber(z, 0)
 	end
 
 	vNew.expose = function()
@@ -180,9 +180,9 @@ end
 vector.make = function(iX, iY, iZ, vReturn)
 	
 	local vNew = {
-		x = checkNumber(iX, 0),
-		y = checkNumber(iY, 0),
-		z = checkNumber(iZ, 0)
+		x = CheckNumber(iX, 0),
+		y = CheckNumber(iY, 0),
+		z = CheckNumber(iZ, 0)
 	}
 	
 	if (vReturn) then
@@ -200,9 +200,9 @@ vector.amake = function(a, vReturn)
 		return a end
 	
 	local vNew = {
-		x = checkNumber(a[1], 0),
-		y = checkNumber(a[2], 0),
-		z = checkNumber(a[3], 0)
+		x = CheckNumber(a[1], 0),
+		y = CheckNumber(a[2], 0),
+		z = CheckNumber(a[3], 0)
 	}
 	
 	if (vReturn) then
@@ -1147,7 +1147,7 @@ vector.check = function(v, hDefault)
 
 	------------------
 	if (not vector.isvector(v)) then
-		return checkVar(hDefault, vector.new()) end
+		return CheckVar(hDefault, vector.new()) end
 
 	------------------
 	return v
@@ -1158,7 +1158,7 @@ end
 Vec3 = vector.make
 Ang3 = vector.make
 Dir3 = vector.make
-checkVec = vector.check
+CheckVec = vector.check
 
 
 ---------------------------

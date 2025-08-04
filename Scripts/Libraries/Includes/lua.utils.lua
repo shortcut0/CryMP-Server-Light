@@ -94,6 +94,11 @@ luautils.isArray = function(hParam)
 end
 
 --=======================================
+luautils.isTable = function(hParam)
+    return type(hParam) == "table"
+end
+
+--=======================================
 luautils.isNull = function(hParam)
     return hParam == nil
 end
@@ -289,6 +294,18 @@ luautils.checkString = function(sString, hDefault)
     end
 
     return sString
+end
+
+--=======================================
+--- luautils.checkStringEx
+--- Checks if a given parameter is a string
+luautils.checkStringEx = function(sString, hDefault, hIf)
+
+    if (IsString(sString)) then
+        return (hIf or hDefault or sString)
+    end
+
+    return hDefault
 end
 
 --=======================================
@@ -648,21 +665,23 @@ unpack = (unpack or luautils.unpack)
 GetRandom = luautils.random
 
 IsNull = luautils.isNull
-IsNullAny = makeAny(isNull)
-IsNullAll = makeAll(isNull)
+IsNullAny = makeAny(IsNull)
+IsNullAll = makeAll(IsNull)
 
 IsDead = luautils.isDead
 IsDeadAny = makeAny(IsDead)
 IsDeadAll = makeAll(IsDead)
 
 IsNumber = luautils.isNumber
-IsNumberAll = makeAll(isNumber)
-IsNumberAny = makeAny(isNumber)
+IsNumberAll = makeAll(IsNumber)
+IsNumberAny = makeAny(IsNumber)
 IsArray = luautils.isArray
+IsTable = luautils.isTable
 IsBoolean = luautils.isBoolean
 IsBool = luautils.isBoolean
 IsString = luautils.isString
 IsFloat = luautils.isFloat
+IsFunc = luautils.isFunction
 IsFunction = luautils.isFunction
 IsEntityId = luautils.isEntityId
 IsUserdata = luautils.isEntityId
@@ -673,6 +692,7 @@ CheckFuncEx = luautils.checkFuncEx
 CheckArray = luautils.checkArray
 CheckGlobal = luautils.checkGlobal
 CheckString = luautils.checkString
+CheckStringEx = luautils.checkStringEx
 
 -- Numbers
 CompareNumber = luautils.compNumber

@@ -11,14 +11,6 @@
 
 ----------------------------
 
-INSTANT_ACTION = "InstantAction"
-POWER_STRUGGLE = "PowerStruggle"
-
-g_pGame = nil
-g_sGameRules = nil
-
-GetCVar = System.GetCVar
-SetCVar = System.SetCVar
 
 ----------------------------
 ---    SERVER EVENTS      --
@@ -62,10 +54,54 @@ ServerEvent_OnMapCommand          = Inc()
 
 ServerEvent_MAX = IncEnd()
 
+ServerScriptEvent_OnProfileValidated = "OnProfileValidated"
+ServerScriptEvent_OnValidationFailed = "OnValidationFailed"
+
 ----------------------------
 ---    SERVER NETWORK    ---
 ServerNetwork_GetRegister = 0
 ServerNetwork_GetUpdater  = 1
 
 ----------------------------
----     FILE  SYSTEM     ---
+---     SERVER TIMERS    ---
+ServerTimer_ExportComponentData = "ExportComponentData"
+
+----------------------------
+---      SERVER CHAT     ---
+
+ChatType_ToAll = 5
+ChatType_ToTeam = 6
+ChatType_ToTarget = 7
+
+ChatType_Console         = TextMessageConsole
+ChatType_ConsoleCentered = TextMessageConsole + 10
+
+ChatType_Center  = TextMessageCenter
+ChatType_Error   = TextMessageError
+ChatType_Info    = TextMessageInfo
+ChatType_Server  = TextMessageServer
+
+----------------------------
+---       GAME VARS      ---
+GameTeam_NK = 1
+GameTeam_US = 2
+GameTeam_Neutral = 3
+GameTeam_NK_String = "NK"
+GameTeam_US_String = "US"
+GameTeam_Neutral_String = "Neutral"
+
+GameMode_IA = "InstantAction"
+GameMode_PS = "PowerStruggle"
+
+----------------------------
+---     SERVER LOCALE    ---
+Language_None       = "None"
+Language_English    = "English"
+Language_German     = "German"
+Language_Russian    = "Russian"
+Language_French     = "French"
+Language_Czech      = "Czech"
+Language_Spanish    = "Spanish"
+
+----------------------------
+---     ANYTHING ELSE    ---
