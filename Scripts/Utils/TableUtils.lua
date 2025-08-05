@@ -90,3 +90,23 @@ end
 table.AppendInPlace = function(table_one, table_two)
     return table.Append(table_one, table_two, true)
 end
+
+----------------------------------
+--- Reverse the order of a table
+table.Reverse = function(tbl, in_place)
+    local reversed = {}
+    for i = #tbl, 1, -1 do
+        reversed[#reversed + 1] = tbl[i]
+    end
+    if in_place then
+        for k in pairs(tbl) do
+            tbl[k] = nil
+        end
+        for i, value in ipairs(reversed) do
+            tbl[i] = value
+        end
+        return tbl
+    end
+    return reversed
+end
+

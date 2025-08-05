@@ -129,6 +129,32 @@ Server:CreateComponent({
 
         -- ===================================================================================
 
+        FindAccessByNameOrId = function(self, hId)
+
+            local hFound
+            local hIdLower = string.lower(hId)
+            local hIdNumber = (tonumber(hId) or -1)
+
+            for _, aInfo in pairs(self.AccessLevelMap) do
+                local sLowerId = string.lower(aInfo.ID)
+                local sLowerName = string.lower(aInfo.Name)
+                if (sLowerId == hIdLower or sLowerName == hIdLower or aInfo.Level == hIdNumber) then
+                    hFound = aInfo
+                    break -- stop on complete matches
+                elseif (string.match(sLowerId, "^" .. string.escape(hIdLower)) or string.match(sLowerName, "^" .. string.escape(hIdLower))) then
+                    if (hFound) then
+                        hFound = nil
+                        break
+                    end
+                    hFound = aInfo
+                end
+            end
+
+            return hFound
+        end,
+
+        -- ===================================================================================
+
         GetAdministrators = function(self)
             return self:GetAdmins()
         end,

@@ -105,3 +105,14 @@ Language_Spanish    = "Spanish"
 
 ----------------------------
 ---     ANYTHING ELSE    ---
+
+CommandArg_TypeNumber = 1   -- number
+CommandArg_TypeString = 2   -- string
+CommandArg_TypeBoolean = 3  -- boolean
+CommandArg_TypePlayer = 4   -- Expects a valid player
+CommandArg_TypeMessage = 5  -- Concat all args
+CommandArg_TypeTime = 6     -- a Time value (1d, 86400)
+CommandArg_TypeAccess = 7   -- a valid server access level
+CommandArg_TypeCVar = 8     -- a valid cvar
+
+ALL_PLAYERS = 1000

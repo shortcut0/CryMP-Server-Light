@@ -11,8 +11,21 @@
 Server.ChatCommands:Add({
     Name = "mmmm1",
     Arguments = {
+        { Required = 1, Type = CommandArg_TypePlayer, Name = "Hello?", Desc = "Bye!",
+
+          Minimum = 1000,
+          Maximum = 9999999,
+          ForceLimit = false,
+
+        },
+       -- { Required = 1, Type = CommandArg_TypeMessage, Name = "Hello?", Desc = "Bye!", },
+       -- { Required = 1, Type = CommandArg_TypeBoolean, Name = "Hello?", Desc = "Bye!", },
+       -- { Required = 1, Type = CommandArg_TypePlayer, Name = "Hello?", Desc = "Bye!", },
+     --   { Required = 1, Type = CommandArg_TypeString, Name = "Hello?", Desc = "Bye!", },
+      --  { Required = 1, Type = CommandArg_TypeNumber, Name = "Hello?", Desc = "Bye!", },
     },
-    Function = function()
+    Function = function(THIS,...)
+        DebugLog(...)
         return true, "return"
     end
 })

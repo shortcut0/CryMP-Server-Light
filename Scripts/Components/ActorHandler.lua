@@ -129,7 +129,7 @@ Server:CreateComponent({
 
             hActor.IsValidated  = function(this) return this.Info.IsValidated  end
             hActor.SetProfileValidated  = function(this, bMode)  this.Info.IsValidated = bMode end
-            hActor.GetAccess    = function(this) return this.Info.Access  end
+            hActor.GetAccess    = function(this, min) if (min) then if (min > this.Info.Access) then return min end end return this.Info.Access  end
             hActor.SetAccess    = function(this, iLevel)  this.Info.Access = iLevel end
             hActor.HasAccess    = function(this, iLevel) return this.Info.Access >= iLevel  end
             hActor.IsAdministrator  = function(this, iAccessLevel) iAccessLevel = iAccessLevel or this.Info.Access return Server.AccessHandler:IsAdministrator(iAccessLevel)  end

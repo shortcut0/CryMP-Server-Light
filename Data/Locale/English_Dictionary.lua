@@ -147,6 +147,66 @@ Server.LocalizationManager:Add({
             English = "Command Disabled{Reason}"
         }
     },
+    {
+        String = "command_consoleLog",
+        Languages = {
+            English = "{Red}{Name}{Gray} Executed {White}!{Red}{Command}{Gray} {Reply}"
+        }
+    },
+    {
+        String = "command_argNMissing",
+        Languages = {
+            English = "Argument {Index} is Required"
+        }
+    },
+    {
+        String = "command_argPlayerNotFound",
+        Languages = {
+            English = "Player {Player} not Found"
+        }
+    },
+    {
+        String = "command_argNotSelf",
+        Languages = {
+            English = "Cannot target yourself"
+        }
+    },
+    {
+        String = "command_argNotNumber",
+        Languages = {
+            English = "Argument {Index} expects a Number"
+        }
+    },
+    {
+        String = "command_argTooHigh",
+        Languages = {
+            English = "Argument {Index} Value too high"
+        }
+    },
+    {
+        String = "command_argTooLow",
+        Languages = {
+            English = "Argument {Index} Value too low"
+        }
+    },
+    {
+        String = "command_argInvalidTime",
+        Languages = {
+            English = "Argument {Index} expects a Duration"
+        }
+    },
+    {
+        String = "command_argNotACVar",
+        Languages = {
+            English = "Invalid CVar {CVar}"
+        }
+    },
+    {
+        String = "command_argNotAccess",
+        Languages = {
+            English = "Invalid Access"
+        }
+    },
 })
 
 Server.LocalizationManager:Add({
@@ -198,6 +258,12 @@ Server.LocalizationManager:Add({
 -- ===================================================================================
 
 Server.LocalizationManager:Add({
+    {
+        String = "str_arguments",
+        Languages = {
+            English = "Arguments"
+        }
+    },
     {
         String = "str_team",
         Languages = {
@@ -280,6 +346,24 @@ Server.LocalizationManager:Add({
         String = "insufficientPrestige",
         Languages = {
             English = "Insufficient Prestige"
+        }
+    },
+    {
+        String = "classList",
+        Languages = {
+            English = "{Class} - List"
+        }
+    },
+    {
+        String = "entitiesListedInConsole",
+        Languages = {
+            English = "Open your Console to View the List of {Count} {Class}"
+        }
+    },
+    {
+        String = "noClassToDisplay",
+        Languages = {
+            English = "No {Class} to Display Available"
         }
     },
 })

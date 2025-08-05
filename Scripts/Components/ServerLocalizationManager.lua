@@ -115,7 +115,7 @@ Server:CreateComponent({
                 self:LogWarning("Localization Recursion too deep! Message is '%s'", sMessage)
             end
 
-            return  Server.Logger:FormatTags(sLocalizedMessage)
+            return Server.Logger:FormatTags(sLocalizedMessage)
         end,
 
         -- A singular string, e.g "test_locale"

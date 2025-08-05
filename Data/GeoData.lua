@@ -8,8 +8,8 @@ return {
   ["City"] = "Paris",
   ["RegionName"] = "Île-de-France",
   ["Organisation"] = "N9uf DYN DSL",
-  ["District"] = "",
   ["ISP"] = "Societe Francaise Du Radiotelephone - SFR SA",
+  ["District"] = "",
   ["ContinentCode"] = "EU",
  },
 }

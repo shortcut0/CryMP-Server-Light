@@ -711,13 +711,15 @@ Server.Logger = {
         })
     end,
 
-    DebugLog = function(self, sMessage)
+    DebugLog = function(self, sMessage, bSafe)
         self:Log(sMessage)
-        self:LogEvent({
-            Event = ServerLogEvent_ScriptDebug,
-            Message = string.gsub(sMessage, "<Debug>:%s*", "", 1),
-            MessageArgs = {},
-        })
+        if (not bSafe) then
+            self:LogEvent({
+                Event = ServerLogEvent_ScriptDebug,
+                Message = string.gsub(sMessage, "<Debug>:%s*", "", 1),
+                MessageArgs = {},
+            })
+        end
     end,
 
     Print = function(self, sMessage)
@@ -1060,4 +1062,11 @@ DebugLog = function(...)
         sMessage = sMessage .. (sMessage ~= "" and ", " or "") .. tostring(sParam)
     end
     Server:DebugLog("<Debug>: " .. sMessage)
+end
+DebugLogSafe = function(...)
+    local sMessage = ""
+    for _, sParam in pairs({...}) do
+        sMessage = sMessage .. (sMessage ~= "" and ", " or "") .. tostring(sParam)
+    end
+    Server:DebugLog("<Debug>: " .. sMessage, true)
 end

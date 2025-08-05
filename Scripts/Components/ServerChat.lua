@@ -153,24 +153,26 @@ Server:CreateComponent({
 
             if (iTeamId) then
                 for _, hTarget in pairs(Server.Utils:GetPlayers({ ByTeam = iTeamId })) do
-                    g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, Server.Logger:RidColors(Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
+                    g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, (Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
                 end
                 return --self:SendMessageToTeam(pSender, iTeamId, sMessage)
 
             elseif (pTarget == ChatType_ToAll) then
                 for _, hTarget in pairs(Server.Utils:GetPlayers()) do
-                    g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, Server.Logger:RidColors(Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
+                    g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, (Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
                 end
                 return --self:SendMessageToAll(pSender, sMessage)
 
             end
-            local aTargetList = ((IsArray(pTarget) and pTarget.id) and { Server.Utils:GetEntity(pTarget) or pTarget})
-            if (table.empty(aTargetList)) then
-                return
+            local aTargetList = {}
+            if (IsArray(pTarget) and pTarget.id) then
+                aTargetList[1] = Server.Utils:GetEntity(pTarget)
+            elseif (table.IsRecursive(pTarget)) then
+                aTargetList = pTarget
             end
 
             for _, hTarget in pairs(aTargetList) do
-                g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, Server.Logger:RidColors(Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
+                g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, (Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
             end
         end,
 
@@ -419,14 +421,21 @@ Server:CreateComponent({
             return sChatTag, sTag
         end,
 
-        FilterMessage = function(self, hSender, hTarget, sMessage, iType)
+        FilterMessage = function(self, hSender, hTarget, sMessage, iType, bSentByServer)
 
-            self:LogChatMessage({
-                Type    = iType,
-                Sender  = hSender,
-                Target  = hTarget,
-                Message = sMessage
-            })
+            local bLogMessage = true
+            if (bSentByServer) then
+                bLogMessage = false
+            end
+
+            if (bLogMessage) then
+                self:LogChatMessage({
+                    Type    = iType,
+                    Sender  = hSender,
+                    Target  = hTarget,
+                    Message = sMessage
+                })
+            end
             return true
         end,
 
@@ -440,13 +449,16 @@ Server:CreateComponent({
 
             if (hSender.IsPlayer) then
 
-                if (Server.ChatCommands:CheckMessage(hSender, sMessage, iType)) then
-                    aInfo.Ok = false
+                if (not bSentByServer) then
+                    if (Server.ChatCommands:CheckMessage(hSender, sMessage, iType)) then
+                        aInfo.Ok = false
 
-                elseif (not self:FilterMessage(hSender, hTarget, sMessage, iType)) then
-                    aInfo.Ok = false
+                    elseif (not self:FilterMessage(hSender, hTarget, sMessage, iType, bSentByServer)) then
+                        aInfo.Ok = false
 
+                    end
                 end
+
                 return aInfo
             end
 

@@ -80,8 +80,8 @@ Server:CreateComponent({
             OnClientDisconnect      = function() end,
             OnClientEnteredGame     = function() end,
             OnWallJump              = function() end,
-            OnChatMessage           = function(self, hSender, hTarget, sMessage, iType)
-                return Server.Chat:OnChatMessage(hSender, hTarget, sMessage, iType)
+            OnChatMessage           = function(self, hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
+                return Server.Chat:OnChatMessage(hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
             end,
             OnEntityCollision       = function() end,
             OnSwitchAccessory       = function() end,
