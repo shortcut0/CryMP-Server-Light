@@ -12,6 +12,7 @@ Server:CreateComponent({
     Name = "Events",
     Body = {
 
+        ComponentPriority = PRIORITY_HIGHER,
         Properties = {
 
             -- Error Threshold after which a specific event gets disabled
@@ -28,8 +29,8 @@ Server:CreateComponent({
             end,
 
             OnProfileValidated = function(this, hPlayer, sProfile)
-                Server.AccessHandler:OnProfileValidated(hPlayer, sProfile)
                 Server.ActorHandler:OnProfileValidated(hPlayer, sProfile)
+                Server.AccessHandler:OnProfileValidated(hPlayer, sProfile)
             end,
 
             -- ============================================================================
@@ -77,8 +78,14 @@ Server:CreateComponent({
             OnChannelDisconnect     = function(this, iChannel, sDescription)
                 Server.Network:OnChannelDisconnect(iChannel, sDescription)
             end,
-            OnClientDisconnect      = function() end,
+            OnClientDisconnect      = function(self, iChannel, hPlayer, sDescription)
+                Server.Network:OnClientDisconnect(hPlayer, iChannel, sDescription)
+                Server.ActorHandler:OnPlayerDisconnect(hPlayer)
+            end,
             OnClientEnteredGame     = function() end,
+            OnClientConnect     = function(self, hPlayer, iChannel, bIsReset, bWasOnHold)
+                Server.Network:OnClientConnected(hPlayer, iChannel)
+            end,
             OnWallJump              = function() end,
             OnChatMessage           = function(self, hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
                 return Server.Chat:OnChatMessage(hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
@@ -93,11 +100,15 @@ Server:CreateComponent({
             OnGameShutdown          = function() end,
             OnMapStarted            = function() end,
             OnEntitySpawn           = function(this, hEntity, hEntityId, bVehicle, bItem, bActor, iType)
+
+                -- We assume that this is done before ANYTHING else on a new actor/client, but not 100% sure!
                 if (bActor) then
                     Server.ActorHandler:OnActorSpawn(hEntity)
                 end
+
                 if (bVehicle) then
                 end
+
                 if (bItem) then
                 end
             end,
@@ -153,7 +164,6 @@ Server:CreateComponent({
             local aReturn, bOk, sError
 
             for _, aInfo in pairs(self.LinkedEvents[hEvent]) do
-
                 if (aInfo.Active) then
                     local aPushArguments = { ... }
                     if (aInfo.PushArgs) then

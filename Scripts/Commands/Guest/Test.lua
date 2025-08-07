@@ -10,8 +10,9 @@
 
 Server.ChatCommands:Add({
     Name = "mmmm1",
+    Access = ServerAccess_Highest,
     Arguments = {
-        { Required = 1, Type = CommandArg_TypePlayer, Name = "Hello?", Desc = "Bye!",
+        { Required = nil, Type = CommandArg_TypePlayer, Name = "Hello?", Desc = "Bye!",
 
           Minimum = 1000,
           Maximum = 9999999,
@@ -25,13 +26,15 @@ Server.ChatCommands:Add({
       --  { Required = 1, Type = CommandArg_TypeNumber, Name = "Hello?", Desc = "Bye!", },
     },
     Function = function(THIS,...)
-        DebugLog(...)
+
+        Server.Chat:SendWelcomeMessage(THIS)
         return true, "return"
     end
 })
 
 Server.ChatCommands:Add({
     Name = "mmmm2",
+    Access = ServerAccess_Highest,
     Arguments = {
     },
     Properties = {
@@ -44,6 +47,7 @@ Server.ChatCommands:Add({
 
 Server.ChatCommands:Add({
     Name = "mmmm3",
+    Access = ServerAccess_Highest,
     Arguments = {
     },
     Function = function()
@@ -53,6 +57,7 @@ Server.ChatCommands:Add({
 
 Server.ChatCommands:Add({
     Name = "mmmm4",
+    Access = ServerAccess_Highest,
     Arguments = {
     },
     Function = function()
@@ -62,6 +67,7 @@ Server.ChatCommands:Add({
 
 Server.ChatCommands:Add({
     Name = "mmmm5",
+    Access = ServerAccess_Highest,
     Arguments = {
     },
     Function = function()

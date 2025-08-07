@@ -1,14 +1,14 @@
 return {
- ["1073103"] = {
+ ["2130706433_test"] = {
   ["AccessLevel"] = 9,
   ["NameProtected"] = true,
   ["Name"] = "shortcut0",
-  ["ProfileID"] = "1073103",
+  ["ProfileID"] = "2130706433_test",
  },
- ["i2130706433"] = {
+ ["1073103_test"] = {
   ["AccessLevel"] = 9,
   ["NameProtected"] = true,
   ["Name"] = "shortcut0",
-  ["ProfileID"] = "i2130706433",
+  ["ProfileID"] = "1073103_test",
  },
 }

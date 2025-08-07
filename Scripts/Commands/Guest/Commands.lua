@@ -9,20 +9,21 @@
 -- ===================================================================================
 
 Server.ChatCommands:Add({
-    Name = "validate",
-    Access = ServerAccess_Lowest,
+
+    Name        = "commands",
+    Access      = ServerRank_Guest,
+    Description = "command_commands",
+
     Arguments = {
-        { Name = "@arg_profileId", Required = true, Type = CommandArg_TypeNumber },
-        { Name = "@arg_hash",      Required = true },
-        { Name = "@arg_name",      Required = true }
+        { Name = "@arg_filter", Desc = "@arg_filter_desc" },
     },
+
     Properties = {
-        IsQuiet = true
+        This = Server.ChatCommands
     },
-    Function = function(self, iProfileId, sHash, sName)
-        if (Server.Network:ValidateProfile(self, iProfileId, sHash, sName)) then
-            return true
-        end
-        return false
+
+    Function = function(self, hPlayer, sClass)
+        self:ListCommands(hPlayer, self.CommandMap, sClass)
+        return true
     end
 })

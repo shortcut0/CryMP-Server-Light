@@ -20,7 +20,7 @@ Server:CreateComponent({
         },
 
         CCommands = {
-            { Name = "push_update", FunctionName = "UpdateServer", Description = "Directly pushes for a Server Update bypassing all restrictions" },
+            { Name = "push_update", FunctionName = "UpdateServer", Description = "Directly pushes for a Server Update, bypassing all restrictions" },
         },
 
         Protected = {
@@ -28,6 +28,7 @@ Server:CreateComponent({
             ChannelCache = {},
             ActiveQueries = {},
             ActiveConnections = {},
+            CurrentChannel = 0,
         },
 
         Properties = {
@@ -38,8 +39,8 @@ Server:CreateComponent({
             MasterServerTimeout = 30, -- timeout for connection attempts
 
             Headers = {
-                JSON    = { ["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8" },
-                Default = { ["Content-Type"] = "application/json" },
+                Default = { ["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8" },
+                JSON    = { ["Content-Type"] = "application/json" },
             },
 
             EndPoints = {
@@ -68,7 +69,7 @@ Server:CreateComponent({
         DefaultGeoData = {
             ContinentName = "Lingshan Island",
             ContinentCode = "LI",
-            CountryName   = "Crysisville",
+            CountryName   = "Crysis ville",
             CountryCode   = "CS",
             RegionName    = "Onslaught",
             City          = "Unnamed Village at the Lake",
@@ -120,18 +121,26 @@ Server:CreateComponent({
 
             hPlayer:SetProfileValidated(false)
 
-            iCode = 69
             if (iCode ~= 200 or sResponse ~= "%Validation:Successful%") then
                 self:LogEvent({ Event = self:GetName(), Recipients = Server.AccessHandler:GetAdministrators(), Message = "@user_notValidated", MessageFormat = {{ ProfileId = sProfile, UserName = ToString(hPlayer:GetName()) }} })
                 Server.Events:Call(ServerScriptEvent_OnValidationFailed, hPlayer, sResponse, iCode)
                 return
             end
 
+            hPlayer:SetProfileValidated(true)
             Server.Events:Call(ServerScriptEvent_OnProfileValidated, hPlayer, sProfile)
         end,
 
         ValidateProfile = function(self, hPlayer, sProfile, sHash, sName)
 
+            sProfile = tostring(sProfile)
+
+            -- Don't allow empty profiles, profiles longer than 7 characters, or negative profile id values
+            if (string.empty(sProfile) or not string.match(sProfile, "^%d+$") or (#sProfile > 7) or (not tonumber(sProfile) or tonumber(sProfile) < 0)) then
+                return false
+            end
+
+            hPlayer:SetProfileReceived(true)
             if (hPlayer.Info.IsValidating) then
                 return true
             end
@@ -154,6 +163,7 @@ Server:CreateComponent({
             end)
 
             hPlayer.Info.IsValidating = true
+            return true
         end,
 
         OnChannelCreated = function(self, iChannel)
@@ -177,13 +187,20 @@ Server:CreateComponent({
                 NickNick = sNickname,
             }
 
-            self:Log("Created Channel %d with Name %s$9 (IP: %s, Country: [%s] %s)", iChannel, sNickname, sIPAddress, sCountryCode, sCountryName)
             self:LogEvent({
-                Event = ServerLogEvent_Network,
                 Recipients = Server.Utils:GetPlayers(),
-                Message = [[channel_created]],
+                Message = "@channel_created",
                 MessageFormat = { Channel = iChannel, Nick = sNickname, IP = sIPAddress, CountryCode = sCountryCode, Country = sCountryName }
             })
+
+            self.CurrentChannel = iChannel
+        end,
+
+        GetConnectionTimer = function(self, iChannel)
+            if (not self.ActiveConnections[iChannel]) then
+                return
+            end
+            return self.ActiveConnections[iChannel].Timer
         end,
 
         ParseDisconnectReason = function(self, sDescription)
@@ -194,16 +211,85 @@ Server:CreateComponent({
         OnChannelDisconnect = function(self, iChannel, sDescription)
 
             local sReasonShort, sReason = self:ParseDisconnectReason(sDescription)
-            self:Log("Channel %d Disconnected (%s, %s)", iChannel, sReasonShort, sReason)
+            local sNickname = ServerDLL.GetChannelNick(iChannel)
+            self:LogEvent({
+                Recipients = Server.Utils:GetPlayers(),
+                Message = "@channel_disconnect",
+                MessageFormat = { Channel = iChannel, Nick = sNickname, Reason = sReason, ShortReason = sReasonShort }
+            })
 
             -- Channels NEVER decrement, so this is fine
             self.ActiveConnections[iChannel] = nil
             self.ChannelCache[iChannel]      = nil
             self.ActiveQueries[iChannel]     = nil
 
-            if (Server.Utils:GetPlayerCount() == 0) then
-                Server:OnServerEmptied()
+            -- next frame
+            Script.SetTimer(1, function()
+                if (Server.Utils:GetPlayerCount() == 0) then
+                    Server:OnServerEmptied()
+                end
+            end)
+        end,
+
+        OnClientConnected = function(self, hClient)
+        end,
+
+        OnClientDisconnect = function(self, hClient, iChannel, iCause, sDescription)
+            self:SendMessage(hClient, "Disconnected", { Cause = iCause, Description = (sDescription or "Undefined") })
+        end,
+
+        SendMessage = function(self, hPlayer, sMessage, aInfo)
+
+            local sCountryCode = hPlayer:GetCountryCode()
+            local sCountryName = hPlayer:GetCountryName()
+            local sPlayerName = hPlayer:GetName()
+            local iChannel = hPlayer:GetChannel()
+
+            if (sMessage == "Connected") then
+                Server.Network:LogEvent({
+                    Message = "@player_connected",
+                    MessageFormat = {
+                        Name = sPlayerName,
+                        Channel = iChannel,
+                        Time = Date:Format(hPlayer.Timers.Connection.diff()),
+                        CountryCode = sCountryCode,
+                        CountryName = sCountryName,
+                    }
+                })
+                Server.Chat:ChatMessage(Server:GetEntity(), Server.Utils:GetPlayers(), "@player_connectedChat", { Name = hPlayer:GetName(), Channel = hPlayer:GetChannel(), CountryCode = sCountryCode, ISP = hPlayer:GetISP() })
+            elseif (sMessage == "Disconnected") then
+
+                local sReasonShort, sReason = self:ParseDisconnectReason(aInfo.Description)
+                Server.Network:LogEvent({
+                    Message = "@player_disconnected",
+                    MessageFormat = {
+                        Name = sPlayerName,
+                        Channel = iChannel,
+                        Time = Date:Format(hPlayer.Timers.Initialized.diff()),
+                        Reason = sReason,
+                        ShortReason = sReasonShort
+                    }
+                })
+                Server.Chat:ChatMessage(Server:GetEntity(), Server.Utils:GetPlayers(), "@player_disconnectedChat", { Name = sPlayerName, Channel = iChannel, Time = Date:Format(hPlayer.Timers.Initialized.diff()), Reason = sReason, ShortReason = sReasonShort })
             end
+        end,
+
+        GetCountryCode = function(self, hPlayer)
+            local aGeoInfo = self:GetGeoInfo(hPlayer:GetIPAddress(), hPlayer:GetChannel())
+            local sCountryCode = aGeoInfo.CountryCode
+            return sCountryCode
+        end,
+
+        GetCountryName = function(self, hPlayer)
+            local aGeoInfo = self:GetGeoInfo(hPlayer:GetIPAddress(), hPlayer:GetChannel())
+            local sCountryName = aGeoInfo.CountryName
+            return sCountryName
+        end,
+
+        GetISP = function(self, hPlayer)
+            local aGeoInfo = self:GetGeoInfo(hPlayer:GetIPAddress(), hPlayer:GetChannel())
+            local sISP = aGeoInfo.ISP
+            return (sISP or "Unknown")
         end,
 
         GetGeoInfo = function(self, sIPAddress, iChannel)

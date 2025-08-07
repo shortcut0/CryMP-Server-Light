@@ -220,29 +220,46 @@ end
 
 ----------------------------------
 Server.OnServerEmptied = function(self)
-
-    if (self.Timers:Expired_Refresh(ServerTimer_ExportComponentData, TEN_MINUTES)) then
-        self:ExportComponentData()
-    end
+    self:Log("Server is Empty, Exporting Component Data.")
+    self:ExportComponentData()
 end
 
 ----------------------------------
 Server.InitializeComponents = function(self)
 
     ServerLog("Initializing Components...")
+    --InitializePriority
+    local aInitializeList = {}
     for sComponent, hFunction in pairs(self.InitializeList) do
+        table.insert(aInitializeList, {
+            Function = hFunction,
+            ComponentName = sComponent
+        })
+    end
 
-        local bOk, sError = pcall(hFunction, self[sComponent])
+    table.sort(aInitializeList, function(a, b)
+        return ((Server[a.ComponentName].ComponentPriority) > (Server[b.ComponentName].ComponentPriority))
+    end)
+
+    for i = 1, #aInitializeList do
+
+        local hInitializeFunction = aInitializeList[i].Function
+        local sComponentName = aInitializeList[i].ComponentName
+
+        local bOk, sError = pcall(hInitializeFunction, self[sComponentName])
         if (bOk == false) then -- No, we are not PirateSoftware, but we don't want 'nil' returns to cause mayhem!
-            ServerLogFatal("Failed to Initialize Component '%s'", sComponent)
+            ServerLogFatal("Failed to Initialize Component '%s'", sComponentName)
             ServerLogFatal("> %s", (sError or "<Null>"))
             return false
         end
 
-        self[sComponent].Initialized = true
+        if (self:LoadComponentExternal(self[sComponentName], sComponentName, true) == false) then
+            return false
+        end
+        self[sComponentName].Initialized = true
     end
-
     self.ComponentsInitialized = true
+
 end
 
 ----------------------------------
@@ -297,73 +314,78 @@ Server.CreateComponentFunctions = function(self, aBody, sName, sFriendlyName)
 end
 
 ----------------------------------
-Server.LoadComponentExternal = function(self, aBody, sName)
+Server.LoadComponentExternal = function(self, aBody, sName, bIsAfterInit)
 
     local aComponentExternal = self.ComponentExternal[sName]
     if (aComponentExternal) then
         for _, aKeyInfo in pairs(aComponentExternal) do
 
             local bOk, hData
-            if (not aKeyInfo.Recursive) then
-                bOk, hData = self.FileLoader:ExecuteFile(aKeyInfo.Name, aKeyInfo.Path, {}, eFileType_Data)
-                if (not bOk) then
-                    ServerLogFatal("Failed to Import External Data for Component '%s'", sName)
-                    ServerLogFatal("Aborting Initialization to Preserve Data!")
-                    return false
-                end
-
-                if (hData) then
-                    if (aKeyInfo.Key) then
-                        aBody[aKeyInfo.Key] = hData
-                    end
-                    aBody:Log("Loaded External Data File %s", aKeyInfo.Name)
-                else
-                    aBody:Log("External Data File %s was not found or is Empty", aKeyInfo.Name)
-                end
-            else
-
-                local function LoadRecursive(sPath)
-
-                    if (not ServerLFS.DirExists(sPath)) then
-                        if (not ServerLFS.DirCreate(sPath)) then
-                            return
-                        end
-                    end
-
-                    local aFiles = ServerLFS.DirGetFiles(sPath, GETFILES_ALL)
-                    if (table.empty(aFiles)) then
-                        return
-                    end
-
-                    for _, sFile in pairs(aFiles) do
-                        local sFileName = ServerLFS.FileGetName(sFile)
-                        if (ServerLFS.DirIsDir(sFile)) then
-                            if (LoadRecursive(sFile) == false) then
-                                return false
-                            end
-
-                        elseif (aKeyInfo.NamePattern == nil or string.match(sFileName, aKeyInfo.NamePattern)) then
-                            bOk, hData = self.FileLoader:ExecuteFile(sFileName, ServerLFS.FileGetPath(sFile), {}, eFileType_Data)
-                            if (not bOk) then
-                                ServerLogFatal("Failed to Import External Data for Component '%s'", sName)
-                                ServerLogFatal("Aborting Initialization to Preserve Data!")
-                                return false
-                            end
-                            aBody:Log("Loaded External Data File %s", sFileName)
-                        end
-                    end
-
-                end
-                local sCurrentDir = (aKeyInfo.Path)
-                if (ServerLFS.DirExists(sCurrentDir)) then
-                    if (LoadRecursive(sCurrentDir) == false) then
+            if (aKeyInfo.AfterInit == nil) then
+                aKeyInfo.AfterInit = false
+            end
+            if ((aKeyInfo.AfterInit == bIsAfterInit)) then
+                if (not aKeyInfo.Recursive) then
+                    bOk, hData = self.FileLoader:ExecuteFile(aKeyInfo.Name, aKeyInfo.Path, {}, eFileType_Data)
+                    if (not bOk) then
+                        ServerLogFatal("Failed to Import External Data for Component '%s'", sName)
+                        ServerLogFatal("Aborting Initialization to Preserve Data!")
                         return false
                     end
-                else
-                    ServerLogFatal("Failed to Create Data Directory '%s' for Component '%s'", sCurrentDir, sName)
-                end
-            end
 
+                    if (hData) then
+                        if (aKeyInfo.Key) then
+                            aBody[aKeyInfo.Key] = hData
+                        end
+                        aBody:Log("Loaded External Data File %s", aKeyInfo.Name)
+                    else
+                        aBody:Log("External Data File %s was not found or is Empty", aKeyInfo.Name)
+                    end
+                else
+
+                    local function LoadRecursive(sPath)
+
+                        if (not ServerLFS.DirExists(sPath)) then
+                            if (not ServerLFS.DirCreate(sPath)) then
+                                return
+                            end
+                        end
+
+                        local aFiles = ServerLFS.DirGetFiles(sPath, GETFILES_ALL)
+                        if (table.empty(aFiles)) then
+                            return
+                        end
+
+                        for _, sFile in pairs(aFiles) do
+                            local sFileName = ServerLFS.FileGetName(sFile)
+                            if (ServerLFS.DirIsDir(sFile)) then
+                                if (LoadRecursive(sFile) == false) then
+                                    return false
+                                end
+
+                            elseif (aKeyInfo.NamePattern == nil or string.match(sFileName, aKeyInfo.NamePattern)) then
+                                bOk, hData = self.FileLoader:ExecuteFile(sFileName, ServerLFS.FileGetPath(sFile), {}, eFileType_Data)
+                                if (not bOk) then
+                                    ServerLogFatal("Failed to Import External Data for Component '%s'", sName)
+                                    ServerLogFatal("Aborting Initialization to Preserve Data!")
+                                    return false
+                                end
+                                aBody:Log("Loaded External Data File %s", sFileName)
+                            end
+                        end
+
+                    end
+                    local sCurrentDir = (aKeyInfo.Path)
+                    if (ServerLFS.DirExists(sCurrentDir)) then
+                        if (LoadRecursive(sCurrentDir) == false) then
+                            return false
+                        end
+                    else
+                        ServerLogFatal("Failed to Create Data Directory '%s' for Component '%s'", sCurrentDir, sName)
+                    end
+                end
+
+            end
         end
     end
 end
@@ -383,6 +405,8 @@ Server.CreateComponents = function(self)
         end
 
         self:CreateComponentFunctions(aBody, sName, aComponent.FriendlyName)
+
+        aBody.ComponentPriority = (aBody.ComponentPriority or PRIORITY_NORMAL)
 
         self.InitializeList[sName]      = aBody.Initialize
         self.PreInitializeList[sName]   = aBody.PreInitialize
@@ -423,8 +447,16 @@ Server.CreateComponents = function(self)
         end
 
         self[sName] = aBody
+        if (aBody.EarlyInitialize) then
+            local bOk, sError = pcall(aBody.EarlyInitialize, aBody)
+            if (not bOk) then
+                ServerLogError("Failed to Early-Initialize Component '%s'", sName)
+                ServerLogError("%s", (sError or "<Null>"))
+                return false
+            end
+        end
 
-        if (self:LoadComponentExternal(aBody, sName) == false) then
+        if (self:LoadComponentExternal(aBody, sName, false) == false) then
             return false
         end
 
@@ -484,6 +516,12 @@ Server.CreateLogAbstract = function(self, aBody, sName)
     aBody.LogEvent = (aBody.LogEvent or function(this, tEvent)
         if (tEvent.Class == nil) then
             tEvent.Class = this:GetFriendlyName()
+        end
+        if (tEvent.Event == nil) then
+            tEvent.Event = this:GetFriendlyName()
+        end
+        if (tEvent.Recipients == nil) then
+            tEvent.Recipients = Server.Utils:GetPlayers()
         end
         Server.Logger:LogEvent(tEvent)--(aBody.LogEventType or sName), sMessage, ...)
     end)

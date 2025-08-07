@@ -115,4 +115,15 @@ CommandArg_TypeTime = 6     -- a Time value (1d, 86400)
 CommandArg_TypeAccess = 7   -- a valid server access level
 CommandArg_TypeCVar = 8     -- a valid cvar
 
+----------------------------
 ALL_PLAYERS = 1000
+
+----------------------------
+PRIORITY_NONE = 1
+PRIORITY_LOWEST = 2
+PRIORITY_LOWER = 3
+PRIORITY_LOW = 4
+PRIORITY_NORMAL = 5
+PRIORITY_HIGH = 6
+PRIORITY_HIGHER = 7
+PRIORITY_HIGHEST = 8

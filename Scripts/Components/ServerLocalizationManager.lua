@@ -13,6 +13,8 @@ Server:CreateComponent({
     FriendlyName = "Locale",
     Body = {
 
+        ComponentPriority = PRIORITY_LOWER,
+
         ExternalData = {
             { Name = "", NamePattern = "%.lua$", Path = (SERVER_DIR_DATA .. "Locale"), Recursive = true, ReadOnly = true }
         },
@@ -136,7 +138,7 @@ Server:CreateComponent({
             end
 
             if (IsTable(sLocalized)) then
-                if (iExtended == true or (sLocalized.Extended and (iExtended and iExtended >= aLocaleInfo.Extended))) then
+                if (sLanguage.Extended and (iExtended == true or (sLocalized.Extended and (iExtended and iExtended >= aLocaleInfo.Extended)))) then
                     sLocalized = sLocalized.Extended
                 else
                     sLocalized = sLocalized.Regular
@@ -196,7 +198,7 @@ Server:CreateComponent({
 
             if (tExistingLocale) then
                 tExistingLocale.Languages = table.Merge(tExistingLocale.Languages, aLanguages or {})
-                self:LogWarning("Duplicated Locale Information! Merging Languages")
+                self:LogWarning("Duplicated Locale Information for '%s'! Merging Languages", sId)
                 return
             end
 

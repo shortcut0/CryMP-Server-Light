@@ -22,16 +22,15 @@ FIVE_MINUTES     = 300       -- 60 * 5
 ONE_MINUTE       = 60        -- 60
 ONE_SECOND       = 1         -- 1
 
-DateFormat_Array = "Array"
-DateFormat_Comma = "Comma"
-DateFormat_Spaced = "Spaced"
-DateFormat_Forced4 = "Forced4"
-DateFormat_Forced3 = "Forced3"
-DateFormat_Forced2 = "Forced2"
+DateFormat_Days = 2
+DateFormat_Hours = 4
+DateFormat_Minutes = 8
+DateFormat_Cramped = 16
+DateFormat_Comma = 32
 
 --------------
 Date = {
-    __type = "date",
+    __type = { "date" }, --"date",
 }
 
 --------------
@@ -95,12 +94,6 @@ Date.New = function(self, hTime)
     local hDate = {
         __type = self.__type,
         __date = os.date("*t", iSeconds),
-        __add = function(a, b)
-            return 1
-        end,
-        __sub = function(a, b)
-            return 69
-        end,
     }
 
     hDate.Format = function(this, iTime, iType) -- difference between this and now
@@ -186,6 +179,15 @@ Date.GetTimestamp = function(self)
 end
 
 --------------
+Date.Colorize = function(self, sDate, sNumberColor, sDotColor)
+
+    sNumberColor = sNumberColor or CRY_COLOR_RED
+    sDotColor = sDotColor or CRY_COLOR_GRAY
+
+    return string.gsub(sDate, "(%d+)", sNumberColor .. "%1" .. sDotColor)
+end
+
+--------------
 Date.Format = function(self, iTime, iType, iUnitLimit)
 
     local bFuture = (iTime < 0)
@@ -198,15 +200,25 @@ Date.Format = function(self, iTime, iType, iUnitLimit)
     end
 
     local aUnits = {
-        --{ name = "millennia", value = 86400 * 365 * 100 * 100 * 100 },  -- Decades
-        --{ name = "c", 		  value = 86400 * 365 * 100 * 100 },		-- Decades
-        --{ name = "dec", 	  value = 86400 * 365 * 100 },			 	-- Decades
         { Name = "y", 		  Value = 86400 * 365 },      				-- Years
         { Name = "d", 		  Value = 86400 },           			 	-- Days
-        { Name = "h", 		  Value = 3600 },            				-- Hours
-        { Name = "m", 		  Value = 60 },               			 	-- Minutes
-        { Name = "s", 		  Value = 1 },                			    -- Seconds
+        { Name = "h", 		  Value = 3600, PadZero = true },            				-- Hours
+        { Name = "m", 		  Value = 60, PadZero = true },               			 	-- Minutes
+        { Name = "s", 		  Value = 1, PadZero = true },                			    -- Seconds
     }
+
+    iType = iType or 0
+    if (BitAND(iType, DateFormat_Days) ~= 0) then
+        table.remove(aUnits,#aUnits)
+        table.remove(aUnits,#aUnits)
+        table.remove(aUnits,#aUnits)
+    elseif (BitAND(iType, DateFormat_Hours) ~= 0) then
+        table.remove(aUnits,#aUnits)
+        table.remove(aUnits,#aUnits)
+
+    elseif (BitAND(iType, DateFormat_Minutes) ~= 0) then
+        table.remove(aUnits,#aUnits)
+    end
 
     local iUnits = table.size(aUnits)
     if (iUnitLimit) then
@@ -236,11 +248,13 @@ Date.Format = function(self, iTime, iType, iUnitLimit)
             end
         end
         for i = iFirstNonZero, #aResult do
-            table.insert(aFormatted, string.format("%02d%s", aResult[i].Value, aResult[i].Name))
+            table.insert(aFormatted, string.format("%" .. (aResult[i].PadZero and "02" or "") .. "d%s", aResult[i].Value, aResult[i].Name))
         end
 
-        if (iStyle == DateFormat_Comma) then
+        if (BitAND(iStyle, DateFormat_Comma) ~= 0) then
             return table.concat(aFormatted, ", ")
+        elseif (BitAND(iStyle, DateFormat_Cramped) ~= 0) then
+            return table.concat(aFormatted, ":")
         end
         return table.concat(aFormatted, ": ")
 

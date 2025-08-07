@@ -49,6 +49,7 @@ Server:CreateComponent({
             ListFound = {
                 Success = true,
                 NoStatus = true,
+                NoAdminLog = true,
                 Message = "@command_listFound"
             },
             InsufficientAccess = {
@@ -146,9 +147,9 @@ Server:CreateComponent({
                 return
             end
 
-            if (not tProperties.Access) then
+            if (not aInfo.Access) then
                 self:LogWarning("No Access to ChatCommands:Add() %s, Assuming Lowest", sName)
-                tProperties.Access = Server.AccessHandler:GetLowestAccess()
+                aInfo.Access = Server.AccessHandler:GetLowestAccess()
             end
 
             if (self.CommandMap[string.lower(sName)]) then
@@ -166,10 +167,10 @@ Server:CreateComponent({
                 aArguments = {}
             end
 
-            self.CommandMap[string.lower(sName)] = self:BuildCommand(sName, aArguments, tProperties, hFunction)
+            self.CommandMap[string.lower(sName)] = self:BuildCommand(sName, aArguments, tProperties, hFunction, aInfo.Access)
         end,
 
-        BuildCommand = function(self, sName, aArguments, tProperties, hFunction)
+        BuildCommand = function(self, sName, aArguments, tProperties, hFunction, iAccessLevel)
 
             local sNameLower = string.lower(sName)
             self.CommandMap[sNameLower] = {
@@ -183,7 +184,7 @@ Server:CreateComponent({
                 },
 
                 Name        = string.lower(sName),
-                Access      = (tProperties.Access),
+                Access      = (iAccessLevel),
                 Properties  = tProperties,
                 Arguments   = aArguments,
                 Function    = hFunction,
@@ -266,9 +267,13 @@ Server:CreateComponent({
 
         SendMessage = function(self, hPlayer, tMessage, tFormat, iMessageType)
 
-            local sCommandUpper = string.upper(tFormat.Name)
+            local sCommandUpper = string.lower(tFormat.Name)
             local sPlayerName = hPlayer:GetName()
             local aLogRecipients = Server.Utils:GetPlayers({ NotById = hPlayer.id, ByAccess = hPlayer:GetAccess(Server.AccessHandler:GetAdminLevel()) })
+            local aChatLogRecipients = table.copy(aLogRecipients)
+
+            local sMessage = tMessage.Message
+            local sAdminMessage = (tMessage.AdminMessage or sMessage)
 
             local sConsole_Log  -- Admins
             local sConsole_Msg  -- Player
@@ -281,10 +286,10 @@ Server:CreateComponent({
                 if (tMessage.NoStatus) then
 
                     -- TEST : Open your Console to view the [ 3 ] Matches!
-                    sConsole_Log = ("(%s{Gray})"):format(CRY_COLOR_GREEN .. tMessage.Message)
-                    sConsole_Msg = CRY_COLOR_GREEN .. tMessage.Message
-                    sChat_Log = CRY_COLOR_GREEN .. tMessage.Message
-                    sChat_Msg = CRY_COLOR_GREEN .. tMessage.Message
+                    sConsole_Log = ("(%s{Gray})"):format(CRY_COLOR_GREEN .. sAdminMessage)
+                    sConsole_Msg = CRY_COLOR_GREEN .. sMessage
+                    sChat_Log = CRY_COLOR_GREEN .. sAdminMessage
+                    sChat_Msg = CRY_COLOR_GREEN .. sMessage
                 elseif (tMessage.NoMessage) then
 
                     -- return true
@@ -297,18 +302,18 @@ Server:CreateComponent({
 
                     -- return true, "Function Returned Ok!"
                     -- TEST : Function returned Ok!
-                    sConsole_Log = ("(%s{Gray})"):format(CRY_COLOR_GREEN .. tMessage.Message)
-                    sConsole_Msg = CRY_COLOR_GREEN .. tMessage.Message
-                    sChat_Log = tMessage.Message
-                    sChat_Msg = tMessage.Message
+                    sConsole_Log = ("(%s{Gray})"):format(CRY_COLOR_GREEN .. sAdminMessage)
+                    sConsole_Msg = CRY_COLOR_GREEN .. sMessage
+                    sChat_Log = sAdminMessage
+                    sChat_Msg = sMessage
                 end
             elseif (tMessage.NoFeedback) then
                 if (tMessage.NoStatus) then
 
                     -- TEST : Open your Console to view the [ 3 ] Matches!
-                    sConsole_Log = CRY_COLOR_ORANGE .. tMessage.Message
-                    sConsole_Msg = CRY_COLOR_ORANGE .. tMessage.Message
-                    sChat_Log = CRY_COLOR_ORANGE .. tMessage.Message
+                    sConsole_Log = CRY_COLOR_ORANGE .. sAdminMessage
+                    sConsole_Msg = CRY_COLOR_ORANGE .. sMessage
+                    sChat_Log = CRY_COLOR_ORANGE .. sAdminMessage
                     sChat_Msg = ""
                 elseif (tMessage.NoMessage) then
 
@@ -322,18 +327,19 @@ Server:CreateComponent({
 
                     -- return false, "Function Returned BAD!"
                     -- TEST : Error (Function returned BAD!)
-                    sConsole_Log = CRY_COLOR_ORANGE .. "@str_noFeedback {Gray}({Orange}" .. tMessage.Message .. "{Gray})"
-                    sConsole_Msg = CRY_COLOR_ORANGE .. "@str_noFeedback {Gray}({Orange}" .. tMessage.Message .. "{Gray})"
-                    sChat_Log = "@str_noFeedback (" .. tMessage.Message .. ")"
-                    sChat_Msg = "@str_noFeedback (" .. tMessage.Message .. ")"
+                    sConsole_Log = CRY_COLOR_ORANGE .. "@str_noFeedback {Gray}({Orange}" .. sAdminMessage .. "{Gray})"
+                    sConsole_Msg = CRY_COLOR_ORANGE .. "@str_noFeedback {Gray}({Orange}" .. sMessage .. "{Gray})"
+                    sChat_Log = "@str_noFeedback (" .. sAdminMessage .. ")"
+                    sChat_Msg = "@str_noFeedback (" .. sMessage .. ")"
                 end
             else--if (tMessage.Failed) then
                 if (tMessage.NoStatus) then
 
                     -- TEST : Open your Console to view the [ 3 ] Matches!
-                    sConsole_Log = ("(%s{Gray})"):format(CRY_COLOR_RED .. tMessage.Message)
-                    sConsole_Msg = CRY_COLOR_RED .. tMessage.Message
-                    sChat_Log = CRY_COLOR_RED .. tMessage.Message
+                    sConsole_Log = ("(%s{Gray})"):format(CRY_COLOR_RED .. sAdminMessage)
+                    sConsole_Msg = CRY_COLOR_RED .. sMessage
+                    sChat_Log = CRY_COLOR_RED .. sAdminMessage
+                    sChat_Msg = CRY_COLOR_RED .. sMessage
                 elseif (tMessage.NoMessage) then
 
                     -- return false
@@ -346,41 +352,63 @@ Server:CreateComponent({
 
                     -- return false, "Function Returned BAD!"
                     -- TEST : Error (Function returned BAD!)
-                    sConsole_Log = CRY_COLOR_RED .. "@str_failed {Gray}({Red}" .. tMessage.Message .. "{Gray})"
-                    sConsole_Msg = CRY_COLOR_RED .. "@str_failed {Gray}({Red}" .. tMessage.Message .. "{Gray})"
-                    sChat_Log = "@str_failed (" .. tMessage.Message .. ")"
-                    sChat_Msg = "@str_failed (" .. tMessage.Message .. ")"
+                    sConsole_Log = CRY_COLOR_RED .. "@str_failed {Gray}({Red}" .. sAdminMessage .. "{Gray})"
+                    sConsole_Msg = CRY_COLOR_RED .. "@str_failed {Gray}({Red}" .. sMessage .. "{Gray})"
+                    sChat_Log = "@str_failed (" .. sAdminMessage .. ")"
+                    sChat_Msg = "@str_failed (" .. sMessage .. ")"
                 end
 
+            end
+
+
+
+            -- Don't log invalid command attempts to admins!
+            if (tMessage == self.Responses.NotFound) then
+                sChat_Log = nil
+                sConsole_Log = nil
             end
 
             -- Admins:
-            if (string.emptyN(sChat_Log)) then
-                Server.Chat:ChatMessage(hPlayer, aLogRecipients, ("(!%s  :  %s)"):format(sCommandUpper, sChat_Log), { tFormat, tFormat })
-            end
-            if (string.emptyN(sConsole_Log)) then
-                self:LogEvent({
-                    Event = self:GetFriendlyName(),
-                    Recipients = aLogRecipients,
-                    Message = "@command_consoleLog",
-                    MessageFormat = { Name = hPlayer:GetName(), Command = sCommandUpper, Reply = sConsole_Log }
-                })
-                local sArguments = (tFormat.__Arguments__ or "<{Green}S{Gray}: {Green}Nomad{Gray}> <{Blue}N{Gray}: {Blue}669{Gray}>, <{Orange}P{Gray}: {Orange}Nomad{Gray}>, <{Yellow}Msg{Gray}: {Yellow}out of mana..{Gray}>, <{Red}?{Gray}: {Red}third!{Gray}>")
-                if (string.emptyN(sArguments)) then
+            if (not tMessage.NoAdminLog) then
+                if (string.emptyN(sChat_Log)) then
+                    Server.Chat:ChatMessage(hPlayer, aChatLogRecipients, ("(!%s  :  %s{Gray})"):format(sCommandUpper, sChat_Log), { tFormat, tFormat })
+                end
+                if (string.emptyN(sConsole_Log)) then
                     self:LogEvent({
                         Event = self:GetFriendlyName(),
                         Recipients = aLogRecipients,
-                        Message = ("@str_arguments %s"):format(sArguments),
-                        MessageFormat = {}
+                        Message = "@command_consoleLog",
+                        MessageFormat = { { Name = hPlayer:GetName(), Command = string.capitalN(sCommandUpper, 1), Reply = sConsole_Log }, tFormat, tFormat  }
                     })
+                    local sArguments = (tFormat.__Arguments__)-- or "<{Green}S{Gray}: {Green}Nomad{Gray}> <{Blue}N{Gray}: {Blue}669{Gray}>, <{Orange}P{Gray}: {Orange}Nomad{Gray}>, <{Yellow}Msg{Gray}: {Yellow}out of mana..{Gray}>, <{Red}?{Gray}: {Red}third!{Gray}>")
+                    if (string.emptyN(sArguments)) then
+                        self:LogEvent({
+                            Event = self:GetFriendlyName(),
+                            Recipients = aLogRecipients,
+                            Message = ("@str_arguments %s"):format(sArguments),
+                            MessageFormat = {}
+                        })
+                    end
                 end
             end
+
             -- Players:
             if (string.emptyN(sChat_Msg)) then
-                Server.Chat:ChatMessage(Server:GetEntity(), hPlayer, ("%s  :  %s"):format(sCommandUpper, sChat_Msg), { tFormat, tFormat })
+                Server.Chat:ChatMessage(Server:GetEntity(), hPlayer, ("[ !%s ] %s"):format(sCommandUpper, sChat_Msg), { tFormat, tFormat })
             end
             if (string.emptyN(sConsole_Msg)) then
-                Server.Chat:ConsoleMessage(hPlayer, ("   (!%s: %s)"):format(sCommandUpper, sConsole_Msg), { tFormat, tFormat })
+                -- So, we only do the normal log if the user used the "say" console command
+                -- Otherwise, we will just insert the user to the admin log recipients
+                if (iMessageType ~= ChatToTarget) then
+                    self:LogEvent({
+                        Event = self:GetFriendlyName(),
+                        Recipients = { hPlayer },
+                        Message = ("> {White}!{Gray}%s {Gray}%s"):format(sCommandUpper, (sAdminMessage ~= sMessage and ((sConsole_Log):gsub(sAdminMessage, sMessage, 1)) or sConsole_Log)),
+                        MessageFormat = { tFormat }
+                    })
+                else
+                    Server.Chat:ConsoleMessage(hPlayer, ("   (!%s: %s{Gray})"):format(sCommandUpper, sConsole_Msg), { tFormat, tFormat })
+                end
             end
         end,
 
@@ -429,13 +457,128 @@ Server:CreateComponent({
 
             elseif (iCommandCount > 1) then
                 self:SendMessage(hPlayer, self.Responses.ListFound, { Name = sCommand, Count = iCommandCount }, iType)
-                self:ListCommands(hPlayer, aCommandList)
+                self:ListCommands(hPlayer, aCommandList, string.lower(sCommand))
                 return true -- Block Message
             end
 
-
-            self:ProcessCommand(hPlayer, aCommandList[1], tArgs)
+            self:ProcessCommand(hPlayer, aCommandList[1], tArgs, iType)
             return true -- Block Message
+        end,
+
+        SendHelp = function(self, hPlayer, aCommand)
+            -- Misc
+            local sAllPrefixes = CRY_COLOR_WHITE .. table.concat(self.Properties.CommandPrefixList, "$9, $1")
+            local sSpace = "      "
+
+            -- Cmd
+            local aCopied   = table.copy(aCommand)
+            local hArgs     = aCopied.Arguments
+            local iAccess   = aCopied.Access
+            local sDesc     = (aCopied.Description or "@no_description")
+            local sName     = aCopied.Name
+
+            -- Client
+            local sLang = hPlayer:GetPreferredLanguage()
+
+            -- Print
+            local iBoxWidth = 100
+            local iMaxArgLen = 0
+            local sArgsLine = ""
+            local sBracketColor = CRY_COLOR_GRAY
+            local hArgsLocalized = table.it(hArgs, function(x, i, v)
+                v.Name = hPlayer:LocalizeText(v.Name) -- Name
+                v.Desc = hPlayer:LocalizeText((v.Desc or "@no_description")) -- Desc
+
+                sBracketColor = CRY_COLOR_GRAY
+                if (v.Required) then
+                    sBracketColor = CRY_COLOR_RED
+                else--if (v.Optional) then
+                    sBracketColor = CRY_COLOR_BLUE
+                end
+
+                iMaxArgLen = math.max(iMaxArgLen, string.len(v.Name))
+                if (sArgsLine == "") then
+                    sArgsLine = string.format("%s<%s%s%s>%s", sBracketColor, CRY_COLOR_YELLOW, v.Name, sBracketColor, CRY_COLOR_GRAY)
+                else
+                    sArgsLine = string.format("%s, %s<%s%s%s>", sArgsLine, sBracketColor, CRY_COLOR_YELLOW, v.Name, sBracketColor, CRY_COLOR_GRAY)
+                end
+            end)
+            local sCmdBanner    = string.format("== [ $1!%s%s$9 ] ", Server.AccessHandler:GetAccessColor(iAccess), string.upper(sName))
+            local sDescBanner   = string.format("%s", hPlayer:LocalizeText(sDesc))
+
+            local sLPrefix = hPlayer:LocalizeText("@str_prefixes")
+            local sLAccess = hPlayer:LocalizeText("@arg_access")
+            local sLUsage  = hPlayer:LocalizeText("@str_usage")
+
+            local iMaxInfoLen   = math.max(string.len(sLPrefix), string.len(sLAccess), string.len(sLUsage))
+
+            local sCommandLine  =  string.capitalN(sName)
+            if (sArgsLine ~= "") then
+                sCommandLine = sCommandLine .. ","
+            end
+            local iCommandLineLen = iMaxInfoLen + string.len(sCommandLine)
+
+            local sPrefixLine   = string.format("%s: %s", string.rspace(sLPrefix, iMaxInfoLen, string.COLOR_CODE), sAllPrefixes)
+            local sAccessLine   = string.format("%s: %s", string.rspace(sLAccess, iMaxInfoLen, string.COLOR_CODE), Server.AccessHandler:GetAccessName(iAccess))
+            local sUsageLine    = string.format("%s: %s %s", string.rspace((sLUsage), iMaxInfoLen, string.COLOR_CODE),  sCommandLine, sArgsLine)
+
+            -- Send All
+            Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. string.rspace(sCmdBanner, iBoxWidth, string.COLOR_CODE, "="))
+            Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. string.format("[ %s ]", string.mspace((hPlayer:LocalizeText("@str_description") .. ":"), iBoxWidth - 4, 1, string.COLOR_CODE)))
+            Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. string.format("[ %s ]", string.mspace(sDescBanner, iBoxWidth - 4, 1, string.COLOR_CODE)))
+            Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. string.format("[ %s ]", string.mspace("", iBoxWidth - 4)))
+            Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. "[ " .. string.rspace(sPrefixLine, iBoxWidth - 4, string.COLOR_CODE) .. CRY_COLOR_GRAY .. " ]")
+            Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. "[ " .. string.rspace(sAccessLine, iBoxWidth - 4, string.COLOR_CODE) .. CRY_COLOR_GRAY .. " ]")
+            Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. "[ " .. string.rspace(sUsageLine,  iBoxWidth - 4, string.COLOR_CODE) .. CRY_COLOR_GRAY .. " ]")
+
+            local iArgsStart = (iMaxArgLen + 3 + string.len(sCommandLine))
+            local iArgMaxName = iMaxArgLen--table.it(hArgs, function(x, i, v) return math.max((x or 0), v.Name)  end)
+
+            local sArgType = ""
+            local sArgLine
+            for _, aArg in pairs(hArgs) do
+
+                sArgType = self:ConvertArgumentType(aArg.Type or CommandArg_TypeString, false, true)
+
+                sBracketColor = CRY_COLOR_GRAY
+                if (aArg.Required) then
+                    sBracketColor = CRY_COLOR_RED
+                else--if (aArg.Optional) then
+                    sBracketColor = CRY_COLOR_BLUE
+                end
+
+                sArgType = string.format("%s(%s%s%s)", CRY_COLOR_GRAY, CRY_COLOR_WHITE, hPlayer:LocalizeText(sArgType), CRY_COLOR_GRAY)
+                -- Debug(aArg.Desc,"==",hPlayer:LocalizeText((aArg.Desc or "@l_ui_nodescription")))
+                sArgLine = string.rep(" ", (iMaxInfoLen + 2 + string.len(sName) + 2)) .. string.rspace(string.format("%s<%s%s %s%s>%s", sBracketColor, CRY_COLOR_YELLOW, string.rspace(hPlayer:LocalizeText(aArg.Name), iArgMaxName, string.COLOR_CODE), sArgType, sBracketColor, CRY_COLOR_GRAY), 30, string.COLOR_CODE) .. " - " .. CRY_COLOR_WHITE .. hPlayer:LocalizeText((aArg.Desc or "@no_description"))
+
+
+                Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. string.format("[ %s ]", string.rspace(sArgLine .. CRY_COLOR_GRAY, iBoxWidth - 4, string.COLOR_CODE)))
+
+            end
+            Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. "[ " .. string.rspace("",  iBoxWidth - 4, string.COLOR_CODE) .. CRY_COLOR_GRAY .. " ]")
+
+            local sInfoHelp = hPlayer:LocalizeText("@arg_consoleHelpLine1")
+            --sInfoHelp = string.format("%s", Logger.Format(sInfoHelp))
+
+            Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. "[ " .. string.mspace(sInfoHelp .. CRY_COLOR_GRAY, iBoxWidth - 4, nil, string.COLOR_CODE) .. " ]")
+            Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. string.rspace("", iBoxWidth, string.COLOR_CODE, "="))
+
+            Server.Chat:ChatMessage(Server:GetEntity(), hPlayer, hPlayer:LocalizeText("@commandHelp_Chat", { Name = string.lower(sName) }))
+
+            local x = {
+                "== [ Commands ] ===================================================================================",
+                "[                                         Description:                                            ]",
+                "[                         Displays all available commands to your Console!                        ]",
+                "[                                                                                                 ]",
+                "[ Prefixes: !, /, \\                                                                               ]",
+                "[ Access:   Developer                                                                             ]",
+                "[ Usage :   !Commands, <Rank>, <Count>                                                            ]",
+                "[                      <Rank  (String)>     - The Target Rank                                     ]",
+                "[                      <Count (Number)>     - The Number                                          ]",
+                "[                                                                                                 ]",
+                "[                          RED Arguments are Required, Blue are Optional                          ]",
+                "===================================================================================================",
+            }
         end,
 
         ProcessCommand = function(self, hPlayer, aCommand, tArgs, iType)
@@ -452,28 +595,36 @@ Server:CreateComponent({
             local iPlayerAccess = hPlayer:GetAccess()
             local bInsufficientAccess = (iPlayerAccess < iCommandAccess)
 
+            local function SendMessage(tMessage, tFormat)
+                self:SendMessage(hPlayer, tMessage, tFormat, iType)
+            end
+
             if (aCommand:IsBroken() and not bIsDeveloper) then
-                self:SendMessage(hPlayer, self.Responses.Broken, { Name = sCommand })
+                SendMessage(self.Responses.Broken, { Name = sCommand })
                 return
             end
 
             if (aCommand:IsDisabled() and not bIsDeveloper) then
-                self:SendMessage(hPlayer, self.Responses.Disabled, { Name = sCommand, Reason = aCommand:GetDisabledReason() })
+                SendMessage(self.Responses.Disabled, { Name = sCommand, Reason = aCommand:GetDisabledReason() })
                 return
             end
 
             if ((aCommand.Access == iPremiumAccess and bInsufficientAccess)) then
-                self:SendMessage(hPlayer, self.Responses.Reserved, { Name = sCommand, Class = sCommandAccess })
+                SendMessage(self.Responses.Reserved, { Name = sCommand, Class = sCommandAccess })
                 return
             end
 
             if (not bIsAdmin and bInsufficientAccess) then
-                self:SendMessage(hPlayer, self.Responses.InsufficientAccess, { Name = sCommand })
+                SendMessage({
+                    NoStatus = true,
+                    Message = "@command_notFound",
+                    AdminMessage = "@insufficientAccess"
+                }, { Name = sCommand })
                 return
             end
 
             if (bInsufficientAccess) then
-                self:SendMessage(hPlayer, self.Responses.NotFound, { Name = sCommand }, iType)
+                SendMessage(self.Responses.InsufficientAccess, { Name = sCommand })
                 return
             end
 
@@ -493,43 +644,49 @@ Server:CreateComponent({
             local bPlayerSpectating = hPlayer:IsSpectating()
             local iPlayerPrestige   = hPlayer:GetPrestige()
 
+
+            if (IsAny(tArgs[1] or "", "-?", "--?", "-help", "--help")) then
+                self:SendHelp(hPlayer, aCommand)
+                return true -- Block message
+            end
+
             if (not bInTestMode) then
 
                 if (sGameRules and sGameRules ~= g_gameRules.class) then
-                    self:SendMessage(hPlayer, self.Responses.GameRules, { Name = sCommand, Class = sGameRules })
+                    SendMessage(self.Responses.GameRules, { Name = sCommand, Class = sGameRules })
                     return
                 end
 
                 local bCooledDown, iExpiry = aCommand:GetCoolDown(hPlayer.id)
                 if (not bCooledDown) then
-                    self:SendMessage(hPlayer, self.Responses.CoolDown, { Name = sCommand, Time = Date:Format(iExpiry) })
+                    SendMessage(self.Responses.CoolDown, { Name = sCommand, Time = Date:Format(iExpiry) })
                     return
                 end
 
                 if (bSpectating ~= nil) then
                     if (bSpectating ~= bPlayerSpectating) then
-                        self:SendMessage(hPlayer, (bSpectating and self.Responses.Spectating or self.Responses.NotSpectating ), { Name = sCommand })
+                        SendMessage((bSpectating and self.Responses.Spectating or self.Responses.NotSpectating ), { Name = sCommand })
                         return
                     end
                 end
 
                 if (bDead ~= nil) then
                     if (bDead ~= bPlayerDead) then
-                        self:SendMessage(hPlayer, (bDead and self.Responses.Dead or self.Responses.NotDead ), { Name = sCommand })
+                        SendMessage((bDead and self.Responses.Dead or self.Responses.NotDead ), { Name = sCommand })
                         return
                     end
                 end
 
                 if (bInVehicle ~= nil) then
                     if (bInVehicle ~= bPlayerInVehicle) then
-                        self:SendMessage(hPlayer, (bInVehicle and self.Responses.InVehicle or self.Responses.NotInVehicle ), { Name = sCommand })
+                        SendMessage((bInVehicle and self.Responses.InVehicle or self.Responses.NotInVehicle ), { Name = sCommand })
                         return
                     end
                 end
 
                 if (bInDoors ~= nil) then
                     if (bInDoors ~= bPlayerInDoors) then
-                        self:SendMessage(hPlayer, (bInDoors and self.Responses.InDoors or self.Responses.NotInDoors ), { Name = sCommand })
+                        SendMessage((bInDoors and self.Responses.InDoors or self.Responses.NotInDoors ), { Name = sCommand })
                         return
                     end
                 end
@@ -537,7 +694,7 @@ Server:CreateComponent({
                 if (sGameRules == GameMode_PS) then
                     if (iPrice ~= nil) then
                         if (iPrice > iPlayerPrestige) then
-                            self:SendMessage(hPlayer, self.Responses.InsufficientPrestige, { Name = sCommand })
+                            SendMessage(self.Responses.InsufficientPrestige, { Name = sCommand })
                             return
                         end
                         bProcessPayment = true
@@ -549,7 +706,8 @@ Server:CreateComponent({
             local pSelf = (aCommand.This or aCommand.Properties.This)
             if (pSelf) then
                 if (IsString(pSelf)) then
-                    table.insert(tPushArguments, CheckGlobal(pSelf))
+                    pSelf = CheckGlobal(pSelf)
+                    table.insert(tPushArguments, pSelf)
                 else
                     table.insert(tPushArguments, pSelf)
                 end
@@ -575,11 +733,12 @@ Server:CreateComponent({
                 -- Still empty!
                 if (sUserArg == nil) then
                     if (aCmdArg.Required) then
-                        local sIndex = ("<%d>"):format(iArg)
+                        local sIndex = ("<%s>"):format(aCmdArg.Name)
                         if (aCmdArg.Type ~= nil) then
-                            sIndex = ("<%d (%s)>"):format(iArg, self:ConvertArgumentType(aCmdArg.Type))
+                            --sIndex = ("<%d (%s)>"):format(iArg, (self:ConvertArgumentType(aCmdArg.Type)))
+                            sIndex = ("<(%s)>"):format(aCmdArg.Name)
                         end
-                        self:SendMessage(hPlayer, {
+                        SendMessage({
                             Message = "@command_argNMissing",
                         }, { Index = sIndex, Name = sCommand })
                         return
@@ -613,7 +772,7 @@ Server:CreateComponent({
                         elseif ((aCmdArg.AllOk or aCmdArg.AcceptAll) and IsAny(sUserArgLower, "all", "everyone")) then
                             hArgReplacement = ALL_PLAYERS
                         else
-                            self:SendMessage(hPlayer, {
+                            SendMessage({
                                 Message = "@command_argPlayerNotFound",
                             }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                             return
@@ -623,11 +782,11 @@ Server:CreateComponent({
                     if (hArgReplacement ~= ALL_PLAYERS) then
                         if (aCmdArg.EqualAccess) then
                             if (hArgReplacement:GetAccess() > hPlayer:GetAccess()) then
-                                self:SendMessage(hPlayer, self.Responses.InsufficientAccess, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
+                                SendMessage(self.Responses.InsufficientAccess, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                                 return
                             end
                         elseif (aCmdArg.NotUser and hPlayer == hArgReplacement) then
-                            self:SendMessage(hPlayer, {
+                            SendMessage({
                                 Message = "@command_argNotSelf"
                             }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                             return
@@ -637,7 +796,7 @@ Server:CreateComponent({
                 elseif (iArgType == CommandArg_TypeNumber) then
                     hArgReplacement = tonumber(sUserArg)
                     if (not hArgReplacement) then
-                        self:SendMessage(hPlayer, {
+                        SendMessage({
                             Message = "@command_argNotNumber"
                         }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                         return
@@ -647,7 +806,7 @@ Server:CreateComponent({
                         if (aCmdArg.ForceLimit) then
                             hArgReplacement = iArgMax
                         else
-                            self:SendMessage(hPlayer, {
+                            SendMessage({
                                 Message = "@command_argTooHigh"
                             }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                             return
@@ -658,7 +817,7 @@ Server:CreateComponent({
                         if (aCmdArg.ForceLimit) then
                             hArgReplacement = iArgMin
                         else
-                            self:SendMessage(hPlayer, {
+                            SendMessage({
                                 Message = "@command_argTooLow"
                             }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                             return
@@ -669,7 +828,7 @@ Server:CreateComponent({
 
                     hArgReplacement = Date:ParseTime(sUserArg)
                     if (hArgReplacement < 1) then
-                        self:SendMessage(hPlayer, {
+                        SendMessage({
                             Message = "@command_argInvalidTime"
                         }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                         return
@@ -679,7 +838,7 @@ Server:CreateComponent({
                         if (aCmdArg.ForceLimit) then
                             hArgReplacement = iArgMax
                         else
-                            self:SendMessage(hPlayer, {
+                            SendMessage({
                                 Message = "@command_argTooHigh"
                             }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                             return
@@ -690,7 +849,7 @@ Server:CreateComponent({
                         if (aCmdArg.ForceLimit) then
                             hArgReplacement = iArgMin
                         else
-                            self:SendMessage(hPlayer, {
+                            SendMessage({
                                 Message = "@command_argTooLow"
                             }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                             return
@@ -702,7 +861,7 @@ Server:CreateComponent({
                     hArgReplacement = ({ Server.Utils:FindCVarByName(sUserArgLower, hPlayer) })
                     if (hArgReplacement[1]) then
                     elseif (IsArray(hArgReplacement[2])) then
-                        self:SendMessage(hPlayer, {
+                        SendMessage({
                             Success = true,
                             NoStatus = true,
                             Message = hArgReplacement[3],
@@ -712,7 +871,7 @@ Server:CreateComponent({
 
                     hArgReplacement = (hArgReplacement[2] or sUserArg)
                     if (not Server.Utils:GetCVar(hArgReplacement)) then
-                        self:SendMessage(hPlayer, {
+                        SendMessage({
                             Message = "@command_argNotACVar"
                         }, { CVar = sUserArgLower, Name = sCommand })
                         return
@@ -721,7 +880,7 @@ Server:CreateComponent({
                 elseif (iArgType == CommandArg_TypeAccess) then
                     hArgReplacement = Server.AccessManager:FindAccessByNameOrId(sUserArgLower)
                     if (not hArgReplacement) then
-                        self:SendMessage(hPlayer, {
+                        SendMessage({
                             Message = "@command_argNotAccess"
                         }, { Arg = sUserArgLower, Name = sCommand })
                         return
@@ -763,7 +922,7 @@ Server:CreateComponent({
             local aResponse = { pcall(hFunction, unpack(tPushArguments)) }
             if (not aResponse[1]) then
                 aCommand:Break()
-                self:SendMessage(hPlayer, self.Responses.ScriptError, { Name = sCommand })
+                SendMessage(self.Responses.ScriptError, { Name = sCommand })
                 self:LogError("Failed to Execute Command '%s'", sCommand)
                 self:LogError("Arguments: %s", (string.empty(sArguments, "<None>")))
                 self:LogError("%s", ToString(aResponse[2]))
@@ -775,23 +934,23 @@ Server:CreateComponent({
 
             if (bOk == false) then
                 if (sReply) then
-                    self:SendMessage(hPlayer, {
+                    SendMessage({
                         Message = sReply,
                     }, { Name = sCommand })
                 else
-                    self:SendMessage(hPlayer, self.Responses.Failed, { Name = sCommand })
+                    SendMessage(self.Responses.Failed, { Name = sCommand })
                 end
                 return
             elseif (bOk == nil) then
-                self:SendMessage(hPlayer, self.Responses.NoFeedback, { Name = sCommand })
+                SendMessage(self.Responses.NoFeedback, { Name = sCommand })
             elseif (bOk == true) then
                 if (sReply) then
-                    self:SendMessage(hPlayer, {
+                    SendMessage({
                         Success = true,
                         Message = sReply,
                     }, { Name = sCommand })
                 else
-                    self:SendMessage(hPlayer, self.Responses.Success, { Name = sCommand })
+                    SendMessage(self.Responses.Success, { Name = sCommand })
                 end
             end
 
@@ -802,47 +961,56 @@ Server:CreateComponent({
             end
         end,
 
-        ConvertArgumentType = function(self, iType, bShort)
+        ConvertArgumentType = function(self, iType, bShort, bLocalized)
             local aTypeList = {
                 [-1] = {
                     Long = "Unknown-Type",
-                    Short = "?"
+                    Short = "?",
+                    Locale = "@arg_unknown",
                 },
                 [CommandArg_TypeBoolean] = {
                     Long = "Boolean",
-                    Short = "B"
+                    Short = "B",
+                    Locale = "@arg_boolean",
                 },
                 [CommandArg_TypeNumber] = {
                     Long = "Number",
-                    Short = "N"
+                    Short = "N",
+                    Locale = "@arg_number",
                 },
                 [CommandArg_TypeTime] = {
                     Long = "Time",
-                    Short = "T"
+                    Short = "T",
+                    Locale = "@arg_time",
                 },
                 [CommandArg_TypeString] = {
                     Long = "String",
-                    Short = "S"
+                    Short = "S",
+                    Locale = "@arg_string",
                 },
                 [CommandArg_TypeAccess] = {
                     Long = "Access",
-                    Short = "A"
+                    Short = "A",
+                    Locale = "@arg_access",
                 },
                 [CommandArg_TypePlayer] = {
                     Long = "Player",
-                    Short = "P"
+                    Short = "P",
+                    Locale = "@arg_player",
                 },
                 [CommandArg_TypeMessage] = {
                     Long = "Message",
-                    Short = "C"
+                    Short = "C",
+                    Locale = "@arg_message",
                 },
                 [CommandArg_TypeCVar] = {
                     Long = "CVar",
-                    Short = "V"
+                    Short = "V",
+                    Locale = "@arg_cvar",
                 },
             }
 
-            return (aTypeList[iType] or aTypeList[-1])[(bShort and "Short" or "Long")]
+            return (aTypeList[iType] or aTypeList[-1])[(bShort and "Short" or (bLocalized and "Locale") or "Long")]
         end,
 
         SortCommands = function(self, aList)
@@ -887,35 +1055,48 @@ Server:CreateComponent({
             local sRank, sRankColor
             local sCmdColor
 
+            local iDisplayed = 0
             local iCmdCount = 0
             local sCmdLine  = ""
 
             local bPS = (g_gameRules.class == POWER_STRUGGLE)
 
-            for _, aCommands in pairs(aCommandList) do
+            --for _, aCommands in pairs(aCommandList) do
+            for _ = Server.AccessHandler:GetLowestAccess(), Server.AccessHandler:GetHighestAccess() do
+
+                local aCommands = aCommandList[_]
 
                 sRank      = Server.AccessHandler:GetAccessName(_)
                 sRankColor = Server.AccessHandler:GetAccessColor(_)
 
                 if (iPlayerAccess >= _ and table.count(aCommands) > 0) then
                     Server.Chat:ConsoleMessage(hPlayer, " ")
-                    Server.Chat:ConsoleMessage(hPlayer, "$9" .. string.mspace((" [ " .. sRankColor .. sRank .. " $9($4" .. table.count(aCommands) .. "$9)" .. " $9] "), iLineWidth, 1, string.COLOR_CODE, "="))
+                    Server.Chat:ConsoleMessage(hPlayer, "$9" .. string.mspace((" [ " .. sRankColor .. sRank .. " $9($1" .. table.count(aCommands) .. "$9)" .. " $9] "), iLineWidth, 1, string.COLOR_CODE, "="))
                     Server.Chat:ConsoleMessage(hPlayer, " ")
 
                     sCmdLine = "    "
                     iCmdCount = 0
+                    iDisplayed = 0
                     for __, aCmd in pairs(aCommands) do
 
-                        if (not aCmd:IsHidden()) then
+                        local sCmdName = aCmd.Name
+                        if (not aCmd:IsHidden() and (not sFilter or string.match(sCmdName:lower(), sFilter:lower()))) then
                             sCmdColor = CRY_COLOR_GRAY
+                            if (sFilter) then
+                                local iStart, iEnd = string.find(string.lower(sCmdName), string.lower(sFilter), 1, true)
+                                if (iStart) then
+                                    sCmdName = ("$9%s$6%s$9%s"):format((sCmdName:sub(1, iStart - 1)), (sCmdName:sub(iStart, iEnd)):upper(), (sCmdName:sub(iEnd + 1)))
+                                end
+                            end
                             if (aCmd:IsBroken() or aCmd:IsDisabled()) then
                                 sCmdColor = CRY_COLOR_RED
                             end
 
-                            sCmdLine = (sCmdLine .. string.rspace(CRY_COLOR_WHITE .. "!$9" .. sCmdColor .. aCmd.Name .. "", iCommandWidth, string.COLOR_CODE))
+                            sCmdLine = (sCmdLine .. string.rspace(CRY_COLOR_WHITE .. "!$9" .. sCmdColor .. sCmdName .. "", iCommandWidth, string.COLOR_CODE))
                             iCmdCount = (iCmdCount + 1)
                             if (iCmdCount % iItemsPerLine == 0) then
                                 Server.Chat:ConsoleMessage(hPlayer, CRY_COLOR_GRAY .. sCmdLine)
+                                iDisplayed = iDisplayed + 1
                                 sCmdLine = "    "
                             end
                         end
@@ -923,6 +1104,11 @@ Server:CreateComponent({
 
                     if (not string.empty(sCmdLine)) then
                         Server.Chat:ConsoleMessage(hPlayer, CRY_COLOR_GRAY .. sCmdLine)
+                        iDisplayed = iDisplayed + 1
+                    end
+
+                    if (iDisplayed == 0 and sFilter) then
+                        Server.Chat:ConsoleMessage(hPlayer, "      {Gray}@command_noFilterMatch", { Filter = sFilter })
                     end
                 end
             end

@@ -230,7 +230,17 @@ end
 
 string.mspace = function(s, space, s_len_div, sClean, sChar)
 
-	------------
+	--[[
+	if sClean then
+		s = string.gsub(s, sClean, "")
+	end
+	local pad = math.max(space - #s, 0)
+	local left = math.floor(pad / 2)
+	local right = pad - left
+	if (right + left > space) then end
+	return string.rep(sChar or " ", left) .. s .. string.rep(sChar or " ", right)
+
+	]]
 	local iLen = string.len(s)
 	if (sClean) then
 		iLen = string.len(string.gsub(s, sClean, "")) end
@@ -238,7 +248,6 @@ string.mspace = function(s, space, s_len_div, sClean, sChar)
 	if (iLen > space) then
 		return s
 	end
-
 	------------
 	local s_len = (iLen) / (s_len_div or 1)
 	local side_len = math.floor((space / 2) - (s_len / 2))
@@ -1189,6 +1198,8 @@ end
 -- string.escape
 
 string.escape = function(sString, aExtra)
+
+	error("dont use me!")
 
     ---------
     local aMap = {

@@ -220,7 +220,7 @@ Server:CreateComponent({
 
         FindPlayerByName = function(self, sName, bGreedy, bIgnoreChannels)
 
-            sName = string.escape(sName)
+            sName = string.Escape(sName)
             local sNameLower = string.lower(sName)
 
             local aFound = {}

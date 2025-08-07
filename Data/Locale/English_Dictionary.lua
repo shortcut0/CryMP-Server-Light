@@ -52,6 +52,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "commandHelp_Chat",
+        Languages = {
+            English = "[ {Name} ] Info sent to Console"
+        }
+    },
+    {
         String = "command_reserved",
         Languages = {
             English = "Reserved for {Class} Users"
@@ -150,7 +156,7 @@ Server.LocalizationManager:Add({
     {
         String = "command_consoleLog",
         Languages = {
-            English = "{Red}{Name}{Gray} Executed {White}!{Red}{Command}{Gray} {Reply}"
+            English = "{Red}{Name}{Gray} Executed {White}!{Command}{Gray} {Reply}"
         }
     },
     {
@@ -207,6 +213,77 @@ Server.LocalizationManager:Add({
             English = "Invalid Access"
         }
     },
+    {
+        String = "command_noFilterMatch",
+        Languages = {
+            English = "No Commands Match your Filter '{Red}{Filter}{Gray}'"
+        }
+    },
+})
+
+Server.LocalizationManager:Add({
+    {
+        String = "channel_created",
+        Extended = ServerAccess_Admin,
+        Languages = {
+            -- PirateSoftware (CA, Canada) Connecting on Channel 5
+            English = {
+                Regular = "({Red}{CountryCode}{Gray}, {Red}{Country}{Gray}) {Red}{Nick}{Gray} Connecting on Channel {Red}{Channel}",
+                Extended = "({Red}{CountryCode}{Gray}, {Red}{Country}{Gray}) {Red}{Nick}{Gray} Connecting on Channel {Red}{Channel} {Gray}({Red}{IP}{Gray})",
+            },
+        },
+    },
+    {
+        String = "channel_disconnect",
+        Extended = ServerAccess_Admin,
+        Languages = {
+            -- PirateSoftware Disconnecting from Channel 5 (Disconnected, NetAspect7: Crysis had a Stroke!)
+            English = {
+                Regular = "{Red}{Nick}{Gray} Disconnecting from Channel {Red}{Channel}{Gray} ({Red}{ShortReason}{Gray})",
+                Extended = "{Red}{Nick}{Gray} Disconnecting from Channel {Red}{Channel}{Gray} ({Red}{ShortReason}{Gray}, {Red}{Reason}{Gray})",
+            },
+        },
+    },
+    {
+        String = "player_connected",
+        Extended = ServerAccess_Admin,
+        Languages = {
+            -- (CA) PirateSoftware Connected on Channel 5 (16s)
+            English = {
+                Regular = "{Red}{Name}{Gray} Connected on Channel {Red}{Channel}{Gray} In {Red}{Time}{Gray} ({Red}{CountryCode}{Gray}, {Red}{CountryName}{Gray})",
+                Extended = "{Red}{Name}{Gray} Connected on Channel {Red}{Channel}{Gray} In {Red}{Time}{Gray} ({Red}{CountryCode}{Gray}, {Red}{CountryName}{Gray})",
+            },
+        },
+    },
+    {
+        String = "player_connectedChat",
+        Languages = {
+            -- (CA) PirateSoftware Connected on Channel 5 (16s)
+            English = {
+                Regular = "{Name} Connected on Channel {Channel} ({CountryCode}, {ISP})",
+            },
+        },
+    },
+    {
+        String = "player_disconnected",
+        Extended = ServerAccess_Admin,
+        Languages = {
+            -- PirateSoftware Disconnected (15h: 31m: 10s, Disconnected)
+            English = {
+                Regular = "{Red}{Name}{Gray} Disconnected ({Red}{Time}{Gray}, {Red}{ShortReason}{Gray})",
+                Extended = "{Red}{Name}{Gray} Disconnected from Channel {Red}{Channel}{Red} ({Red}{Time}{Gray}, {Red}{ShortReason}{Gray})",
+            },
+        },
+    },
+    {
+        String = "player_disconnectedChat",
+        Languages = {
+            -- PirateSoftware Disconnected (15h: 31m: 10s, Disconnected)
+            English = {
+                Regular = "{Name} Disconnected ({Time}, {ShortReason}}",
+            },
+        },
+    },
 })
 
 Server.LocalizationManager:Add({
@@ -225,13 +302,13 @@ Server.LocalizationManager:Add({
     {
         String = "user_notValidated",
         Languages = {
-            English = "Failed to Validate Profile {Red}{ProfileId}{Gray} from User {Red}{Name}{Gray}"
+            English = "Failed to Validate Profile {Red}{ProfileId}{Gray} from User {Red}{UserName}{Gray}"
         }
     },
     {
         String = "user_validated",
         Languages = {
-            English = "Profile {Red}{ProfileId}{Gray} from User {Red}{Name}{Gray} Has been Verified"
+            English = "Profile {Red}{ProfileId}{Gray} from User {Red}{UserName}{Gray} Has been Verified"
         }
     },
     {
@@ -243,13 +320,26 @@ Server.LocalizationManager:Add({
     {
         String = "user_accessAssigned",
         Languages = {
-            English = "Assigning Default Access {AccessColor}{AccessName}{Gray} to Player {Red}{UserName}"
+            English = "{Temporary}Assigning Access {AccessColor}{AccessName}{Gray} to {Local}Player {Red}{UserName}"
         }
     },
     {
         String = "user_ipIdAssigned",
         Languages = {
             English = "Assigned IP-Profile {Red}{ID}{Gray} to User {Red}{UserName}"
+        }
+    },
+    {
+        String = "user_deleted",
+        Languages = {
+            English = "Registered User {Red}{UserName}{Gray} ({Red}{ProfileID}{Gray}) has been {Red}Deleted{Gray} by {Orange}{AdminName}"
+        }
+    },
+    {
+        String = "user_registered",
+        Languages = {
+            -- Shortcut0 has Registered User PirateSoftware (1008858) As Admin
+            English = "{Red}{AdminName}{Gray} Has Registered User {Red}{UserName}{Gray} ({Red}{ProfileID}{Gray}) As {AccessColor}{AccessName}{Gray}"
         }
     },
 })
@@ -324,6 +414,78 @@ Server.LocalizationManager:Add({
             English = "Used"
         }
     },
+    {
+        String = "str_temporarily",
+        Languages = {
+            English = "Temporarily"
+        }
+    },
+    {
+        String = "str_demoted",
+        Languages = {
+            English = "Demoted"
+        }
+    },
+    {
+        String = "str_promoted",
+        Languages = {
+            English = "Promoted"
+        }
+    },
+    {
+        String = "str_local",
+        Languages = {
+            English = "Local"
+        }
+    },
+    {
+        String = "str_Never",
+        Languages = {
+            English = "Never"
+        }
+    },
+    {
+        String = "str_Today",
+        Languages = {
+            English = "Today"
+        }
+    },
+    {
+        String = "str_ago",
+        Languages = {
+            English = "Ago"
+        }
+    },
+    {
+        String = "str_online",
+        Languages = {
+            English = "Online"
+        }
+    },
+    {
+        String = "str_offline",
+        Languages = {
+            English = "Offline"
+        }
+    },
+    {
+        String = "str_usage",
+        Languages = {
+            English = "Usage"
+        }
+    },
+    {
+        String = "str_prefixes",
+        Languages = {
+            English = "Prefixes"
+        }
+    },
+    {
+        String = "str_description",
+        Languages = {
+            English = "Description"
+        }
+    },
 })
 
 
@@ -340,6 +502,12 @@ Server.LocalizationManager:Add({
         String = "insufficientAccess",
         Languages = {
             English = "Insufficient Access"
+        }
+    },
+    {
+        String = "alreadyAccess",
+        Languages = {
+            English = "Access already {Class}"
         }
     },
     {
@@ -366,12 +534,60 @@ Server.LocalizationManager:Add({
             English = "No {Class} to Display Available"
         }
     },
+    {
+        String = "welcome_toTheServer",
+        Languages = {
+            English = "Welcome to the Server"
+        }
+    },
+    {
+        String = "yourLastVisit",
+        Languages = {
+            English = "Your Last Visit"
+        }
+    },
+    {
+        String = "nextMap",
+        Languages = {
+            English = "Next Map"
+        }
+    },
+    {
+        String = "no_description",
+        Languages = {
+            English = "No Description"
+        }
+    },
 })
 
 
 -- ===================================================================================
 
 Server.LocalizationManager:Add({
+    {
+        String = "command_commands",
+        Languages = {
+            English = "Lists all Available Console Commands to your Console"
+        }
+    },
+})
+
+
+-- ===================================================================================
+
+Server.LocalizationManager:Add({
+    {
+        String = "arg_filter",
+        Languages = {
+            English = "Filter"
+        }
+    },
+    {
+        String = "arg_filter_desc",
+        Languages = {
+            English = "The desired Filter to Apply"
+        }
+    },
     {
         String = "arg_profileId",
         Languages = {
@@ -388,6 +604,66 @@ Server.LocalizationManager:Add({
         String = "arg_name",
         Languages = {
             English = "Name"
+        }
+    },
+    {
+        String = "arg_number",
+        Languages = {
+            English = "Number"
+        }
+    },
+    {
+        String = "arg_unknown",
+        Languages = {
+            English = "Unknown"
+        }
+    },
+    {
+        String = "arg_time",
+        Languages = {
+            English = "Time"
+        }
+    },
+    {
+        String = "arg_boolean",
+        Languages = {
+            English = "Boolean"
+        }
+    },
+    {
+        String = "arg_cvar",
+        Languages = {
+            English = "CVar"
+        }
+    },
+    {
+        String = "arg_string",
+        Languages = {
+            English = "String"
+        }
+    },
+    {
+        String = "arg_message",
+        Languages = {
+            English = "Message"
+        }
+    },
+    {
+        String = "arg_access",
+        Languages = {
+            English = "Access"
+        }
+    },
+    {
+        String = "arg_access_desc",
+        Languages = {
+            English = "The specific Access Class to Apply"
+        }
+    },
+    {
+        String = "arg_consoleHelpLine1",
+        Languages = {
+            English = "{Red}<>{Gray} Arguments are Required, {Blue}<>{Gray} are Optional."
         }
     },
 })

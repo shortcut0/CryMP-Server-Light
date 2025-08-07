@@ -103,6 +103,7 @@ Server:CreateComponent({
                     TagColor = self.Properties.ConsoleLogTagDefaultColor
                 })
                 self.ConsoleLogClasses[sComponent] = aConsoleLogInfo
+                self.ConsoleLogClasses[aComponent:GetFriendlyName()] = aConsoleLogInfo
             end
             self:Log("Created Default Log Classes for %d Components", table.count(Server.ComponentList))
         end,
@@ -145,6 +146,8 @@ Server:CreateComponent({
                 Server.Logger:Log("Bad Sender Specified to ChatMessage(): %s", ToString(pSender))
                 return
             end
+
+            sMessage = string.gsub(sMessage, string.COLOR_CODE, "")
 
             local iTeamId = ((IsString(pTarget) or (IsAny(pTarget, GameTeam_Neutral, GameTeam_NK, GameTeam_NK))) and Server.Utils:GetTeam_Number(pTarget))
             if (not iTeamId and pTarget == ChatType_ToTeam) then
@@ -466,7 +469,92 @@ Server:CreateComponent({
         end,
 
         SendWelcomeMessage = function(self, hPlayer)
-            DebugLog("welcome message..")
+
+            local sAccessName = hPlayer:GetAccessName()
+            local sAccessColor = hPlayer:GetAccessColor()
+            local sPlayerName = hPlayer:GetName()
+            local sLastVisit = hPlayer:GetLastConnect(true, "@str_Never", "@str_Today")
+            local sServerTime = Date:Colorize(Date:Format(hPlayer.Data.ServerTime, (DateFormat_Cramped + DateFormat_Hours)), "$5")
+            local sAdminStatus = table.empty(Server.AccessHandler:GetAdmins()) and "$4@str_offline" or "$3@str_online"
+            local sCountry = ("(%s) %s"):format(hPlayer:GetCountryCode(), hPlayer:GetCountryName())
+
+            -- TODO
+            local sNextMap = "$4Mesa $9($4PS$9)"
+
+            local sUsageInfo = string.format("CPU: %d%%, %s", ServerDLL.GetCPUUsage(), Server.Utils:ByteSuffix(ServerDLL.GetMemUsage(), 0))
+
+
+            local aFormat = {
+            }
+
+
+            -- !!FIXME
+            local sCPU = ("$4%0.2f$9%%"):format(ServerDLL.GetCPUUsage() or "0")
+            local sMemory = ("$4%s"):format(Server.Utils:ByteSuffix(ServerDLL.GetMemUsage())):gsub("%s", " $9")
+            local sModInfo = Server.Logger:FormatTags("{Red}{Mod_Version}{Gray}, {Red}x{Mod_Bits}")
+            local aServerLogo =
+            ([[
+              -- ===================================================================================
+              --{Gray}       ____            __  __ ____            ____                                {Gray}--
+              --{Gray}      / ___|_ __ _   _|  \/  |  _ \          / ___|  ___ _ ____   _____ _ __      {Gray}--
+              --{Gray}     | |   | '__| | | | |\/| | |_) |  _____  \___ \ / _ \ '__\ \ / / _ \ '__|     {Gray}--
+              --{Gray}     | |___| |  | |_| | |  | |  __/  |_____|  ___) |  __/ |   \ V /  __/ |        {Gray}--
+              --{Gray}      \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|        {Gray}--
+              --{Gray}                 |___/            {Gray}by: {Red}shortcut0{Gray}                                   {Gray}--
+              ]]):gsub("\\", "\\"):format(
+                    string.mspace(sModInfo, 80, nil, string.COLOR_CODE),
+                    string.rspace(("CPU: " .. sCPU), 80, string.COLOR_CODE)
+            )
+            -- %s {Gray}--
+            -- %s {Gray}--
+
+
+            for _, sLine in pairs(string.split(aServerLogo, "\n")) do
+                self:ConsoleMessage(hPlayer, ("{Gray}%s"):format(sLine))
+            end
+
+            local function CreateInfoLine(tLeft, tCenter, tRight)
+                -- [  Last Visit : 30d Ago   ]                   [ Something : Some text    ]
+                -- [      Access : Developer ]                   [    PU/Mem : 35%, 611MB   ]
+                local iLeftNameWidth = 12
+                local iLeftValueWidth = 19
+                local iCenterWidth = 37
+                local iRightNameWidth = 14
+                local iRightValueWidth = 12
+                local iOffset = 0
+
+                local sSpace = " "
+                if (tLeft.NoSpace) then
+                    sSpace = ""
+                    iOffset = 1
+                end
+
+                local sNameLeft   =           string.lspace(hPlayer:LocalizeText(tLeft.Name or "", aFormat), iOffset + iLeftNameWidth, string.COLOR_CODE) .. sSpace
+                local sValueLeft  = sSpace .. string.rspace(hPlayer:LocalizeText(tLeft.Value or "", aFormat), iOffset + iLeftValueWidth, string.COLOR_CODE)
+                local sNameRight  =           string.lspace(hPlayer:LocalizeText(tRight.Name or "", aFormat), iOffset + iRightNameWidth, string.COLOR_CODE) .. sSpace
+                local sValueRight = sSpace .. string.rspace(hPlayer:LocalizeText(tRight.Value or "", aFormat), iOffset + iRightValueWidth, string.COLOR_CODE)
+                local sCenterLine =           string.mspace(hPlayer:LocalizeText(tCenter.Value or "", aFormat), iCenterWidth, nil, string.COLOR_CODE)
+
+                local sLeft = (tLeft.Empty and string.rep(" ", ((iLeftNameWidth + iLeftValueWidth) + 5)) or ("[ %s:{Gray}%s"):format(sNameLeft, sValueLeft))
+                local sRight = (tRight.Empty and string.rep(" ", ((iRightNameWidth + iRightValueWidth) + 5)) or ("%s:{Gray}%s {Gray}]"):format(sNameRight, sValueRight))
+                local sLine = (" {Gray}%s {Gray}| %s {Gray}| %s"):format(sLeft, sCenterLine, sRight)
+                self:ConsoleMessage(hPlayer, sLine)
+            end
+
+            self:ConsoleMessage(hPlayer, (" {Gray}%s"):format(string.rep("=", self:GetConsoleWidth() - 3)))
+            CreateInfoLine({ NoSpace = true, Name = "USER$5", Value = "INFO" }, {}, { NoSpace = true, Name = "SERVER$4", Value = "INFO" })
+            CreateInfoLine({ NoSpace = true, Empty = true }, { Value = "@welcome_toTheServer, $5" .. sPlayerName }, { NoSpace = true, Empty = true })
+            CreateInfoLine({ Name = "Access", Value = sAccessColor .. sAccessName }, {Value = "@yourLastVisit: $4" .. sLastVisit}, { Name = "Up-Time", Value = Date:Colorize(Date:Format(_time, DateFormat_Minutes + DateFormat_Cramped)) })
+            CreateInfoLine({ Name = "ProfileID", Value = "$5" .. hPlayer:GetProfileId() }, {  }, { Name = "Memory", Value = sMemory })
+            CreateInfoLine({ Name = "IP", Value = "$8" .. hPlayer:GetIPAddress() }, {}, { Name = "CPU", Value = sCPU })
+            CreateInfoLine({ Name = "Country", Value = sCountry }, { }, { Name = "Highest Slot", Value = "$4" .. Server.Network.CurrentChannel })
+            CreateInfoLine({ Name = "Server-Time", Value = sServerTime }, { Value = "@nextMap: " .. sNextMap }, { Name = "Administration", Value = sAdminStatus })
+            self:ConsoleMessage(hPlayer, (" {Gray}%s"):format(string.rep("=", self:GetConsoleWidth() - 3)))
+            self:ConsoleMessage(hPlayer, " ")
+            self:ConsoleMessage(hPlayer, " ")
+
+            -- Chat
+            self:ChatMessage(Server:GetEntity(), hPlayer, "@welcome_toTheServer, " .. sAccessName .. " " .. sPlayerName, {})
         end,
 
     }
