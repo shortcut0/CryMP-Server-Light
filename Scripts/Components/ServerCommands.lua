@@ -322,7 +322,7 @@ Server:CreateComponent({
                     sConsole_Log = ("(%s{Gray})"):format(CRY_COLOR_ORANGE .. "@str_noFeedback")
                     sConsole_Msg = CRY_COLOR_ORANGE .. "@str_noFeedback"
                     sChat_Log = "@str_noFeedback"
-                    sChat_Msg = "@str_noFeedback"
+                    sChat_Msg = ""
                 else
 
                     -- return false, "Function Returned BAD!"
@@ -399,7 +399,8 @@ Server:CreateComponent({
             if (string.emptyN(sConsole_Msg)) then
                 -- So, we only do the normal log if the user used the "say" console command
                 -- Otherwise, we will just insert the user to the admin log recipients
-                if (iMessageType ~= ChatToTarget) then
+                local bSayConsoleLog = true
+                if (not bSayConsoleLog and iMessageType ~= ChatToTarget) then
                     self:LogEvent({
                         Event = self:GetFriendlyName(),
                         Recipients = { hPlayer },

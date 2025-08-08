@@ -110,3 +110,82 @@ table.Reverse = function(tbl, in_place)
     return reversed
 end
 
+----------------------------------
+--- Recursively counts elements inside a table
+table.CountRecursive = function(tbl, fPred, tInfo)
+
+    tInfo = tInfo or { Level = 1 }
+
+    local iCount = 0
+    for i, v in pairs(tbl) do
+        if (fPred == nil or fPred(i, v, tInfo.Level)) then
+            if (type(v) == "table") then
+                iCount = iCount + table.CountRecursive(v, fPred, { Level = tInfo.Level + 1 })
+            else
+                iCount = iCount + 1
+            end
+        end
+    end
+    return iCount
+end
+
+----------------------------------
+--- Formats a table to string
+table.ToString = function(tbl, tInfo)
+
+    local iMaxDepth = (tInfo.MaxDepth or -1)
+    local iDepth = (tInfo.CurrentDepth or 0)
+    local sName = (tInfo.Name or tostring(tbl))
+    local sTab = (tInfo.Tab or "   ")
+    local sTbl = "{"
+    if (string.emptyN(sName)) then
+        sTbl = ("%s = {"):format(sName)
+    end
+
+    sTbl = (sTbl .. "\n")
+
+    local iTbl = table.size(tbl)
+    local iCurr = 0
+    for sKey, hValue in pairs(tbl) do
+        local sElement
+        local sType = type(hValue)
+        iCurr = (iCurr + 1)
+        if (sType == "table") then
+            if (tInfo.Processed[hValue]) then
+                sElement = ([[["%s"] = %s]]):format(sKey, tostring(hValue))
+            else
+                tInfo.Processed[hValue] = true
+                if (iMaxDepth ~= -1 and iDepth >= iMaxDepth) then
+                    sElement = ([[["%s"] = %s]]):format(sKey, tostring(hValue))
+                else
+                    sElement = ([[["%s"] = %s]]):format(sKey, table.ToString(hValue, {
+                        iDepth = (iDepth + 1),
+                        iMaxDepth = iMaxDepth,
+                        Processed = tInfo.Processed,
+                        Name = "",
+                        Tab = (sTab .. sTab),
+                    }))
+                end
+            end
+        elseif (sType == "number") then
+            sElement = ([[["%s"] = %d]]):format(sKey, hValue)
+            if (string.find(tostring(hValue), "%.")) then
+                sElement = ([[["%s"] = %f]]):format(sKey, hValue)
+            end
+        elseif (sType == "string") then
+            sElement = ([[["%s"] = "%s"]]):format(sKey, hValue)
+        else
+            sElement = ([[["%s"] = %s]]):format(sKey, tostring(hValue))
+        end
+
+        if (iCurr ~= iTbl) then
+            sElement = sElement .. ","
+        end
+
+        sTbl = (sTbl .. sElement .. "\n")
+    end
+
+    sTbl = (sTbl .. "}")
+    return sTbl
+end
+

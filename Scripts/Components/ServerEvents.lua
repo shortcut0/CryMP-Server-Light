@@ -113,7 +113,12 @@ Server:CreateComponent({
                 end
             end,
             OnVehicleSpawn          = function() end,
-            OnScriptLoaded          = function() end,
+            OnLoadingScript          = function(self, sFileName)
+                Server.Patcher:OnLoadingScript(sFileName)
+            end,
+            OnScriptLoaded          = function(self, sFileName)
+                Server.Patcher:OnScriptLoaded(sFileName)
+            end,
             OnMapCommand            = function() end,
             OnScriptError            = function(this, sError)
                 Server.ErrorHandler:HandleError(sError)

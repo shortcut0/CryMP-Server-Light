@@ -10,6 +10,11 @@ return {
   ["OutOfMana"] = true,
   ["ServerTime"] = 1749,
  },
+ ["1073150"] = {
+  ["LastConnect"] = 1754619563,
+  ["OutOfMana"] = true,
+  ["ServerTime"] = 295,
+ },
  ["1073134"] = {
   ["LastConnect"] = 1754526309,
   ["OutOfMana"] = true,

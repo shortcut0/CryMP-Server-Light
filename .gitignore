@@ -4,3 +4,4 @@ CryMP-Server-Light.iml
 .idea/vcs.xml
 /.idea
 /Sources/C++/.vs
+/Sources/Lua/Crysis Scripts

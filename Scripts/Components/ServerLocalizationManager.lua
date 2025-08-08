@@ -138,7 +138,7 @@ Server:CreateComponent({
             end
 
             if (IsTable(sLocalized)) then
-                if (sLanguage.Extended and (iExtended == true or (sLocalized.Extended and (iExtended and iExtended >= aLocaleInfo.Extended)))) then
+                if (sLocalized.Extended and (iExtended == true or (sLocalized.Extended and (iExtended and iExtended >= aLocaleInfo.Extended)))) then
                     sLocalized = sLocalized.Extended
                 else
                     sLocalized = sLocalized.Regular

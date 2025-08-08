@@ -558,6 +558,18 @@ Server.LocalizationManager:Add({
             English = "No Description"
         }
     },
+    {
+        String = "rmi_flags_fixed",
+        Languages = {
+            English = "Fixed {Red}{Count}{Gray} Dangerous RMI Flags for Class {Red}{Class}"
+        }
+    },
+    {
+        String = "patcher_initialized",
+        Languages = {
+            English = "Patched {Red}{Functions}{Gray} Members from {Red}{Classes}{Gray} Classes"
+        }
+    },
 })
 
 

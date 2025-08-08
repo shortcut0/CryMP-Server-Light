@@ -5,25 +5,20 @@
 --        | |___| |  | |_| | |  | |  __/  |_____|  ___) |  __/ |   \ V /  __/ |     --
 --         \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|     --
 --                    |___/          by: shortcut0                                  --
---                          This file Contains Chat-Commands
+-- Contains Patched functions for 'Net'
 -- ===================================================================================
 
-Server.ChatCommands:Add({
-
-    Name        = "commands",
-    Access      = ServerAccess_Guest,
-    Description = "command_commands",
-
-    Arguments = {
-        { Name = "@arg_filter", Desc = "@arg_filter_desc" },
-    },
-
-    Properties = {
-        This = Server.ChatCommands
-    },
-
-    Function = function(self, hPlayer, sClass)
-        self:ListCommands(hPlayer, self.CommandMap, sClass)
-        return true
-    end
+Server.Patcher:HookClass({
+    Class = "Net",
+    HookNow = true,
+    Body = {
+        {
+            Name = "Expose",
+            Value = function(tInfo)
+                Server.Patcher:FixRMIFlags(tInfo)
+                Net.Expose_Backup(tInfo)
+            end,
+            Backup = true
+        }
+    }
 })

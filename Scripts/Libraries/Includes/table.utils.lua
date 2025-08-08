@@ -1069,7 +1069,7 @@ end
 ---------------------------
 -- table.findv
 
-table.findv = function(t, hFind)
+table.find_value = function(t, hFind)
 	for i, v in pairs(t) do
 		if (v == hFind) then
 			return v

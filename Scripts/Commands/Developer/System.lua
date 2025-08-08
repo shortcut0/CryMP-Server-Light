@@ -9,21 +9,9 @@
 -- ===================================================================================
 
 Server.ChatCommands:Add({
-
-    Name        = "commands",
-    Access      = ServerAccess_Guest,
-    Description = "command_commands",
-
-    Arguments = {
-        { Name = "@arg_filter", Desc = "@arg_filter_desc" },
-    },
-
-    Properties = {
-        This = Server.ChatCommands
-    },
-
-    Function = function(self, hPlayer, sClass)
-        self:ListCommands(hPlayer, self.CommandMap, sClass)
-        return true
+    Name = "reload",
+    Access = ServerAccess_Developer,
+    Function = function(self)
+        Server.Utils:ExecuteCommand("server_reloadScrip")
     end
 })

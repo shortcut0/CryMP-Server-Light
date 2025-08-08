@@ -5,25 +5,24 @@
 --        | |___| |  | |_| | |  | |  __/  |_____|  ___) |  __/ |   \ V /  __/ |     --
 --         \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|     --
 --                    |___/          by: shortcut0                                  --
---                          This file Contains Chat-Commands
+--                       Contains useful general Lua Functions
 -- ===================================================================================
 
-Server.ChatCommands:Add({
+--- @class LuaUtils
+LuaUtils = {
+}
 
-    Name        = "commands",
-    Access      = ServerAccess_Guest,
-    Description = "command_commands",
-
-    Arguments = {
-        { Name = "@arg_filter", Desc = "@arg_filter_desc" },
-    },
-
-    Properties = {
-        This = Server.ChatCommands
-    },
-
-    Function = function(self, hPlayer, sClass)
-        self:ListCommands(hPlayer, self.CommandMap, sClass)
-        return true
+LuaUtils.CheckGlobal = function(sGlobal, hDefault)
+    local t
+    if (string.sub(sGlobal, 2) ~= "_G") then
+        t = _G
     end
-})
+    for key in sGlobal:gmatch("[^%.]+") do
+        t = t[key]
+        if (t == nil) then
+            return hDefault
+        end
+    end
+    return t
+end
+

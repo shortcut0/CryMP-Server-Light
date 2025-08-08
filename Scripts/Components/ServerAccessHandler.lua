@@ -479,11 +479,11 @@ Server:CreateComponent({
                 }
 
                 -- ServerAccess_Admin
-                -- ServerAccess_ADMIN
-                -- ServerAccess_admin
+                -- ServerAccess_GetAdmins()
                 _G[("ServerAccess_%s"):format(aInfo.Name)] = aInfo.Level
-                _G[("ServerAccess_%s"):format(aInfo.Name:lower())] = aInfo.Level
-                _G[("ServerAccess_%s"):format(aInfo.Name:upper())] = aInfo.Level
+                _G[("ServerAccess_Get%ss"):format(aInfo.Name)] = function()
+                    return Server.Utils:GetPlayers({ ByAccess = aInfo.Level })
+                end
             end
 
             for iLevel, aInfo in pairs(self.AccessLevelMap) do
@@ -524,7 +524,6 @@ Server:CreateComponent({
 
             ServerAccess_Lowest = self.LowestAccessLevel
             ServerAccess_Highest = self.HighestAccessLevel
-            ffff=999
         end,
 
 

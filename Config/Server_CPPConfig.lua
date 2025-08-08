@@ -18,4 +18,8 @@ Server_CPPConfig = {
 
     -- If Server should always enforce HTTP on all Network Requests
     ForceHTTPOverHTTPs = false,
+
+    -- If enabled, upon loading a script, the server will check if an identical file is present inside the overwrite folder
+    -- if there is, that one will be loaded INSTEAD.
+    UseAutomaticScriptRedirection = true,
 }
