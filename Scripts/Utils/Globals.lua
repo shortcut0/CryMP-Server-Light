@@ -50,12 +50,17 @@ ServerEvent_OnMapStarted          = Inc()
 ServerEvent_OnEntitySpawn         = Inc()
 ServerEvent_OnVehicleSpawn        = Inc()
 ServerEvent_OnScriptLoaded        = Inc()
+ServerEvent_OnScriptLoading       = Inc()
 ServerEvent_OnMapCommand          = Inc()
+ServerEvent_OnPostInit            = Inc()
+ServerEvent_OnInit          = Inc()
 
 ServerEvent_MAX = IncEnd()
 
 ServerScriptEvent_OnProfileValidated = "OnProfileValidated"
 ServerScriptEvent_OnValidationFailed = "OnValidationFailed"
+ServerScriptEvent_OnPostInit = "OnPostInitialize"
+ServerScriptEvent_OnInit = "OnInitialize"
 
 ----------------------------
 ---    SERVER NETWORK    ---
@@ -92,6 +97,7 @@ GameTeam_Neutral_String = "Neutral"
 
 GameMode_IA = "InstantAction"
 GameMode_PS = "PowerStruggle"
+GameMode_TIA = "TeamInstantAction"
 
 ----------------------------
 ---     SERVER LOCALE    ---
@@ -117,6 +123,17 @@ CommandArg_TypeCVar = 8     -- a valid cvar
 
 ----------------------------
 ALL_PLAYERS = 1000
+
+----------------------------
+CommandResp_Success = 3
+CommandResp_SuccessQuiet = 4
+
+----------------------------
+ConfigType_Any = 1
+ConfigType_String = 2
+ConfigType_Number = 3
+ConfigType_Array = 4
+ConfigType_Boolean = 5
 
 ----------------------------
 PRIORITY_NONE = 1

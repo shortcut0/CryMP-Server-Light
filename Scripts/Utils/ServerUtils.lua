@@ -194,8 +194,33 @@ Server:CreateComponent({
             System.SetCVar(sCVar, sValue)
         end,
 
+        ExecuteCommand = function(self, sCommand, hAdmin)
+            local sAdmin = "Server"
+            if (hAdmin) then
+                sAdmin = hAdmin:GetName()
+            end
+            if (not sCommand) then
+                ServerLogError("No Command Specified to ExecuteCommand")
+                return
+            end
+            if (string.match(sCommand:lower(), "^map")) then
+                Server:OnMapCommand()
+            end
+            ServerLog("%s Executes Command '%s'", sAdmin, sCommand)
+            System.ExecuteCommand(sCommand)
+        end,
+
         IsEntity = function(self, pEntity)
             return ((IsUserdata(pEntity) and self:GetEntity(pEntity)) or (IsTable(pEntity) and self:GetEntity(pEntity.id)))
+        end,
+
+        GetEntities = function(self, aInfo)
+            local aEntities
+            if (aInfo.ByClass) then
+                aEntities = System.GetEntitiesByClass(aInfo.ByClass)
+            end
+
+            return aEntities or {}
         end,
 
         GetEntity = function(self, hId)

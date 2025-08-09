@@ -8,7 +8,7 @@
 --                       Contains useful general Lua Functions
 -- ===================================================================================
 
---- @class LuaUtils
+---@class LuaUtils
 LuaUtils = {
 }
 

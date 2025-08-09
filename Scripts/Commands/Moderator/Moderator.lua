@@ -9,9 +9,18 @@
 -- ===================================================================================
 
 Server.ChatCommands:Add({
-    Name = "reload",
-    Access = ServerAccess_Developer,
-    Function = function(self)
-        Server.Utils:ExecuteCommand("server_reloadScript")
+    Name = "NextMap",
+    Access = ServerAccess_Guest,
+    Arguments = {
+        { Name = "@arg_time/@arg_stop", Desc = "@arg_time_desc/@arg_stop_desc" }
+    },
+    Properties = {
+        This = "Server.MapRotation"
+    },
+    Function = function(self, hPlayer, hOption)
+        if (hOption == "show" or not hPlayer:HasAccess(ServerAccess_Moderator)) then
+            return true, hPlayer:LocalizeText("@next_map", { Name = self:GetNextMapName() })
+        end
+        return self:Command_NextMap(hOption, hPlayer)
     end
 })

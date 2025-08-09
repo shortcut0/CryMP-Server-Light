@@ -87,8 +87,7 @@ Server:CreateComponent({
             self:BuildAccessInfo()
         end,
 
-        PostInitialize = function(self)
-
+        Initialize = function(self)
             for _, aUserInfo in pairs(self.Properties.RegisteredUsers) do
                 self.SavedUsers[aUserInfo.ProfileID] = aUserInfo
             end
@@ -102,7 +101,11 @@ Server:CreateComponent({
             })
         end,
 
+        PostInitialize = function(self)
+        end,
+
         OnValidationFinished = function(self, hPlayer)
+
             Server.Chat:SendWelcomeMessage(hPlayer)
             Server.Network:SendMessage(hPlayer, "Connected")
         end,

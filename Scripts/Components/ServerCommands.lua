@@ -104,10 +104,6 @@ Server:CreateComponent({
         },
 
         Initialize = function(self)
-        end,
-
-        PostInitialize = function(self)
-
             self:RegisterCommands()
 
             local iCommandsLoaded = table.size(self.CommandMap)
@@ -119,6 +115,10 @@ Server:CreateComponent({
             })
         end,
 
+        PostInitialize = function(self)
+
+        end,
+
         Add = function(self, aInfo)
             table.insert(self.CollectedCommands, aInfo)
         end,
@@ -127,13 +127,11 @@ Server:CreateComponent({
             for _, aInfo in pairs(self.CollectedCommands) do
                 self:RegisterCommand(aInfo)
             end
-
-            self.CollectedCommands = nil
         end,
 
         RegisterCommand = function(self, aInfo)
             local sName         = aInfo.Name
-            local aArguments    = aInfo.Arguments
+            local aArguments    = (aInfo.Arguments or {})
             local tProperties   = (aInfo.Properties or {})
             local hFunction     = aInfo.Function
 
@@ -157,17 +155,7 @@ Server:CreateComponent({
                 return
             end
 
-            if (not tProperties) then
-                tProperties = {}
-
-            else
-            end
-
-            if (not aArguments) then
-                aArguments = {}
-            end
-
-            self.CommandMap[string.lower(sName)] = self:BuildCommand(sName, aArguments, tProperties, hFunction, aInfo.Access)
+            self:BuildCommand(sName, aArguments, tProperties, hFunction, aInfo.Access)
         end,
 
         BuildCommand = function(self, sName, aArguments, tProperties, hFunction, iAccessLevel)
@@ -272,8 +260,8 @@ Server:CreateComponent({
             local aLogRecipients = Server.Utils:GetPlayers({ NotById = hPlayer.id, ByAccess = hPlayer:GetAccess(Server.AccessHandler:GetAdminLevel()) })
             local aChatLogRecipients = table.copy(aLogRecipients)
 
-            local sMessage = tMessage.Message
-            local sAdminMessage = (tMessage.AdminMessage or sMessage)
+            local sMessage = Server.Logger:RidColors(hPlayer:LocalizeText(tMessage.Message or "", {}))
+            local sAdminMessage = Server.Logger:RidColors(hPlayer:LocalizeText((tMessage.AdminMessage or sMessage or ""), {}))
 
             local sConsole_Log  -- Admins
             local sConsole_Msg  -- Player
@@ -366,6 +354,10 @@ Server:CreateComponent({
             if (tMessage == self.Responses.NotFound) then
                 sChat_Log = nil
                 sConsole_Log = nil
+            end
+
+            if (tMessage.ChatOnly) then
+                sConsole_Msg = ""
             end
 
             -- Admins:
@@ -709,18 +701,23 @@ Server:CreateComponent({
                 if (IsString(pSelf)) then
                     pSelf = CheckGlobal(pSelf)
                     table.insert(tPushArguments, pSelf)
+                    DebugLog("push pSelf??")
                 else
                     table.insert(tPushArguments, pSelf)
+                    DebugLog("push pSelf??")
                 end
-                aCommand.This = tPushArguments[1] -- Cache for later
+                if (not aCommand.This) then -- Cache for later
+                    aCommand.This = pSelf
+                end
             end
+
+            DebugLog("push player??")
             table.insert(tPushArguments, hPlayer)
 
             -- ===========================================================================
             -- Check Arguments
 
             local sUserArg, sUserArgLower
-
             for iArg, aCmdArg in pairs((aCommandArgs)) do
 
                 sUserArg = tArgs[iArg]
@@ -925,8 +922,8 @@ Server:CreateComponent({
                 aCommand:Break()
                 SendMessage(self.Responses.ScriptError, { Name = sCommand })
                 self:LogError("Failed to Execute Command '%s'", sCommand)
-                self:LogError("Arguments: %s", (string.empty(sArguments, "<None>")))
-                self:LogError("%s", ToString(aResponse[2]))
+                self:LogError("Arguments: %s", (string.empty(sArguments) and "<None>" or sArguments))
+                self:LogError("%s", tostring(aResponse[2]))
                 return
             end
 
@@ -944,11 +941,21 @@ Server:CreateComponent({
                 return
             elseif (bOk == nil) then
                 SendMessage(self.Responses.NoFeedback, { Name = sCommand })
-            elseif (bOk == true) then
+            elseif (bOk == true or bOk == CommandResp_Success) then
                 if (sReply) then
                     SendMessage({
                         Success = true,
                         Message = sReply,
+                    }, { Name = sCommand })
+                else
+                    SendMessage(self.Responses.Success, { Name = sCommand })
+                end
+            elseif (bOk == CommandResp_SuccessQuiet) then
+                if (sReply) then
+                    SendMessage({
+                        Success = true,
+                        Message = sReply,
+                        ChatOnly = true
                     }, { Name = sCommand })
                 else
                     SendMessage(self.Responses.Success, { Name = sCommand })

@@ -101,6 +101,7 @@ Server.Initialize = function(self)
         return false
     end
 
+    self.Events:Call(ServerScriptEvent_OnInit)
     self.Initialized = true
     ServerLog("Script Fully Initialized!")
     return true
@@ -128,15 +129,18 @@ Server.PostInitialize = function(self)
 
     self:CheckServerEntity()
     self.Logger:PostInitialize()
+    self.Events:Call(ServerScriptEvent_OnPostInit)
 
     self.PostInitialized = true
 
     self.Logger:LogEvent({
         Event = "Server",
         Message = ("@initialization_time"),
-        MessageFormat = { Time = Date:Format(os.clock() - self.InitializeStart) },
+        MessageFormat = { Time = Date:Format(os.clock() - MAP_LOAD_START) },
         Recipients = self.Utils:GetPlayers()
     })
+
+    self:ReadConfig()
     ServerLog("Script Fully Post-Initialized")
     return true
 end
@@ -162,7 +166,48 @@ Server.PreInitialize = function(self)
 end
 
 ----------------------------------
-Server.Reset = function(self)
+Server.ReadConfig = function(self)
+
+    ServerLog("Reading Config...")
+    self.Utils:SetCVar("sv_serverName", self.Logger:FormatTags(self.Config:Get("Server.ServerName", "CryMP-Server")))
+end
+
+----------------------------------
+Server.OnMapCommand = function(self)
+    self:OnReset()
+    self:ExportComponentData()
+end
+
+----------------------------------
+Server.OnLoadingStart = function(self)
+end
+
+----------------------------------
+Server.OnGameRulesSpawn = function(self)
+
+    -- This function will be called right as the game rules are spawning, so
+    -- this looks like a good place to start the resetting process
+    -- Edit: It's not good, by this point player's don't even exist anymore!
+    -- self:OnReset()
+
+end
+
+----------------------------------
+Server.OnReset = function(self)
+
+    ServerLog("Resetting ..")
+    for _, aComponent in pairs(self.ComponentList) do
+        local sComponent = aComponent.Name
+        if (self[sComponent].OnReset) then
+            local bOk, sError = pcall(self[sComponent].OnReset, self[sComponent])
+            if (not bOk) then
+                self:LogFatal("Failed to Reset Component '%s'", sComponent)
+                self:LogFatal("%s", (sError or "<Null>"))
+                self:LogFatal("Aborting to Preserve Component Data")
+                return false
+            end
+        end
+    end
 end
 
 ----------------------------------
@@ -199,6 +244,7 @@ Server.SpawnServerEntity = function(self)
     end
 
     self.ServerEntity = hEntity
+    self.ActorHandler:OnServerSpawn(hEntity)
     self:Log("Spawned Server Entity")
 
 end
@@ -446,6 +492,13 @@ Server.CreateComponents = function(self)
             end
         end
 
+        --[[
+        for _, tConfig in pairs(aBody.Config or {}) do
+            local sKey = tConfig.Key
+            local sDestination = tConfig.Key
+        end
+        ]]
+
         self[sName] = aBody
         if (aBody.EarlyInitialize) then
             local bOk, sError = pcall(aBody.EarlyInitialize, aBody)
@@ -611,6 +664,9 @@ Server.Logger = {
         for i = 1, table.size(self.EventQueue) do
             self:LogEvent(self.EventQueue[i])
         end
+
+        self.CommonTags["MapName"] = Server.MapRotation:GetMapName()
+        self.CommonTags["MapPath"] = Server.MapRotation:GetMapPath()
 
         self.EventQueue = {}
         self:Log("Logger Queue Cleared..")

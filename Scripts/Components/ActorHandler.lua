@@ -30,6 +30,12 @@ Server:CreateComponent({
         PostInitialize = function(self)
         end,
 
+        OnReset = function(self)
+            for _, hPlayer in pairs(Server.Utils:GetPlayers()) do
+                self:OnPlayerDisconnect(hPlayer)
+            end
+        end,
+
         OnPlayerDisconnect = function(self, hActor)
             if (hActor.Info.IsValidated) then
                 hActor.Data.LastConnect = Date:GetTimestamp()
@@ -42,11 +48,9 @@ Server:CreateComponent({
         end,
 
         OnProfileValidated = function(self, hPlayer, sId)
-            DebugLog("validated?",sId)
             local aData = self.PlayerData[sId]
             if (aData) then
                 table.MergeInPlace(hPlayer.Data, aData)
-                DebugLog(table.tostring(hPlayer.Data))
             end
         end,
 
@@ -71,10 +75,35 @@ Server:CreateComponent({
             end
         end,
 
-        OnActorSpawn = function(self, hActor)
+        OnServerSpawn = function(self, hServer)
+
+            hServer.Timers = {}
+            hServer.Data = {}
+            hServer.Info = {
+                IsPlayer  = false,
+                ChannelId = 0,
+                ProfileId = "0",
+                IPAddress = "127.0.0.1",
+                HostName  = "localhost",
+                Language = {
+                    Detected = Language_English,
+                    Preferred = Language_English
+                }
+            }
+
+            self:AddActorFunctions(hServer)
+        end,
+
+        OnActorSpawn = function(self, hActor, bForceInitialize)
 
             local bIsPlayer = hActor.actor:IsPlayer()
             local iChannel = hActor.actor:GetChannel()
+
+            if (hActor.Initialized and not bForceInitialize) then
+                self:Log("Skipping Re-Initialization for '%s'", hActor:GetName())
+                return
+            end
+
 
             hActor.IsPlayer = bIsPlayer
             hActor.Timers = {

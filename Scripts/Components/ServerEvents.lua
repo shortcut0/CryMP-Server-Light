@@ -33,6 +33,14 @@ Server:CreateComponent({
                 Server.AccessHandler:OnProfileValidated(hPlayer, sProfile)
             end,
 
+            OnPostInitialize = function(this)
+                Server.Events:CallEvent(ServerEvent_OnPostInit)
+            end,
+
+            OnInitialize = function(this)
+                Server.Events:CallEvent(ServerEvent_OnInit)
+            end,
+
             -- ============================================================================
             -- C++ Callbacks
 
@@ -95,7 +103,12 @@ Server:CreateComponent({
             OnProjectileHit         = function() end,
             OnLeaveWeaponModify     = function() end,
             OnProjectileExplosion   = function() end,
-            CanStartNextLevel       = function() end,
+            CanStartNextLevel       = function(self)
+                return Server.MapRotation:CanStartNextLevel()
+            end,
+            OnLevelStart       = function(self)
+                return Server:OnLoadingStart()
+            end,
             OnRadarScanComplete     = function() end,
             OnGameShutdown          = function() end,
             OnMapStarted            = function() end,
@@ -127,7 +140,6 @@ Server:CreateComponent({
         },
 
         LinkedEvents = {
-
         },
 
         Initialize = function(self)
@@ -138,6 +150,12 @@ Server:CreateComponent({
         end,
 
         PostInitialize = function(self)
+        end,
+
+        OnReset = function(self)
+            for hEvent = 1, ServerEvent_MAX do
+                self.LinkedEvents[hEvent]  = {}
+            end
         end,
 
         TestOne = function(MASTER, ...)

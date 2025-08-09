@@ -570,6 +570,48 @@ Server.LocalizationManager:Add({
             English = "Patched {Red}{Functions}{Gray} Members from {Red}{Classes}{Gray} Classes"
         }
     },
+    {
+        String = "next",
+        Languages = {
+            English = "Next"
+        }
+    },
+})
+
+
+-- ===================================================================================
+
+Server.LocalizationManager:Add({
+    {
+        String = "no_map_start_stopped",
+        Languages = {
+            English = "There is no Map Change Queued"
+        }
+    },
+    {
+        String = "map_start_stopped",
+        Languages = {
+            English = "Map Change has been {Red}Stopped"
+        }
+    },
+    {
+        String = "map_not_found",
+        Languages = {
+            English = "Map {Map} not Found"
+        }
+    },
+    {
+        String = "maps",
+        Languages = {
+            English = "Maps"
+        }
+    },
+    {
+        String = "map_start_queued",
+        Languages = {
+            English = "Starting {Next}Map {Red}{Map}{Gray} ({Red}{Mode}{Gray}) In {Red}{Time}{Gray}"
+        }
+    },
 })
 
 
@@ -634,6 +676,24 @@ Server.LocalizationManager:Add({
         String = "arg_time",
         Languages = {
             English = "Time"
+        }
+    },
+    {
+        String = "arg_time_desc",
+        Languages = {
+            English = "The Time in Seconds (or Value Format e.g 1d50m) for the Action"
+        }
+    },
+    {
+        String = "arg_stop",
+        Languages = {
+            English = "Stop"
+        }
+    },
+    {
+        String = "arg_stop_desc",
+        Languages = {
+            English = "Stops the Current Action"
         }
     },
     {

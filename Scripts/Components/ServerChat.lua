@@ -18,6 +18,8 @@ Server:CreateComponent({
 
         Properties = {
 
+            ShowConsoleWelcomeAlways = false,
+
             -- Examples of how it will look!
 
             -- Nomad0 (TEAM) : did i mention that i worked at blizzard for 7 years?
@@ -87,6 +89,8 @@ Server:CreateComponent({
             TextMessageCenter,
             TextMessageConsole,
         },
+
+        ChannelsWelcomed = {},
 
         Protected = {
             ChatEntities = {},
@@ -468,13 +472,14 @@ Server:CreateComponent({
             return aInfo
         end,
 
-        SendWelcomeMessage = function(self, hPlayer)
+        SendWelcomeMessage = function(self, hPlayer, bShowAlways)
+
 
             local sAccessName = hPlayer:GetAccessName()
             local sAccessColor = hPlayer:GetAccessColor()
             local sPlayerName = hPlayer:GetName()
             local sLastVisit = hPlayer:GetLastConnect(true, "@str_Never", "@str_Today")
-            local sServerTime = Date:Colorize(Date:Format(hPlayer.Data.ServerTime, (DateFormat_Cramped + DateFormat_Hours)), "$5")
+            local sServerTime = Date:Colorize(Date:Format(hPlayer.Data.ServerTime, (DateFormat_Cramped + (hPlayer.Data.ServerTime > ONE_HOUR and DateFormat_Hours or 0))), "$5")
             local sAdminStatus = table.empty(Server.AccessHandler:GetAdmins()) and "$4@str_offline" or "$3@str_online"
             local sCountry = ("(%s) %s"):format(hPlayer:GetCountryCode(), hPlayer:GetCountryName())
 
@@ -509,9 +514,6 @@ Server:CreateComponent({
             -- %s {Gray}--
 
 
-            for _, sLine in pairs(string.split(aServerLogo, "\n")) do
-                self:ConsoleMessage(hPlayer, ("{Gray}%s"):format(sLine))
-            end
 
             local function CreateInfoLine(tLeft, tCenter, tRight)
                 -- [  Last Visit : 30d Ago   ]                   [ Something : Some text    ]
@@ -541,6 +543,19 @@ Server:CreateComponent({
                 self:ConsoleMessage(hPlayer, sLine)
             end
 
+            -- Chat
+            self:ChatMessage(Server:GetEntity(), hPlayer, "@welcome_toTheServer, " .. sAccessName .. " " .. sPlayerName, {})
+
+            if (not self.Properties.ShowConsoleWelcomeAlways and not bShowAlways) then
+                if (self.ChannelsWelcomed[hPlayer:GetChannel()]) then
+                    return
+                end
+            end
+            self.ChannelsWelcomed[hPlayer:GetChannel()] = true
+
+            for _, sLine in pairs(string.split(aServerLogo, "\n")) do
+                self:ConsoleMessage(hPlayer, ("{Gray}%s"):format(sLine))
+            end
             self:ConsoleMessage(hPlayer, (" {Gray}%s"):format(string.rep("=", self:GetConsoleWidth() - 3)))
             CreateInfoLine({ NoSpace = true, Name = "USER$5", Value = "INFO" }, {}, { NoSpace = true, Name = "SERVER$4", Value = "INFO" })
             CreateInfoLine({ NoSpace = true, Empty = true }, { Value = "@welcome_toTheServer, $5" .. sPlayerName }, { NoSpace = true, Empty = true })
@@ -553,8 +568,6 @@ Server:CreateComponent({
             self:ConsoleMessage(hPlayer, " ")
             self:ConsoleMessage(hPlayer, " ")
 
-            -- Chat
-            self:ChatMessage(Server:GetEntity(), hPlayer, "@welcome_toTheServer, " .. sAccessName .. " " .. sPlayerName, {})
         end,
 
     }

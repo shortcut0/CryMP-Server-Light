@@ -19,7 +19,7 @@ Server.ChatCommands:Add({
     },
 
     Properties = {
-        This = Server.ChatCommands
+        This = "Server.ChatCommands"
     },
 
     Function = function(self, hPlayer, sClass)

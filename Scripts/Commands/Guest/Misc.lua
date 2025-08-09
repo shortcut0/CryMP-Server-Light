@@ -12,6 +12,6 @@ Server.ChatCommands:Add({
     Name = "pda",
     Access = ServerAccess_Lowest,
     Function = function(self)
-        Server.Chat:SendWelcomeMessage(self)
+        Server.Chat:SendWelcomeMessage(self, true)
     end
 })

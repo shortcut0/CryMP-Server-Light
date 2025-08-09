@@ -22,20 +22,33 @@ Server:CreateComponent({
             { Name = "*.lua$", Path = SERVER_DIR_SCRIPTS .. "/Game/Patcher/", Recursive = true, ReadOnly = true }
         },
 
+        CurrentEnvironment = {},
+        EnvironmentChanges = {},
         TotalHookCount = 0,
         ActiveHooks = {
         },
 
         Initialize = function(self)
-        end,
-
-        PostInitialize = function(self)
-
             ServerDLL.GameRulesInitScriptTables()
             self:LogEvent({
                 Message = "@patcher_initialized",
                 MessageFormat = { Classes = table.size(self.ActiveHooks), Functions = self.TotalHookCount }
             })
+
+            if (Server:WasInitialized()) then
+                for sClass, tHookInfo in pairs(self.ActiveHooks) do
+                    for _, hEntity in pairs(Server.Utils:GetEntities({ ByClass = sClass })) do
+                        self:HookObject(hEntity, sClass, tHookInfo.Body)
+                    end
+                    if (_G[sClass]) then
+                        self:HookObject(_G[sClass], sClass, tHookInfo.Body)
+                    end
+                end
+            end
+        end,
+
+        PostInitialize = function(self)
+
         end,
 
         SnapshotEnvironment = function(self)
@@ -61,17 +74,19 @@ Server:CreateComponent({
         end,
 
         OnScriptLoaded = function(self, sPath)
-            local tChange = self:CompareEnvironment()
+            local tChange = (self.EnvironmentChanges[sPath] or self:CompareEnvironment())
             if (table.emptyN(tChange)) then
                 for _, sKey in pairs(tChange) do
                     if (_G[sKey] ~= nil and type(_G[sKey]) == "table") then
                         self:CheckClass(sKey)
                     end
                 end
+                self.EnvironmentChanges[sPath] = table.copy(tChange)
             end
         end,
 
         CheckClass = function(self, sClass)
+
             local aClassInfo = self.ActiveHooks[sClass]
             if (not aClassInfo) then
                 return
@@ -85,6 +100,10 @@ Server:CreateComponent({
                 end
             end
 
+            self:HookObject(hClass, sClass, aBody)
+        end,
+
+        HookObject = function(self, hClass, sClass, aBody)
             local function CopyToClass(aTable, aTarget, sStack)
                 for sKey, tValue in pairs(aTable) do
                     if (type(tValue) == "table") then
@@ -143,21 +162,61 @@ Server:CreateComponent({
             end
 
             local sClass = (aInfo.Class)
-            local aBody = aInfo.Body
+            local sParent = (aInfo.Parent)
+            local bHookNow = (aInfo.HookNow)
+            if (IsArray(sClass)) then
+                for _, tClass in pairs(sClass) do
+                    self:HookClass({
+                        Class   = tClass,
+                        Body    = aInfo.Body,
+                        Parent  = sParent,
+                        ReplaceBody = aInfo.ReplaceBody,
+                    })
+                end
+                return
+            end
 
-            self.ActiveHooks[sClass] = (self.ActiveHooks[sClass] or {
+            local aClassEntities = Server.Utils:GetEntities({ ByClass = sClass })
+            local aBody = aInfo.Body
+            if (sParent) then
+                if (not self.ActiveHooks[sParent]) then
+                    self:Log("Creating new Parent Class '%s'",sParent)
+                    self:HookBody(table.Merge(aInfo, {
+                        Class = sParent,
+                    }))
+                end
+                self.ActiveHooks[sClass] = {
+                    ReplaceBody = (aInfo.ReplaceBody),
+                    Body = self.ActiveHooks[sParent].Body
+                }
+                --for _, hEntity in pairs(aClassEntities) do
+                --    self:Log("Hook Entity %s (%s)", hEntity:GetName(), hEntity.class)
+                --end
+
+                self:Log("Linked Class '%s' to Parent Class '%s'",sClass,sParent)
+                return
+            end
+
+            self:HookBody(aInfo)
+           -- for _, hEntity in pairs(aClassEntities) do
+           --     self:HookObject(hEntity, sClass, aBody)
+           -- end
+        end,
+
+        HookBody = function(self, aInfo)
+
+            self.ActiveHooks[aInfo.Class] = (self.ActiveHooks[aInfo.Class] or {
                 ReplaceBody = (aInfo.ReplaceBody),
                 Body = {}
             })
 
-            for _, aBodyPart in pairs(aBody) do
-                self:InsertHook(sClass, aBodyPart.Name, aBodyPart.Value, aBodyPart.Backup)
+            for _, aBodyPart in pairs(aInfo.Body) do
+                self:InsertHook(aInfo.Class, aBodyPart.Name, aBodyPart.Value, aBodyPart.Backup)
             end
 
             if (aInfo.HookNow) then
-                self:CheckClass(sClass)
+                self:CheckClass(aInfo.Class)
             end
-
         end,
 
         FixRMIFlags = function(self, tInfo)

@@ -31,6 +31,7 @@ Server:CreateComponent({
             CurrentChannel = 0,
         },
 
+
         Properties = {
 
             GeoService = "http://ip-api.com/json/{Query}?fields=3854107",
@@ -101,6 +102,9 @@ Server:CreateComponent({
             self.Properties.MapLinkList = aMapLinks
             self:Log("Imported %d Map-Links", table.size(aMapLinks))
 
+
+            self.Properties.ServerInfo.Description = Server.Config:Get("Server.ServerDescription", "No Description")
+
             self.TimerRegisterFail.setexpiry(self.Properties.RecoveryInterval)
             self.TimerUpdateFail.setexpiry(self.Properties.RecoveryInterval)
             self.TimerUpdateLog.expire()
@@ -110,6 +114,15 @@ Server:CreateComponent({
         end,
 
         PostInitialize = function(self)
+        end,
+
+        OnReset = function(self)
+
+            -- Upon changing a map, we won't receive a new connection timer
+            -- So we "reset" it here
+            for iChannel, aInfo in pairs(self.ActiveConnections) do
+                aInfo.Timer.refresh()
+            end
         end,
 
         OnProfileValidated = function(self, hPlayer, sProfile, sError, sResponse, iCode)
@@ -566,7 +579,7 @@ Server:CreateComponent({
 
                 -- Map Config
                 local iDirectX10    = 1
-                local sMapName      = ServerDLL.GetMapName()
+                local sMapName      = Server.MapRotation:GetMapPath()
                 local sMapTitle     = self:GetMapTitle(sMapName)
                 local sMapDownload  = self:GetMapDownloadLink()
                 local iTimeLeft     = (g_pGame:GetRemainingGameTime())
