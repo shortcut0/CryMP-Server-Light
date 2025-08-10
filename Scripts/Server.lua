@@ -9,6 +9,7 @@
 -- ===================================================================================
 
 local ComponentData = {}
+--local iFullInitStart, bIsFullInitializing
 if (Server) then
     for sComponent, aKeys in pairs(Server.ComponentData) do
         ComponentData[sComponent] = {}
@@ -19,6 +20,7 @@ if (Server) then
         end
     end
     ComponentData = Server.ComponentData
+    --iFullInitStart, bIsFullInitializing = Server.FullInitializationStart, Server.IsFullInitializing
 end
 
 Server = {
@@ -38,6 +40,9 @@ Server = {
 
     Initialized = false,
     PostInitialized = false,
+
+    FullInitializationStart = iFullInitStart,
+    IsFullInitializing = bIsFullInitializing
 }
 
 ----------------------------------
@@ -80,6 +85,8 @@ Server.Initialize = function(self)
     SERVER_DIR_PLUGINS  = (SERVER_DIR_SCRIPTS .. "Plugins\\")    -- Plugins
 
     self.InitializeStart = os.clock()
+    self.FullInitializationStart = os.clock()
+    self.IsFullInitializing = true
 
     self:CreateComponentFunctions(self.ErrorHandler, "ErrorHandler")
     self:CreateComponentFunctions(self.FileLoader, "FileLoader")
@@ -113,6 +120,11 @@ Server.PostInitialize = function(self)
 
     ServerLog("Post-Initializing..")
 
+    local iPostInitStart = os.clock()
+    local iFullInitStart = self.FullInitializationStart
+    self.Chat:ChatMessage(self:GetEntity(), ChatType_ToAll, "@post_initialization_start")
+    self.Logger:LogEvent({ Event = "Server", Message = ("@post_initialization_start"), Recipients = self.Utils:GetPlayers() })
+
     self.ErrorHandler:PostInitialize()
     if (not self.FileLoader:PostInitialize()) then
         ServerLogError("FileLoader Failed to Post-Initialize!")
@@ -135,10 +147,19 @@ Server.PostInitialize = function(self)
 
     self.Logger:LogEvent({
         Event = "Server",
-        Message = ("@initialization_time"),
-        MessageFormat = { Time = Date:Format(os.clock() - MAP_LOAD_START) },
+        Message = ("@post_initialization_time"),
+        MessageFormat = { Time = Date:Format(os.clock() - iPostInitStart) },
         Recipients = self.Utils:GetPlayers()
     })
+    if (self.IsFullInitializing) then
+        self.Logger:LogEvent({
+            Event = "Server",
+            Message = ("@initialization_time"),
+            MessageFormat = { Time = Date:Format(os.clock() - iFullInitStart) },
+            Recipients = self.Utils:GetPlayers()
+        })
+        self.IsFullInitializing = false
+    end
 
     self:ReadConfig()
     ServerLog("Script Fully Post-Initialized")
@@ -160,8 +181,6 @@ Server.PreInitialize = function(self)
         end
     end
 
-    self.Chat:ChatMessage(self:GetEntity(), ChatType_ToAll, "@initialization_start")
-    self.Logger:LogEvent({ Event = "Server", Message = ("@initialization_start"), Recipients = self.Utils:GetPlayers() })
     return true
 end
 
@@ -262,6 +281,8 @@ Server.OnTimerSecond = function(self)
             self[sComponent]:Event_TimerSecond()
         end
     end
+
+    self.Statistics:Event(StatisticsEvent_ServerLifetime, 1)
 end
 
 ----------------------------------
@@ -335,7 +356,8 @@ Server.ExportComponentData = function(self)
             for _, aKeyInfo in pairs(aKeys) do
                 local aData = self[sComponent][aKeyInfo.Key]
                 if (not aKeyInfo.IsRecursive and not aKeyInfo.ReadOnly and aData ~= nil) then
-                    bOk, iTotalSize = self.FileLoader:SaveFile(aData, aKeyInfo.Name, aKeyInfo.Path)
+                    local sComment = ("This file Contains data which will be loaded into the '%s' Key for the '%s' Server Component"):format(aKeyInfo.Key, sComponent)
+                    bOk, iTotalSize = self.FileLoader:SaveFile(aData, aKeyInfo.Name, aKeyInfo.Path, sComment)
                 end
             end
         end
@@ -1054,7 +1076,7 @@ Server.FileLoader = {
         return true
     end,
 
-    SaveFile = function(self, hData, sFile, sDir)
+    SaveFile = function(self, hData, sFile, sDir, sComment)
 
         sDir = (sDir or SERVER_DIR_DATA)
         sFile = (sDir .. sFile)
@@ -1064,6 +1086,30 @@ Server.FileLoader = {
         end
 
         local sData = string.format("return %s", (table.tostring((hData or {}), "", "") or "{}"))
+        if (sComment) then
+            local iCurrentLineLength = 0
+            local sCommentLines = ""
+            for _, sWord in pairs(string.split(sComment, " ")) do
+                if ((iCurrentLineLength + #sWord) > 80) then
+                    iCurrentLineLength = 0
+                    sCommentLines = sCommentLines .. "\n-- "
+                end
+                sCommentLines = sCommentLines .. sWord .. " "
+                iCurrentLineLength = (iCurrentLineLength + #sWord)
+            end
+            sData =
+            "-- ===================================================================================\n" ..
+            "--          ____            __  __ ____            ____                             --\n" ..
+            "--         / ___|_ __ _   _|  \\/  |  _ \\          / ___|  ___ _ ____   _____ _ __   --\n" ..
+            "--        | |   | '__| | | | |\\/| | |_) |  _____  \\___ \\ / _ \\ '__\\ \\ / / _ \\ '__|  --\n" ..
+            "--        | |___| |  | |_| | |  | |  __/  |_____|  ___) |  __/ |   \\ V /  __/ |     --\n" ..
+            "--         \\____|_|   \\__, |_|  |_|_|             |____/ \\___|_|    \\_/ \\___|_|     --\n" ..
+            "--                    |___/          by: shortcut0                                  --\n" ..
+            "-- Generated by " .. MOD_EXE_NAME .. "(" .. MOD_VERSION .. ") Build " .. MOD_COMPILER .. "\n" ..
+            "-- " .. sCommentLines .. "\n" ..
+            "-- ===================================================================================\n" ..
+	        sData
+        end
         ServerDLL.SaveFile(sFile, sData)
         return true, string.len(sData)
     end,

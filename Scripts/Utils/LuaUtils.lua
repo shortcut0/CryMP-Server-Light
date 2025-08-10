@@ -26,3 +26,20 @@ LuaUtils.CheckGlobal = function(sGlobal, hDefault)
     return t
 end
 
+LuaUtils.Switch = function(hState, ...)
+    for i = 1, select("#", ...) do
+        local tState = select(i, ...)
+        if (hState == tState[1]) then
+            for _, tJob in pairs((table.IsRecursive(tState[2]) and tState[2] or { tState[2] })) do
+                local pJob = tJob[1]
+                if (type(pJob) == "function") then
+                    pJob(unpack(tJob, 2))
+                else
+                    error ("unhandled job case '" .. type(pJob) .. "'")
+                end
+            end
+            return
+        end
+    end
+end
+

@@ -10,9 +10,10 @@
 
 ----------------------------------
 --- Checks if a table is recursive
---- { {1} }     ---> true
---- { 1 }       ---> false
---- { 1, {1} }  ---> false
+--- { {1} }             ---> true
+--- { {1}, [5] = {} }   ---> true
+--- { 1 }               ---> false
+--- { 1, {1} }          ---> false
 table.IsRecursive = function(this)
     if (type(this) ~= "table") then
         return

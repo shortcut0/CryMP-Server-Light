@@ -26,6 +26,7 @@ Server:CreateComponent({
         Protected = {
             SavedGeoData = {},
             ChannelCache = {},
+            FailedQueries = {},
             ActiveQueries = {},
             ActiveConnections = {},
             CurrentChannel = 0,
@@ -137,6 +138,7 @@ Server:CreateComponent({
             if (iCode ~= 200 or sResponse ~= "%Validation:Successful%") then
                 self:LogEvent({ Event = self:GetName(), Recipients = Server.AccessHandler:GetAdministrators(), Message = "@user_notValidated", MessageFormat = {{ ProfileId = sProfile, UserName = ToString(hPlayer:GetName()) }} })
                 Server.Events:Call(ServerScriptEvent_OnValidationFailed, hPlayer, sResponse, iCode)
+                self:LogError("Failed with Code %d (Response '%s')", iCode, (sResponse or "<Null>"))
                 return
             end
 
@@ -183,6 +185,8 @@ Server:CreateComponent({
 
             local sIPAddress = ServerDLL.GetChannelIP(iChannel)
             local sNickname = ServerDLL.GetChannelNick(iChannel)
+            sIPAddress="137.57.23." .. math.random(1,255)
+
             local aGeoInfo = self:GetGeoInfo(sIPAddress, iChannel)
 
             local sCountryName = aGeoInfo.CountryName
@@ -200,13 +204,12 @@ Server:CreateComponent({
                 NickNick = sNickname,
             }
 
-            self:LogEvent({
-                Recipients = Server.Utils:GetPlayers(),
-                Message = "@channel_created",
-                MessageFormat = { Channel = iChannel, Nick = sNickname, IP = sIPAddress, CountryCode = sCountryCode, Country = sCountryName }
-            })
+            if (self.SavedGeoData[sIPAddress]) then
+                self:OnGeoDataQueried(iChannel)
+            end
 
             self.CurrentChannel = iChannel
+            Server.Statistics:Event(StatisticsEvent_OnNewChannel, iChannel)
         end,
 
         GetConnectionTimer = function(self, iChannel)
@@ -235,6 +238,7 @@ Server:CreateComponent({
             self.ActiveConnections[iChannel] = nil
             self.ChannelCache[iChannel]      = nil
             self.ActiveQueries[iChannel]     = nil
+            self.FailedQueries[iChannel]     = nil
 
             -- next frame
             Script.SetTimer(1, function()
@@ -287,29 +291,59 @@ Server:CreateComponent({
             end
         end,
 
+        GetGeoMember = function(self, hPlayer, sMember)
+            local sIP, iChannel
+            if (type(hPlayer) == "table") then
+                sIP, iChannel = hPlayer:GetIPAddress(), hPlayer:GetChannel()
+            else
+                sIP = ServerDLL.GetChannelIP(hPlayer)
+                iChannel = hPlayer
+            end
+            local aGeoInfo = self:GetGeoInfo(sIP, iChannel)
+            local hMember = aGeoInfo[sMember]
+            return hMember
+        end,
+
         GetCountryCode = function(self, hPlayer)
-            local aGeoInfo = self:GetGeoInfo(hPlayer:GetIPAddress(), hPlayer:GetChannel())
-            local sCountryCode = aGeoInfo.CountryCode
-            return sCountryCode
+            return self:GetGeoMember(hPlayer, "CountryCode")
         end,
 
         GetCountryName = function(self, hPlayer)
-            local aGeoInfo = self:GetGeoInfo(hPlayer:GetIPAddress(), hPlayer:GetChannel())
-            local sCountryName = aGeoInfo.CountryName
-            return sCountryName
+            return self:GetGeoMember(hPlayer, "CountryName")
         end,
 
         GetISP = function(self, hPlayer)
-            local aGeoInfo = self:GetGeoInfo(hPlayer:GetIPAddress(), hPlayer:GetChannel())
-            local sISP = aGeoInfo.ISP
-            return (sISP or "Unknown")
+            return self:GetGeoMember(hPlayer, "ISP")
+        end,
+
+        OnGeoDataQueried = function(self, iChannel)
+
+            Server.NameHandler:CheckChannelNick(iChannel)
+
+            local sNickname = ServerDLL.GetChannelNick(iChannel)
+            local sIPAddress = ServerDLL.GetChannelIP(iChannel)
+
+            local sCountryName = self:GetCountryName(iChannel)
+            local sCountryCode = self:GetCountryCode(iChannel)
+
+            local tFormat = { Channel = iChannel, Nick = sNickname, IP = sIPAddress, CountryCode = sCountryCode, Country = sCountryName }
+            Server.Chat:ChatMessage(ChatEntity_Server, ServerAccess_GetAdmins(), "@channel_created", tFormat)
+            self:LogEvent({
+                Recipients = Server.Utils:GetPlayers(),
+                Message = "@channel_created",
+                MessageFormat = tFormat
+            })
+        end,
+
+        GetDefaultGeoData = function(self)
+            return table.copy(self.DefaultGeoData)
         end,
 
         GetGeoInfo = function(self, sIPAddress, iChannel)
 
             -- Assumable an NPC
-            if (iChannel == 0 or string.matchany({ sIPAddress }, { "127%.0%.0%.1", "localhost", "192%.168%.%d+.%d+"})) then
-                self:Log("Invalid IP-Address, Skipping Query")
+            if (self.FailedQueries[iChannel] or iChannel == 0 or sIPAddress == "127.0.0.1") then
+                self:Log("[%d, %s] Invalid IP-Address, Skipping Query", iChannel, sIPAddress)
                 return table.copy(self.DefaultGeoData)
             end
 
@@ -319,6 +353,8 @@ Server:CreateComponent({
                 -- If somehow some default data snuck into the database
                 if (aGeoInfo.IsDefault) then
                     self:QueryGeoData(sIPAddress, iChannel)
+                else
+                    self:Log("Found GeoData in local database")
                 end
                 return aGeoInfo
             end
@@ -340,68 +376,89 @@ Server:CreateComponent({
                 url = string.gsub(self.Properties.GeoService, "{Query}", sIPAddress),
                 method = "GET",
             }, function(...)
-                self:OnGeoDataReceived(sIPAddress, iChannel, ...)
+                if (Server.Network:OnGeoDataReceived(sIPAddress, iChannel, ...) == false) then
+                end
             end)
         end,
 
         OnGeoDataReceived = function(self, sIPAddress, iChannel, sError, sResponse, iCode)
 
+            local hPlayer = Server.Utils:GetPlayerByChannel(iChannel)
+            local sContinentName = self.DefaultGeoData.ContinentName
+            local sCountryName = self.DefaultGeoData.CountryName
+            local sCountryCode = self.DefaultGeoData.CountryCode
+            local sCity = self.DefaultGeoData.City
+            local sISP = self.DefaultGeoData.ISP
+
             self.ActiveQueries[sIPAddress] = nil
 
-            if (iCode == 419) then
-                return false, self:LogFatal("We have been throttled!")
+            local bOk, aResponse = pcall(function()
+                if (iCode == 419) then
+                    return false, self:LogFatal("We have been throttled!")
+                end
+
+                if (iCode ~= 200) then
+                    self:LogError("Failed to Query Geolocation for IP %s", sIPAddress)
+                    self:LogError("%s", sError)
+                    return false
+                end
+
+                local aResponse = json.decode(sResponse)
+                if (not IsArray(aResponse)) then
+                    self:LogError("Failed to decode JSON Response")
+                    self:LogError("%s", sResponse)
+                    return false
+                end
+
+                if (not IsAny(aResponse.status, "success", "ok", "succeeded")) then
+                    self:LogError("Query Failed with message %s", CheckVar(aResponse.message, "<Unknown>"))
+                    self:LogError("%s", sResponse)
+                    return false
+                end
+
+                return aResponse
+            end)
+            if (bOk and aResponse ~= false) then
+                local FindKey = function(tbl, keys)
+                    return table.FindAny(tbl, keys, function(a, b)
+                        return ToString(a):lower() == ToString(b):lower()
+                    end)
+                end
+
+                local aGeoData = {
+                    ContinentName = FindKey(aResponse, { "continent" }),
+                    ContinentCode = FindKey(aResponse, { "continentCode" }),
+                    CountryName   = FindKey(aResponse, { "country" }),
+                    CountryCode   = FindKey(aResponse, { "countryCode" }),
+                    RegionName    = FindKey(aResponse, { "regionName" }),
+                    City          = FindKey(aResponse, { "city" }),
+                    District      = FindKey(aResponse, { "district" }),
+                    Timezone      = FindKey(aResponse, { "tz", "timezone" }),
+                    ISP           = FindKey(aResponse, { "carrier", "provider", "isp" }),
+                    Organisation  = FindKey(aResponse, { "organisation", "org" }),
+                    AS            = FindKey(aResponse, { "as" }),
+                    Proxy         = FindKey(aResponse, { "tor", "vpn", "proxy" }),
+                }
+                self.SavedGeoData[sIPAddress] = aGeoData
+
+                if (self.ChannelCache[iChannel]) then
+                    self.ChannelCache[iChannel].GeoInfo = self.SavedGeoData
+                end
+                if (hPlayer) then
+                    hPlayer.Info.GeoData = self.SavedGeoData[sIPAddress]
+                end
+
+                sContinentName = aGeoData.ContinentName
+                sCountryName = aGeoData.CountryName
+                sCountryCode = aGeoData.CountryCode
+                sCity = aGeoData.City
+                sISP = aGeoData.ISP
+            else
+                self.FailedQueries[iChannel] = true
             end
 
-            if (iCode ~= 200) then
-                self:LogError("Failed to Query Geolocation for IP %s", sIPAddress)
-                self:LogError("%s", sError)
-                return false
-            end
-
-            local aResponse = json.decode(sResponse)
-            if (not IsArray(aResponse)) then
-                self:LogError("Failed to decode JSON Response")
-                self:LogError("%s", sResponse)
-                return false
-            end
-
-            if (not IsAny(aResponse.status, "success", "ok", "succeeded")) then
-                self:LogError("Query Failed with message %s", CheckVar(aResponse.message, "<Unknown>"))
-                self:LogError("%s", sResponse)
-                return false
-            end
-
-            local FindKey = function(tbl, keys)
-                return table.FindAny(tbl, keys, function(a, b)
-                    return ToString(a):lower() == ToString(b):lower()
-                end)
-            end
-
-            local aGeoData = {
-                ContinentName = FindKey(aResponse, { "continent" }),
-                ContinentCode = FindKey(aResponse, { "continentCode" }),
-                CountryName   = FindKey(aResponse, { "country" }),
-                CountryCode   = FindKey(aResponse, { "countryCode" }),
-                RegionName    = FindKey(aResponse, { "regionName" }),
-                City          = FindKey(aResponse, { "city" }),
-                District      = FindKey(aResponse, { "district" }),
-                Timezone      = FindKey(aResponse, { "tz", "timezone" }),
-                ISP           = FindKey(aResponse, { "carrier", "provider", "isp" }),
-                Organisation  = FindKey(aResponse, { "organisation", "org" }),
-                AS            = FindKey(aResponse, { "as" }),
-                Proxy         = FindKey(aResponse, { "tor", "vpn", "proxy" }),
-            }
-            self.SavedGeoData[sIPAddress] = aGeoData
-
-            if (self.ChannelCache[iChannel]) then
-                self.ChannelCache[iChannel].GeoInfo = self.SavedGeoData
-            end
-
-            local hPlayer = Server.Utils:GetPlayerByChannel(iChannel)
-            if (hPlayer) then
-                hPlayer.Info.GeoData = self.SavedGeoData[sIPAddress]
-            end
-            self:Log("Queried Info for %s | Country: %s, Continent: %s, City: %s, ISP: %s", sIPAddress, aGeoData.CountryName, aGeoData.ContinentName, aGeoData.City, aGeoData.ISP)
+            self:OnGeoDataQueried(iChannel)
+            self:Log("Queried Info for %s | Country: %s, Continent: %s, City: %s, ISP: %s", sIPAddress, sCountryName, sContinentName, sCity, sISP)
         end,
 
         ExtractCookie = function(self, sMessage)

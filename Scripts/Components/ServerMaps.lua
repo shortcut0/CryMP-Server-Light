@@ -164,7 +164,7 @@ Server:CreateComponent({
                 List     = {},
                 NextList = nil,
                 Current = 1,
-                Last    = table.size(aMapList),
+                Last    = 1,
                 LastMap = "",
                 Shuffle = (tInfo.Shuffle),
 
@@ -178,14 +178,14 @@ Server:CreateComponent({
                         this:Next()
                     end
                 end,
-                Reset        = function(this) this.Current = 1 if (this.Shuffle) then this.List = (this.NextList or table.shuffle(this.List)) this.NextList = nil end end,
+                Reset        = function(this) this.Current = 1 if (this.Shuffle) then this.List = (this.NextList or table.shuffle(this.List)) end end,
                 QueueReset   = function(this) if (this.Shuffle) then this.NextList = table.shuffle(this.List) end end,
                 GetNext      = function(this)
                     local iNext = this.Current + 1
                     if (iNext > this.Last) then
                         if (this.Shuffle) then
                             this:QueueReset()
-                            return this.NextList.Map
+                            return this.NextList[iNext].Map
                         end
                         iNext = 1
                     end
@@ -215,6 +215,9 @@ Server:CreateComponent({
                 end
             end
 
+            aRotation.Last = #aRotation.List
+            aRotation:Reset()
+            self:Log("Initialized Map Rotation with %d Maps", aRotation.Last)
             return aRotation
         end,
 

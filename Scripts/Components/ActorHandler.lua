@@ -39,6 +39,10 @@ Server:CreateComponent({
         OnPlayerDisconnect = function(self, hActor)
             if (hActor.Info.IsValidated) then
                 hActor.Data.LastConnect = Date:GetTimestamp()
+                hActor.Data.LastName = nil
+                if (not Server.NameHandler:IsNomadOrTemplate(hActor:GetName())) then
+                    hActor.Data.LastName = hActor:GetName()
+                end
                 self:ExportPlayerData(hActor.Data, hActor:GetProfileId())
             end
         end,
@@ -85,6 +89,7 @@ Server:CreateComponent({
                 ProfileId = "0",
                 IPAddress = "127.0.0.1",
                 HostName  = "localhost",
+                HardwareId = nil,
                 Language = {
                     Detected = Language_English,
                     Preferred = Language_English
@@ -112,7 +117,6 @@ Server:CreateComponent({
             }
 
             hActor.Data = {
-                OutOfMana = true,
                 LastConnect = -1, -- Never
                 ServerTime = 0, -- Time spent on this server
             }
@@ -124,8 +128,10 @@ Server:CreateComponent({
                 ProfileReceived = false,
                 IPAddress = "127.0.0.1",
                 HostName  = "localhost",
+                Port      = "localhost",
+                HardwareId = nil, -- TODO
 
-                GeoData   = Server.Network:GetGeoInfo(iChannel),
+                GeoData   = Server.Network:GetDefaultGeoData(),
 
                 Access    = 0,
                 IsInTestMode = false,
@@ -141,7 +147,10 @@ Server:CreateComponent({
 
             if (bIsPlayer) then
                 hActor.Info.IPAddress = ServerDLL.GetChannelIP(iChannel)
-                hActor.Info.HostName  = ServerDLL.GetChannelName(iChannel)
+
+                local sHostName = ServerDLL.GetChannelName(iChannel)
+                hActor.Info.HostName  = (sHostName:match("(.*):%d+$") or sHostName)
+                hActor.Info.Port = (sHostName:match(":(%d+)$") or -1)
             end
 
             self:AddActorFunctions(hActor)
@@ -208,7 +217,7 @@ Server:CreateComponent({
                         return ((sToday == true) and "@str_Today" or sToday)
                     end
                     -- Rounds to nearest time ago in Days
-                    return Date:Format(Date:GetTimestamp() - iLastConnect, DateFormat_Days) .. " @Ago"
+                    return Date:Format(Date:GetTimestamp() - iLastConnect, DateFormat_Days) .. " @ago"
                 end
                 return (iLastConnect)
             end
@@ -231,8 +240,10 @@ Server:CreateComponent({
             hActor.SetLanguage  = function(this, sLang) this.Info.Language.Detected = sLang  end
             hActor.GetLanguage  = function(this) return this.Info.Language.Detected  end
 
+            hActor.GetHardwareId = function(this) return this.Info.HardwareId  end
             hActor.GetIPAddress = function(this) return this.Info.IPAddress  end
             hActor.GetHostName  = function(this) return this.Info.HostName  end
+            hActor.GetPort  = function(this) return this.Info.Port  end
             hActor.GetProfileId = function(this) return this.Info.ProfileId  end
             hActor.SetProfileId = function(this, sId) this.Info.ProfileId = sId end
             hActor.GetChannel   = function(this) return this.Info.ChannelId  end

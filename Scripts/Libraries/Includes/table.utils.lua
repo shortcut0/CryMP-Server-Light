@@ -1069,9 +1069,9 @@ end
 ---------------------------
 -- table.findv
 
-table.find_value = function(t, hFind)
+table.find_value = function(t, hFind, fPred)
 	for i, v in pairs(t) do
-		if (v == hFind) then
+		if (v == hFind or (fPred and fPred(v, hFind))) then
 			return v
 		end
 	end

@@ -142,6 +142,10 @@ Server:CreateComponent({
         ChatMessage = function(self, pSender, pTarget, sMessage, tFormat)
 
             local hSender = Server.Utils:GetEntity(pSender)
+            if (pSender == ChatEntity_Server) then
+                hSender = Server:GetEntity()
+            end
+
             if (not Server.Utils:IsEntity(hSender)) then
                 hSender = self:GetChatEntity(pSender)
             end
@@ -484,7 +488,7 @@ Server:CreateComponent({
             local sCountry = ("(%s) %s"):format(hPlayer:GetCountryCode(), hPlayer:GetCountryName())
 
             -- TODO
-            local sNextMap = "$4Mesa $9($4PS$9)"
+            local sNextMap = ("{Red}%s{Gray} ({Red}%s{Gray})"):format(Server.MapRotation:GetNextMapName(), Server.MapRotation:GetNextMapRules():upper())
 
             local sUsageInfo = string.format("CPU: %d%%, %s", ServerDLL.GetCPUUsage(), Server.Utils:ByteSuffix(ServerDLL.GetMemUsage(), 0))
 
@@ -557,10 +561,10 @@ Server:CreateComponent({
                 self:ConsoleMessage(hPlayer, ("{Gray}%s"):format(sLine))
             end
             self:ConsoleMessage(hPlayer, (" {Gray}%s"):format(string.rep("=", self:GetConsoleWidth() - 3)))
-            CreateInfoLine({ NoSpace = true, Name = "USER$5", Value = "INFO" }, {}, { NoSpace = true, Name = "SERVER$4", Value = "INFO" })
-            CreateInfoLine({ NoSpace = true, Empty = true }, { Value = "@welcome_toTheServer, $5" .. sPlayerName }, { NoSpace = true, Empty = true })
-            CreateInfoLine({ Name = "Access", Value = sAccessColor .. sAccessName }, {Value = "@yourLastVisit: $4" .. sLastVisit}, { Name = "Up-Time", Value = Date:Colorize(Date:Format(_time, DateFormat_Minutes + DateFormat_Cramped)) })
-            CreateInfoLine({ Name = "ProfileID", Value = "$5" .. hPlayer:GetProfileId() }, {  }, { Name = "Memory", Value = sMemory })
+            CreateInfoLine({ NoSpace = true, Name = "USER$5", Value = "INFO" }, {Value = "@welcome_toTheServer"}, { NoSpace = true, Name = "SERVER$4", Value = "INFO" })
+            CreateInfoLine({ NoSpace = true, Empty = true }, { Value = "$5" .. sPlayerName }, { NoSpace = true, Empty = true })
+            CreateInfoLine({ Name = "Access", Value = sAccessColor .. sAccessName }, {}, { Name = "Up-Time", Value = Date:Colorize(Date:Format(_time, DateFormat_Minutes + DateFormat_Cramped)) })
+            CreateInfoLine({ Name = "ProfileID", Value = "$5" .. hPlayer:GetProfileId() }, { Value = "@yourLastVisit: $4" .. sLastVisit }, { Name = "Memory", Value = sMemory })
             CreateInfoLine({ Name = "IP", Value = "$8" .. hPlayer:GetIPAddress() }, {}, { Name = "CPU", Value = sCPU })
             CreateInfoLine({ Name = "Country", Value = sCountry }, { }, { Name = "Highest Slot", Value = "$4" .. Server.Network.CurrentChannel })
             CreateInfoLine({ Name = "Server-Time", Value = sServerTime }, { Value = "@nextMap: " .. sNextMap }, { Name = "Administration", Value = sAdminStatus })

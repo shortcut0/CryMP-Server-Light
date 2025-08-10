@@ -67,7 +67,7 @@ Server:CreateComponent({
         PostInitialize = function(self)
 
             --[[
-            ServerRank_Moderator=60
+            ServerAccess_Moderator=60
             ServerLog(self:LocalizeMessage("@test_locale HellO!!!", Language_English, {{Arg1="aaa",Arg2="bbb"}}, 59))
             ServerLog(self:LocalizeMessage("@test_locale HellO!!!", Language_English, {{Ext1="ccc",Ext2="ddd",Arg1="aaa",Arg2="bbb"}}, 60))
             ServerLog(self:LocalizeMessage("@test_nested_locale", Language_English, {}, 60))
@@ -169,7 +169,7 @@ Server:CreateComponent({
         --[[         --- Reference ----
         Server.LocalizationManager:Add({
             String = "test_locale",
-            Extended = ServerRank_Moderator,
+            Extended = ServerAccess_Moderator,
             Languages = {
                 English = {
                     Standard = "translated to english - standard {Arg_One}",

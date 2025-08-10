@@ -25,15 +25,27 @@ Server.LocalizationManager:Add({
 
 Server.LocalizationManager:Add({
     {
+        String = "post_initialization_time",
+        Languages = {
+            English = "Post-Initialization took {Red}{Time}"
+        }
+    },
+    {
         String = "initialization_time",
         Languages = {
-            English = "Initialization took {Red}{Time}"
+            English = "Full Initialization took {Red}{Time}"
         }
     },
     {
         String = "initialization_start",
         Languages = {
             English = "Server is Re-Initializing, Prepare for {Red}Interruptions"
+        }
+    },
+    {
+        String = "post_initialization_start",
+        Languages = {
+            English = "Server is Post-Initializing, Prepare for {Red}Interruptions"
         }
     },
 })
@@ -574,6 +586,12 @@ Server.LocalizationManager:Add({
         String = "next",
         Languages = {
             English = "Next"
+        }
+    },
+    {
+        String = "ago",
+        Languages = {
+            English = "Ago"
         }
     },
 })

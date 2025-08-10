@@ -19,9 +19,14 @@ Server:CreateComponent({
         ExternalData = {
             { Key = "SavedUsers", Name = "SavedUsers.lua", Path = (SERVER_DIR_DATA .. "Users\\") },
             { Key = "IPProfiles", Name = "IPProfiles.lua", Path = (SERVER_DIR_DATA .. "Users\\") },
+            { Key = "UniqueUserIDs", Name = "UniqueUserIDs.lua", Path = (SERVER_DIR_DATA .. "Users\\") },
         },
 
         Protected = {
+            UniqueUserIDs = {
+                Profiles = {},
+                Next = 0,
+            },
             SavedUsers = {},
             IPProfiles = {
                 Next = 0,
@@ -29,7 +34,6 @@ Server:CreateComponent({
         },
 
         AccessLevelMap = {},
-
         Properties = {
 
             KickInvalidProfiles = false,
@@ -72,14 +76,14 @@ Server:CreateComponent({
                     Name = "shortcut0",
                     AccessLevel = 9,
                     NameProtected = true,
-                    ProfileID = "1073103_test"
+                    ProfileID = "1073103"
                 },
                 {
                     Name = "shortcut0",
                     AccessLevel = 9,
                     NameProtected = true,
-                    ProfileID = string.ip2dec("127.0.0.1") .. "_test"
-                }
+                    ProfileID = "127.0.0.1"
+                },
             }
         },
 
@@ -108,10 +112,73 @@ Server:CreateComponent({
 
             Server.Chat:SendWelcomeMessage(hPlayer)
             Server.Network:SendMessage(hPlayer, "Connected")
+
+            self:AssignUniqueID(hPlayer, self:GetUniqueID(hPlayer))
+        end,
+
+        AssignUniqueID = function(self, hPlayer, hId)
+            hPlayer.Info.UniqueId = hId
+            hPlayer.Info.UniqueName = self:GetUniqueName(hId)
+            self:Log("Resolved Unique ID for User '%s' ID: %s, Name: %s", hPlayer:GetName(), hId, hPlayer.Info.UniqueName)
+        end,
+
+        GetUniqueName = function(self, hId)
+            local tProfile = self:GetUniqueProfile(hId)
+            if (not tProfile) then
+                return "Nomad"
+            end
+
+            return tProfile.UniqueName or "Nomad"
+        end,
+
+        GetUniqueProfile = function(self, hId)
+            for _, tProfile in pairs(self.UniqueUserIDs.Profiles) do
+                if (tProfile.UniqueId == hId) then
+                    return tProfile
+                end
+            end
+            return
+        end,
+
+        GetUniqueID = function(self, hPlayer)
+            local aIdentifiers = {
+                hPlayer:GetProfileId(),
+                hPlayer:GetHostName(),
+                hPlayer:GetIPAddress(),
+                hPlayer:GetHardwareId(),
+            }
+
+            local tUserProfile
+            for _, sId in pairs(aIdentifiers) do
+                for _, tProfile in pairs(self.UniqueUserIDs.Profiles) do
+                    if (table.find_value(tProfile.Identifiers, sId)) then
+                        tUserProfile = tProfile
+                        break
+                    end
+                end
+            end
+
+            if (tUserProfile) then
+                for _, sIdentifier in pairs(aIdentifiers) do
+                    if (not table.find_value(tUserProfile.Identifiers, sIdentifier)) then
+                        table.insert(tUserProfile.Identifiers, sIdentifier)
+                        self:Log("Inserted new identifier '%s'", sIdentifier)
+                    end
+                end
+                return tUserProfile.UniqueId
+            end
+
+            self.UniqueUserIDs.Next = (self.UniqueUserIDs.Next + 1)
+            table.insert(self.UniqueUserIDs.Profiles, {
+                UniqueName = hPlayer:GetName(),
+                UniqueId = ("p%05d"):format(self.UniqueUserIDs.Next),
+                Identifiers = table.copy(aIdentifiers),
+            })
+
+            return self.UniqueUserIDs.Profiles[#self.UniqueUserIDs.Profiles].UniqueId
         end,
 
         OnNoProfileReceived = function(self, hPlayer)
-
         end,
 
         OnValidationFailed = function(self, hPlayer)

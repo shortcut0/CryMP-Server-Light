@@ -37,11 +37,6 @@ Server.Config:Create({
         }, ---< Server
 
         ------------------------------------------
-        --- General Server Configuration
-        Server = {
-        }, ---< Server
-
-        ------------------------------------------
         --- Game Configuration
         GameConfig = {
 
@@ -98,7 +93,38 @@ Server.Config:Create({
             },
         }, ---< MapConfig
 
+        ------------------------------------------
+        --- Player Name Configuration
+        PlayerNames = {
 
+            -- The Name Template for Nomads or forbidden names
+            NameTemplate = "Nomad.{CountryCode} (#{Channel})",
+
+            -- Allow Spaces in Names
+            AllowSpaces = true,
+
+            -- Forbidden Names
+            ForbiddenNames = {
+                "Nomad",
+            },
+
+            -- Forbidden Symbols
+            ForbiddenSymbols = {
+                "$",
+                "@",
+                "%%",
+            },
+
+            -- Replacement Character used in sanitization
+            ReplacementCharacter = "_",
+
+            -- Maximum length for names
+            MinimumLength = 3,
+
+            -- Maximum length for names
+            MaximumLength = 18,
+
+        }, ---< PlayerNames
 
 
     },

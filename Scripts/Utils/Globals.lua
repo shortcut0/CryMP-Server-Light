@@ -86,6 +86,8 @@ ChatType_Error   = TextMessageError
 ChatType_Info    = TextMessageInfo
 ChatType_Server  = TextMessageServer
 
+ChatEntity_Server = -1000
+
 ----------------------------
 ---       GAME VARS      ---
 GameTeam_NK = 1
@@ -134,6 +136,15 @@ ConfigType_String = 2
 ConfigType_Number = 3
 ConfigType_Array = 4
 ConfigType_Boolean = 5
+
+----------------------------
+---
+StatisticsEvent_OnNewChannel = 1
+StatisticsEvent_ServerLifetime = 2
+
+StatisticsValue_ServerLifetime = "ServerLifetime"
+StatisticsValue_ChannelCount = "ChannelCount"
+StatisticsValue_ChannelRecord = "ChannelRecord"
 
 ----------------------------
 PRIORITY_NONE = 1
