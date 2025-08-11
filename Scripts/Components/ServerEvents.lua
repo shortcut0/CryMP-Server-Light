@@ -71,10 +71,14 @@ Server:CreateComponent({
             end,
             RequestUseWeapon        = function() end,
             OnWeaponDropped         = function() end,
-            OnShoot                 = function() end,
+            OnShoot                 = function(self, hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
+                Server.PlayerEquipment:OnWeaponFired(hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
+            end,
             OnStartReload           = function() end,
             OnEndReload             = function() end,
-            OnMelee                 = function() end,
+            OnMelee                 = function(self, hShooterId, hWeaponId)
+                Server.PlayerEquipment:OnWeaponMelee(hShooterId, hWeaponId)
+            end,
             RequestPickObject       = function() end,
             OnObjectPicked          = function() end,
             OnExplosivePlaced       = function() end,

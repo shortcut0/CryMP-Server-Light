@@ -130,6 +130,14 @@ Server:CreateComponent({
         end,
 
         RegisterCommand = function(self, aInfo)
+
+            if (table.IsRecursive(aInfo)) then
+                for _, tInfo in pairs(aInfo) do
+                    self:RegisterCommand(tInfo)
+                end
+                return
+            end
+
             local sName         = aInfo.Name
             local aArguments    = (aInfo.Arguments or {})
             local tProperties   = (aInfo.Properties or {})
@@ -225,7 +233,7 @@ Server:CreateComponent({
                     elseif (string.match(sName, ("^" .. sCommandName))) then
                         table.insert(aResults, aCommand)
                     elseif (bGreedy and iCommandLength > 1) then
-                        local iStepBack = math.GetMax(1, iCommandLength - 3)
+                        local iStepBack = math.GetMax(3, iCommandLength - 3)
                         for i = string.len(sCommandName), iStepBack, -1 do
                             local sGreedyMatch = string.sub(sCommandName, 1, i)
                             if (string.match(sName, ("^" .. sGreedyMatch))) then
@@ -260,8 +268,8 @@ Server:CreateComponent({
             local aLogRecipients = Server.Utils:GetPlayers({ NotById = hPlayer.id, ByAccess = hPlayer:GetAccess(Server.AccessHandler:GetAdminLevel()) })
             local aChatLogRecipients = table.copy(aLogRecipients)
 
-            local sMessage = Server.Logger:RidColors(hPlayer:LocalizeText(tMessage.Message or "", {}))
-            local sAdminMessage = Server.Logger:RidColors(hPlayer:LocalizeText((tMessage.AdminMessage or sMessage or ""), {}))
+            local sMessage = Server.Logger:RidColors(hPlayer:LocalizeText(tMessage.Message or "", tFormat   ))
+            local sAdminMessage = Server.Logger:RidColors(hPlayer:LocalizeText((tMessage.AdminMessage or sMessage or ""), tFormat))
 
             local sConsole_Log  -- Admins
             local sConsole_Msg  -- Player
@@ -282,6 +290,8 @@ Server:CreateComponent({
 
                     -- return true
                     -- TEST : Success
+                    -- TEST : Success
+                    tFormat = { {}, tFormat }
                     sConsole_Log = CRY_COLOR_GREEN .. "@str_success"
                     sConsole_Msg = CRY_COLOR_GREEN .. "@str_success"
                     sChat_Log = CRY_COLOR_GREEN .. "@str_success"
@@ -307,6 +317,8 @@ Server:CreateComponent({
 
                     -- return false
                     -- TEST : Failed
+                    -- TEST : Success
+                    tFormat = { {}, tFormat }
                     sConsole_Log = ("(%s{Gray})"):format(CRY_COLOR_ORANGE .. "@str_noFeedback")
                     sConsole_Msg = CRY_COLOR_ORANGE .. "@str_noFeedback"
                     sChat_Log = "@str_noFeedback"
@@ -315,6 +327,8 @@ Server:CreateComponent({
 
                     -- return false, "Function Returned BAD!"
                     -- TEST : Error (Function returned BAD!)
+                    -- TEST : Success
+                    tFormat = { {}, tFormat }
                     sConsole_Log = CRY_COLOR_ORANGE .. "@str_noFeedback {Gray}({Orange}" .. sAdminMessage .. "{Gray})"
                     sConsole_Msg = CRY_COLOR_ORANGE .. "@str_noFeedback {Gray}({Orange}" .. sMessage .. "{Gray})"
                     sChat_Log = "@str_noFeedback (" .. sAdminMessage .. ")"
@@ -332,6 +346,8 @@ Server:CreateComponent({
 
                     -- return false
                     -- TEST : Failed
+                    -- TEST : Success
+                    tFormat = { {}, tFormat }
                     sConsole_Log = ("(%s{Gray})"):format(CRY_COLOR_RED .. "@str_failed")
                     sConsole_Msg = CRY_COLOR_RED .. "@str_failed"
                     sChat_Log = "@str_failed"
@@ -340,6 +356,8 @@ Server:CreateComponent({
 
                     -- return false, "Function Returned BAD!"
                     -- TEST : Error (Function returned BAD!)
+                    -- TEST : Success
+                    tFormat = { {}, tFormat }
                     sConsole_Log = CRY_COLOR_RED .. "@str_failed {Gray}({Red}" .. sAdminMessage .. "{Gray})"
                     sConsole_Msg = CRY_COLOR_RED .. "@str_failed {Gray}({Red}" .. sMessage .. "{Gray})"
                     sChat_Log = "@str_failed (" .. sAdminMessage .. ")"
@@ -363,14 +381,14 @@ Server:CreateComponent({
             -- Admins:
             if (not tMessage.NoAdminLog) then
                 if (string.emptyN(sChat_Log)) then
-                    Server.Chat:ChatMessage(hPlayer, aChatLogRecipients, ("(!%s  :  %s{Gray})"):format(sCommandUpper, sChat_Log), { tFormat, tFormat })
+                    Server.Chat:ChatMessage(hPlayer, aChatLogRecipients, ("(!%s  :  %s{Gray})"):format(sCommandUpper, sChat_Log), tFormat)
                 end
                 if (string.emptyN(sConsole_Log)) then
                     self:LogEvent({
                         Event = self:GetFriendlyName(),
                         Recipients = aLogRecipients,
                         Message = "@command_consoleLog",
-                        MessageFormat = { { Name = hPlayer:GetName(), Command = string.capitalN(sCommandUpper, 1), Reply = sConsole_Log }, tFormat, tFormat  }
+                        MessageFormat = { { Name = hPlayer:GetName(), Command = string.capitalN(sCommandUpper, 1), Reply = sConsole_Log }, tFormat  }
                     })
                     local sArguments = (tFormat.__Arguments__)-- or "<{Green}S{Gray}: {Green}Nomad{Gray}> <{Blue}N{Gray}: {Blue}669{Gray}>, <{Orange}P{Gray}: {Orange}Nomad{Gray}>, <{Yellow}Msg{Gray}: {Yellow}out of mana..{Gray}>, <{Red}?{Gray}: {Red}third!{Gray}>")
                     if (string.emptyN(sArguments)) then
@@ -386,7 +404,7 @@ Server:CreateComponent({
 
             -- Players:
             if (string.emptyN(sChat_Msg)) then
-                Server.Chat:ChatMessage(Server:GetEntity(), hPlayer, ("[ !%s ] %s"):format(sCommandUpper, sChat_Msg), { tFormat, tFormat })
+                Server.Chat:ChatMessage(Server:GetEntity(), hPlayer, ("[ !%s ] %s"):format(sCommandUpper, sChat_Msg), tFormat)
             end
             if (string.emptyN(sConsole_Msg)) then
                 -- So, we only do the normal log if the user used the "say" console command
@@ -397,10 +415,10 @@ Server:CreateComponent({
                         Event = self:GetFriendlyName(),
                         Recipients = { hPlayer },
                         Message = ("> {White}!{Gray}%s {Gray}%s"):format(sCommandUpper, (sAdminMessage ~= sMessage and ((sConsole_Log):gsub(sAdminMessage, sMessage, 1)) or sConsole_Log)),
-                        MessageFormat = { tFormat }
+                        MessageFormat = tFormat
                     })
                 else
-                    Server.Chat:ConsoleMessage(hPlayer, ("   (!%s: %s{Gray})"):format(sCommandUpper, sConsole_Msg), { tFormat, tFormat })
+                    Server.Chat:ConsoleMessage(hPlayer, ("   (!%s: %s{Gray})"):format(sCommandUpper, sConsole_Msg), tFormat)
                 end
             end
         end,
@@ -701,17 +719,14 @@ Server:CreateComponent({
                 if (IsString(pSelf)) then
                     pSelf = CheckGlobal(pSelf)
                     table.insert(tPushArguments, pSelf)
-                    DebugLog("push pSelf??")
                 else
                     table.insert(tPushArguments, pSelf)
-                    DebugLog("push pSelf??")
                 end
                 if (not aCommand.This) then -- Cache for later
                     aCommand.This = pSelf
                 end
             end
 
-            DebugLog("push player??")
             table.insert(tPushArguments, hPlayer)
 
             -- ===========================================================================
@@ -744,6 +759,8 @@ Server:CreateComponent({
                 end
             end
 
+            local bBreak
+            local iArgPlus = 0
             for iArg, aCmdArg in pairs(aCommandArgs) do
 
                 sUserArg = tArgs[iArg]
@@ -888,11 +905,17 @@ Server:CreateComponent({
 
                 elseif (iArgType == CommandArg_TypeMessage) then
 
+                    -- TODO: Concat ONLY up to the point of a required argument??
+                    --- to make THIS possible !rename PirateSoftware im out of mana <ADMIN DECISION>
+                    --- so we will treat REASON argument as the stop for concatenation ??
+                    ---
+
                     hArgReplacement = sUserArg
-                    for i = (iArg + 1), table.size(aCommandArgs) do
-                        hArgReplacement = (hArgReplacement .. " " .. aCommandArgs[i])
+                    for i = (iArg + 1), table.size(tArgs) do
+                        hArgReplacement = (hArgReplacement .. " " .. (tArgs[i] or ""))
                     end
-                    break
+                    hArgReplacement = hArgReplacement:gsub("(%s+)$", "")
+                    bBreak = true
 
                 elseif (iArgType == CommandArg_TypeString) then
                 elseif (iArgType == CommandArg_TypeBoolean) then
@@ -906,6 +929,10 @@ Server:CreateComponent({
 
                 if (hArgReplacement ~= nil) then
                     tArgs[iArg] = hArgReplacement
+                end
+
+                if (bBreak) then
+                    break
                 end
             end
 

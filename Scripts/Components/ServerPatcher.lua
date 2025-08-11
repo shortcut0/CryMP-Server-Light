@@ -104,6 +104,77 @@ Server:CreateComponent({
         end,
 
         HookObject = function(self, hClass, sClass, aBody)
+
+            local function Log(...)
+                if (1) then
+                    return
+                end
+                self:Log(...)
+            end
+
+            local function Stack(a, b)
+                return ("%s.%s"):format(a, b)
+            end
+
+            local function Table(tArray, tParent, sStack)
+                for i, v in pairs(tArray) do
+                    if (type(v) == "table") then
+                        if (tParent[i]) then
+                            if (type(tParent[i]) ~= "table") then
+                                error("mismatching types in Table() <stack:" .. Stack(sStack, i) .. ">")
+                            end
+                        else
+                            tParent[i] = {}
+                        end
+                        Table(v, tParent[i], Stack(sStack, i))
+                    else
+                        tParent[i] = v
+                        Log("Final stack: %s = %s", Stack(sStack, i), tostring(v))
+                    end
+                end
+            end
+
+            local function Body(tBody, tParent, sStack)
+                for sKey, aInfo in pairs(tBody) do
+                    Log("%s.%s=", sStack,sKey)
+                    if (aInfo.Value and aInfo.Name) then
+                        if (type(aInfo.Value) == "table") then
+                            Log("Value is table")
+                            if (tParent[aInfo.Name]) then
+                                if (type(tParent[aInfo.Name]) ~= "table") then
+                                    error("mismatching types in Body() <stack:" .. Stack(sStack, sKey) .. ">")
+                                end
+                            else
+                                tParent[aInfo.Name] = {}
+                            end
+                            Table(aInfo.Value, tParent[aInfo.Name], Stack(sStack, aInfo.Name))
+                        else
+                            if (aInfo.Backup) then
+                                local sBackup = ("%s_Backup"):format(sKey)
+                                if (tParent[sKey] ~= nil and tParent[sBackup] == nil) then
+                                    tParent[sBackup] = tParent[sKey]
+                                    Log("backup of %s was made (%s)", Stack(sStack, sKey), sBackup)
+                                end
+                            end
+                            tParent[sKey] = aInfo.Value
+                            Log("Value Final stack: %s = %s", Stack(sStack, sKey),tostring(aInfo.Value))
+                        end
+                    else
+                        if (tParent[sKey]) then
+                            if (type(tParent[sKey]) ~= "table") then
+                                error("mismatching types")
+                            end
+                        else
+                            tParent[sKey] = {}
+                        end
+                        Body(aInfo, tParent[sKey], Stack(sStack, sKey))
+                    end
+                end
+            end
+
+            Body(aBody, hClass, sClass)
+
+            --[[
             local function CopyToClass(aTable, aTarget, sStack)
                 for sKey, tValue in pairs(aTable) do
                     if (type(tValue) == "table") then
@@ -117,21 +188,49 @@ Server:CreateComponent({
                 end
             end
 
-            for sKey, tValue in pairs(aBody) do
+            local function OnValue(tValue, tParent, sKey)
                 if (type(tValue.Value) == "table") then
-                    if (hClass[sKey] == nil) then
-                        hClass[sKey] = {}
+                    if (tParent[sKey] == nil) then
+                        tParent[sKey] = {}
                     end
-                    CopyToClass(tValue.Value, hClass[sKey], (sClass .. "." .. sKey))
+                    CopyToClass(tValue.Value, tParent[sKey], (sClass .. "." .. sKey))
                 else
                     if (tValue.Backup) then
-                        if (hClass[(sKey .. "_Backup")] == nil) then
-                            hClass[(sKey .. "_Backup")] = hClass[sKey]
+                        if (tParent[(sKey .. "_Backup")] == nil) then
+                            tParent[(sKey .. "_Backup")] = tParent[sKey]
                         end
                     end
-                    hClass[sKey] = tValue.Value
+                    tParent[sKey] = tValue.Value
                 end
             end
+
+            local function OnBody(tBody, tParent)
+                for sKey, tValue in pairs(tBody) do
+                    self:Log("[body] key=%s",sKey)
+                    if (tValue.IsBody) then
+
+                        self:Log("key is a body..")
+                        tParent[sKey] = tParent[sKey] or {}
+                        OnBody(tValue, tParent[sKey])
+                    else
+                        self:Log("key is a value..")
+                        OnValue(tValue, tParent, sKey)
+                    end
+                end
+            end
+
+            self:Log(table.tostring(aBody))
+            for sKey, tValue in pairs(aBody) do
+                self:Log("[1] key= %s",sKey)
+                if (tValue.IsBody) then
+                    self:Log("key is a body..")
+                    OnBody(tValue, hClass[sKey])
+                else
+                    self:Log("key is value")
+                    OnValue(tValue, hClass, sKey)
+                end
+            end
+            ]]
         end,
 
         InsertHook = function(self, sClass, sMember, hValue, bCreateBackup)
@@ -143,6 +242,7 @@ Server:CreateComponent({
                     self.TotalHookCount = (self.TotalHookCount + 1)
                     hIndex[sPart] = {
                         Backup = bCreateBackup,
+                        Name = sPart,
                         Value = hValue
                     }
                 else

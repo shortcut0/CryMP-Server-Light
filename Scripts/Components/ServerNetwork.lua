@@ -328,11 +328,8 @@ Server:CreateComponent({
 
             local tFormat = { Channel = iChannel, Nick = sNickname, IP = sIPAddress, CountryCode = sCountryCode, Country = sCountryName }
             Server.Chat:ChatMessage(ChatEntity_Server, ServerAccess_GetAdmins(), "@channel_created", tFormat)
-            self:LogEvent({
-                Recipients = Server.Utils:GetPlayers(),
-                Message = "@channel_created",
-                MessageFormat = tFormat
-            })
+            Server.Chat:BattleLog(BattleLog_Information, ALL_PLAYERS, "@channel_created", tFormat)
+            self:LogEvent({ Recipients = Server.Utils:GetPlayers(), Message = "@channel_created", MessageFormat = tFormat })
         end,
 
         GetDefaultGeoData = function(self)

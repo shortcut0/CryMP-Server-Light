@@ -74,6 +74,8 @@ ServerTimer_ExportComponentData = "ExportComponentData"
 ----------------------------
 ---      SERVER CHAT     ---
 
+BattleLog_Information = 1
+
 ChatType_ToAll = 5
 ChatType_ToTeam = 6
 ChatType_ToTarget = 7
@@ -90,9 +92,9 @@ ChatEntity_Server = -1000
 
 ----------------------------
 ---       GAME VARS      ---
-GameTeam_NK = 1
 GameTeam_US = 2
-GameTeam_Neutral = 3
+GameTeam_NK = 1
+GameTeam_Neutral = 0
 GameTeam_NK_String = "NK"
 GameTeam_US_String = "US"
 GameTeam_Neutral_String = "Neutral"
@@ -100,6 +102,22 @@ GameTeam_Neutral_String = "Neutral"
 GameMode_IA = "InstantAction"
 GameMode_PS = "PowerStruggle"
 GameMode_TIA = "TeamInstantAction"
+
+GameRank_PVT = 1
+GameRank_CPL = 2
+GameRank_SGT = 3
+GameRank_LT = 4
+GameRank_CPT = 5
+GameRank_MAJ = 6
+GameRank_COL = 7
+GameRank_GEN = 8
+
+KillType_Unknown   = 0
+KillType_Suicide   = 1
+KillType_Team      = 2
+KillType_Enemy     = 3
+KillType_Bot       = 4
+KillType_BotDeath  = 5
 
 ----------------------------
 ---     SERVER LOCALE    ---
@@ -138,6 +156,10 @@ ConfigType_Array = 4
 ConfigType_Boolean = 5
 
 ----------------------------
+
+PlayerData_Equipment = "Equipment"
+
+----------------------------
 ---
 StatisticsEvent_OnNewChannel = 1
 StatisticsEvent_ServerLifetime = 2
@@ -145,6 +167,16 @@ StatisticsEvent_ServerLifetime = 2
 StatisticsValue_ServerLifetime = "ServerLifetime"
 StatisticsValue_ChannelCount = "ChannelCount"
 StatisticsValue_ChannelRecord = "ChannelRecord"
+
+----------------------------
+
+Effect_LightExplosion   = "explosions.light.portable_light";
+Effect_Flare		    = "explosions.flare.a";
+Effect_FlareNight	    = "explosions.flare.night_time";
+Effect_Firework	        = "misc.extremly_important_fx.celebrate";
+Effect_C4Explosive      = "explosions.C4_explosion.ship_door";
+Effect_Claymore	        = "explosions.mine.claymore";
+Effect_AlienBeam	    = "alien_weapons.singularity.Tank_Singularity_Spinup";
 
 ----------------------------
 PRIORITY_NONE = 1

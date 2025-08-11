@@ -20,6 +20,7 @@ Server:CreateComponent({
             { Name = "end_game", FunctionName = "Command_EndGame", Description = "Ends the current game" },
         },
 
+
         Protected = {
             FirstInitialization = false
         },
@@ -97,6 +98,7 @@ Server:CreateComponent({
 
         Initialize = function(self)
 
+            self.Properties.DeleteClientEntities = Server.Config:Get("MapConfig.DeleteClientEntities", true, ConfigType_Boolean)
             self.Properties.DefaultTimeLimits = Server.Config:Get("MapConfig.MapRotation.DefaultTimeLimits", {}, ConfigType_Array)
             self.Properties.DefaultTimeLimits.Default = (self.Properties.DefaultTimeLimit or ONE_HOUR)
             self:CollectMaps()
@@ -106,6 +108,16 @@ Server:CreateComponent({
         end,
 
         PostInitialize = function(self)
+            if (self.Properties.DeleteClientEntities) then
+                local iDeletedCount = 0
+                for _, hEntity in pairs(System.GetEntities()) do
+                    if (hEntity:HasFlags(ENTITY_FLAG_CLIENT_ONLY)) then
+                        System.RemoveEntity(hEntity.id)
+                        iDeletedCount = (iDeletedCount + 1)
+                    end
+                end
+                self:Log("Deleted %d Client-Side Entities", iDeletedCount)
+            end
         end,
 
         GetRawMapList = function(self)
@@ -179,7 +191,12 @@ Server:CreateComponent({
                     end
                 end,
                 Reset        = function(this) this.Current = 1 if (this.Shuffle) then this.List = (this.NextList or table.shuffle(this.List)) end end,
-                QueueReset   = function(this) if (this.Shuffle) then this.NextList = table.shuffle(this.List) end end,
+                QueueReset   = function(this)
+                    if (this.Shuffle) then
+                        -- keep the old NextList
+                        this.NextList = this.NextList or table.shuffle(this.List)
+                    end
+                end,
                 GetNext      = function(this)
                     local iNext = this.Current + 1
                     if (iNext > this.Last) then
@@ -366,6 +383,20 @@ Server:CreateComponent({
                 Server.Utils:SetCVar("sv_gameRules", sRules)
                 Server.Utils:ExecuteCommand("map " .. sPath)
             end)
+        end,
+
+        GetMiniMap = function(self)
+
+            local aMiniMaps = self.CachedMiniMaps
+            local sMapPath = self:GetMapPath()
+            if (aMiniMaps == nil or sMapPath ~= self.LastMiniMapPath) then
+                local sMapXML = ("levels/%s/%s.xml"):format(ServerDLL.GetMapName(), Server.MapRotation:GetMapName())
+                self.CachedMiniMaps = ServerDLL.GetMiniMapBBox(sMapXML)
+                aMiniMaps = self.CachedMiniMaps
+            end
+
+            self.LastMiniMapPath = sMapPath
+            return table.copy((aMiniMaps or {})[1] or {})
         end,
 
         Command_StartMap = function(self, sMap, iTimer, hPlayer)

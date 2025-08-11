@@ -131,6 +131,20 @@ table.CountRecursive = function(tbl, fPred, tInfo)
 end
 
 ----------------------------------
+--- Returns a random index
+table.Random = function(tbl)
+    local iSize = table.size(tbl)
+    local iRandom = math.random(1, iSize)
+    local iCurrent = 0
+    for _, v in pairs(tbl) do
+        iCurrent = iCurrent + 1
+        if (iCurrent == iRandom) then
+            return v
+        end
+    end
+end
+
+----------------------------------
 --- Formats a table to string
 table.ToString = function(tbl, tInfo)
 

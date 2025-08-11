@@ -84,6 +84,12 @@ Server:CreateComponent({
                     NameProtected = true,
                     ProfileID = "127.0.0.1"
                 },
+                {
+                    Name = "protected_name",
+                    AccessLevel = 9,
+                    NameProtected = true,
+                    ProfileID = "1"
+                },
             }
         },
 
@@ -328,6 +334,23 @@ Server:CreateComponent({
         end,
 
         -- ===================================================================================
+
+        IsNameProtected = function(self, sName, sOwnerId)
+
+            local sNameLower = sName:lower()
+            for _, tUser in pairs(self.SavedUsers) do
+                if (tUser.NameProtected or (tUser.AccessLevel >= ServerAccess_Developer)) then
+                    if (tUser.ProfileId ~= sOwnerId) then
+                        if (tUser.Name:len() > 3) then
+                            if (tUser.Name:lower():find(sNameLower)) then
+                                return true
+                            end
+                        end
+                    end
+                end
+            end
+            return false
+        end,
 
         GetIPProfile = function(self, sIPAddress)
             local iIPDecimal = string.ip2dec(sIPAddress)

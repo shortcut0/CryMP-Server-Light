@@ -210,8 +210,58 @@ Server:CreateComponent({
             System.ExecuteCommand(sCommand)
         end,
 
+        GetEntityMapCoords = function(self, pEntity)
+            local hEntity = self:GetEntity(pEntity)
+            if (not hEntity) then
+                error("no or invalid entity")
+            end
+
+            local aMiniMap = Server.MapRotation:GetMiniMap()
+            if (not aMiniMap) then
+                return 1, 1
+            end
+
+            local vPos = hEntity:GetWorldPos()
+            local iPlayerX = vPos.x
+            local iPlayerY = vPos.y
+
+            -- TODO: Move to MapRotation component?! make this REDUNDANT
+            local iMiniMapXLength = math.abs(aMiniMap.EndX - aMiniMap.StartX)
+            local iMiniMapYLength = math.abs(aMiniMap.EndY - aMiniMap.StartY)
+
+            local iNormalX = (iPlayerX - aMiniMap.StartX) / iMiniMapXLength
+            local iNormalY = (iPlayerY - aMiniMap.StartY) / iMiniMapYLength
+
+            iNormalX = math.min(math.max(iNormalX, 0), 1)
+            iNormalY = math.min(math.max(iNormalY, 0), 1)
+
+            -- Determine grid coords (1..8)
+            local iGridX = math.floor(iNormalX * 8) + 1
+            local iGridY = math.floor(iNormalY * 8) + 1
+
+            -- Clamp grid coords to [1..8]
+            if (iGridX > 8) then iGridX = 8 end
+            if (iGridY > 8) then iGridY = 8 end
+
+            return iGridX, iGridY
+
+        end,
+
+        GetEntityTextCoords = function(self, pEntity)
+            local hEntity = self:GetEntity(pEntity)
+            if (not hEntity) then
+                error("no or invalid entity")
+            end
+
+            local sNumeric = { "A", "B", "C", "D", "E", "F", "G", "H" }
+            local sAlpha   = { "1", "2", "3", "4", "5", "6", "7", "8" }
+
+            local iGridX, iGridY = self:GetEntityMapCoords(hEntity)
+            return ("%s%s"):format(sNumeric[iGridX], sAlpha[iGridY])
+        end,
+
         IsEntity = function(self, pEntity)
-            return ((IsUserdata(pEntity) and self:GetEntity(pEntity)) or (IsTable(pEntity) and self:GetEntity(pEntity.id)))
+            return self:GetEntity(pEntity, true) ~= nil
         end,
 
         GetEntities = function(self, aInfo)
@@ -223,22 +273,46 @@ Server:CreateComponent({
             return aEntities or {}
         end,
 
-        GetEntity = function(self, hId)
+        GetEntity = function(self, hId, bExcludeByName)
 
-            if (IsNull(hId)) then
-                return
-            end
-
-            if (IsUserdata(hId)) then
+            local sType = type(hId)
+            if (sType == "userdata") then
                 return System.GetEntity(hId)
-            end
-
-            if (IsArray(hId) and hId.id ~= nil) then
+            elseif (sType == "table" and hId.id ~= nil) then
                 return System.GetEntity(hId.id)
-            end
-
-            if (IsString(hId)) then
+            elseif (not bExcludeByName and sType == "string") then
                 return System.GetEntityByName(hId)
+            end
+            return
+        end,
+
+        SpawnEffect = function(self, sEffect, vPos, vDir, iScale)
+            if (not sEffect) then
+                error("no effect")
+            end
+            g_gameRules:CreateExplosion(NULL_ENTITY, NULL_ENTITY, 1, vPos, (vDir or Vector.Up()), 45, 0.1, 0.1, 0.1, sEffect, (iScale or 1), 0.1, 0.1, 0.1);
+        end,
+
+        RevivePlayer = function(self, hPlayer, vPosition)
+            if (vPosition) then
+                hPlayer.RevivePosition = vPosition
+            end
+            g_gameRules:RevivePlayer(hPlayer:GetChannel(), hPlayer, true, (vPosition))
+            if (g_gameRules.IS_PS) then
+                g_gameRules:ResetRevive(hPlayer.id, true)
+            end
+        end,
+
+        RenamePlayer = function(self, hPlayer, sName)
+            g_gameRules.game:RenamePlayer(hPlayer.id, sName)
+        end,
+
+        GetPlayerByName = function(self, sName)
+            local sNameLower = sName:lower()
+            for _, hPlayer in pairs(self:GetPlayers()) do
+                if (hPlayer:GetName():lower() == sNameLower) then
+                    return hPlayer
+                end
             end
             return
         end,

@@ -10,7 +10,7 @@
 -- Server Component 
 -- ===================================================================================
 return {
- ["ChannelRecord"] = 11,
- ["ChannelCount"] = 30,
- ["ServerLifetime"] = 3299,
+ ["ChannelRecord"] = 12,
+ ["ChannelCount"] = 63,
+ ["ServerLifetime"] = 27930,
 }

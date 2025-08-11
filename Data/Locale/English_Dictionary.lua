@@ -354,6 +354,12 @@ Server.LocalizationManager:Add({
             English = "{Red}{AdminName}{Gray} Has Registered User {Red}{UserName}{Gray} ({Red}{ProfileID}{Gray}) As {AccessColor}{AccessName}{Gray}"
         }
     },
+    {
+        String = "user_renamed",
+        Languages = {
+            English = "{Red}{OldName}{Gray} has been renamed to {Red}{NewName}{Gray} ({Red}{Reason}{Gray})"
+        }
+    },
 })
 
 
@@ -505,6 +511,12 @@ Server.LocalizationManager:Add({
 
 Server.LocalizationManager:Add({
     {
+        String = "user_decision",
+        Languages = {
+            English = "User Decision"
+        }
+    },
+    {
         String = "admin_decision",
         Languages = {
             English = "Admin Decision"
@@ -594,6 +606,174 @@ Server.LocalizationManager:Add({
             English = "Ago"
         }
     },
+    {
+        String = "too_short",
+        Languages = {
+            English = "too short"
+        }
+    },
+    {
+        String = "too_long",
+        Languages = {
+            English = "too long"
+        }
+    },
+    {
+        String = "name_in_use",
+        Languages = {
+            English = "Name already in Use"
+        }
+    },
+    {
+        String = "count_players_renamed",
+        Languages = {
+            English = "{Count} Players have been Renamed"
+        }
+    },
+    {
+        String = "reason",
+        Languages = {
+            English = "Reason"
+        }
+    },
+    {
+        String = "target",
+        Languages = {
+            English = "Target"
+        }
+    },
+    {
+        String = "name",
+        Languages = {
+            English = "Name"
+        }
+    },
+    {
+        String = "invalid_name",
+        Languages = {
+            English = "Invalid Name"
+        }
+    },
+    {
+        String = "forbidden",
+        Languages = {
+            English = "Forbidden"
+        }
+    },
+    {
+        String = "reserved",
+        Languages = {
+            English = "Reserved"
+        }
+    },
+    {
+        String = "Option",
+        Languages = {
+            English = "Option"
+        }
+    },
+    {
+        String = "you_were_revived",
+        Languages = {
+            English = "You have been Revived"
+        }
+    },
+    {
+        String = "you_were_broughtTo",
+        Languages = {
+            English = "You have been Brought to {To}"
+        }
+    },
+    {
+        String = "you_teleportedTo",
+        Languages = {
+            English = "You Teleported to {To} Location"
+        }
+    },
+    {
+        String = "x_teleportedToYou",
+        Languages = {
+            English = "{X} Teleported to your Location"
+        }
+    },
+    {
+        String = "hitaccuracy",
+        Languages = {
+            English = "HIT:ACCURACY"
+        }
+    },
+    {
+        String = "hit_accuracy_0",
+        Languages = {
+            English = "COMPLETE AZZ ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_5",
+        Languages = {
+            English = "SLiNGSHOT GRANNY ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_10",
+        Languages = {
+            English = "STORMTROOPER ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_20",
+        Languages = {
+            English = "NiGHTMARE ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_30",
+        Languages = {
+            English = "SHAMEFUL ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_40",
+        Languages = {
+            English = "WEAK ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_50",
+        Languages = {
+            English = "NOT GOOD ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_60",
+        Languages = {
+            English = "NOT BAD ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_70",
+        Languages = {
+            English = "VERY DECENT ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_80",
+        Languages = {
+            English = "SNiPER LiKE ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_90",
+        Languages = {
+            English = "GOD LiKE ({Percent}%%)"
+        }
+    },
+    {
+        String = "hit_accuracy_99",
+        Languages = {
+            English = "FUCKiNG AiMBOT ({Percent}%%)"
+        }
+    },
 })
 
 
@@ -648,6 +828,48 @@ Server.LocalizationManager:Add({
 -- ===================================================================================
 
 Server.LocalizationManager:Add({
+    {
+        String = "arg_goto_option_desc",
+        Languages = {
+            English = "Directly teleport into the targets vehicle"
+        }
+    },
+    {
+        String = "arg_bring_option_desc",
+        Languages = {
+            English = "Bring the target Player(s) directly into your Vehicle"
+        }
+    },
+    {
+        String = "arg_revive_option_desc",
+        Languages = {
+            English = "Option to Revive the target at their death, or the default location"
+        }
+    },
+    {
+        String = "arg_reason_desc",
+        Languages = {
+            English = "The new name your wish to be renamed to"
+        }
+    },
+    {
+        String = "arg_rename_desc",
+        Languages = {
+            English = "The new name your wish to be renamed to"
+        }
+    },
+    {
+        String = "arg_renameT_desc",
+        Languages = {
+            English = "The new name your wish to be renamed the target to"
+        }
+    },
+    {
+        String = "arg_target_desc",
+        Languages = {
+            English = "The target player for your devious action"
+        }
+    },
     {
         String = "arg_filter",
         Languages = {

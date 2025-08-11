@@ -11,25 +11,28 @@
 Server.ChatCommands:Add({
 
     -- ================================================================
-    -- !PDA
+    -- !Revive <Target> <AtSpawn>
     {
-        Name = "pda",
-        Access = ServerAccess_Lowest,
-        Function = function(self)
-            Server.Chat:SendWelcomeMessage(self, true)
+        Name = "InitPlayer",
+        Access = ServerAccess_Developer,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, Default = "self", AcceptSelf = true, AcceptAll = true },
+        },
+        Properties = {
+        },
+        Function = function(self, hTarget, sOption)
+            if (hTarget == self) then
+                Server.ActorHandler:AddActorFunctions(self)
+                return true
+            elseif (hTarget == ALL_PLAYERS) then
+                for _, hVictim in pairs(Server.Utils:GetPlayers()) do
+                    Server.ActorHandler:AddActorFunctions(hVictim)
+                end
+                return true
+            end
+
+            Server.ActorHandler:AddActorFunctions(hTarget)
+            return true
         end
     },
-
-    -- ================================================================
-    -- !NAME
-    {
-        Name = "name",
-        Access = ServerAccess_Lowest,
-        Arguments = {
-            { Name = "@name", Desc = "@arg_rename_desc", Required = true, Type = CommandArg_TypeMessage }
-        },
-        Function = function(self, sName)
-            return Server.NameHandler:Command_Name(self, sName)
-        end
-    }
 })

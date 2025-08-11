@@ -29,7 +29,7 @@ Server.Config:Create({
         Server = {
 
             -- The Name of Server
-            ServerName = "CryMP ~~ {MapName} ~~",
+            ServerName = "CryMP ~ {MapName} ~",
 
             -- The Description which will appear on the Website
             ServerDescription = "CryMP-Server"
@@ -43,11 +43,177 @@ Server.Config:Create({
             -- Will skip the annoying Pre-Game!
             SkipPreGames = true,
 
+            -- Configuration for Kills
+            KillConfig = {
+
+                -- if players should drop all their equipment upon death
+                DropAllEquipment = true,
+
+                -- Deduct rewards for killing bots
+                DeductBotKills = false,
+
+                -- Deduct Kills for killing teammates
+                DeductTeamKills = 1,
+
+                -- Deduct kills for suiciding
+                DeductSuicideKills = 0,
+
+                -- Add Deaths for suiciding (1 + this)
+                SuicideAddDeaths = 0,
+
+                -- Will enable new Kill Messages
+                EnableNewKillMessages = true,
+
+                --- Kill Streaks
+                KillStreaks = {
+
+                    --- formats are:
+                    --- {ShooterName} = name of the shooter
+                    --- {TargetName} = name of the target
+                    --- {Kills} = the amount of kills the shooter has
+
+                    --- the message list for KILL streaks
+                    KillMessages = {
+                        [03] = "{ShooterName} IS on a KILLING SPREE ( #{Kills} Kills )",
+                        [05] = "{ShooterName} IS on a RAMPAGE ( #{Kills} Kills )",
+                        [08] = "{ShooterName} IS DOMINATING : ( #{Kills} Kills )",
+                        [12] = "{ShooterName} IS AMAZING : ( #{Kills} Kills )",
+                        [15] = "{ShooterName} IS UNSTOPPABLE : ( #{Kills} Kills )",
+                        [19] = "{ShooterName} IS INSANE : ( #{Kills} Kills )",
+                        [23] = "{ShooterName} IS OVERPOWERED : ( #{Kills} Kills )",
+                        [28] = "{ShooterName} IS GODLIKE : ( #{Kills} Kills )",
+                        [35] = "{ShooterName} IS MORE THAN GODLIKE : ( #{Kills} Kills )",
+                        [40] = "{ShooterName} IS AMD USER : ( #{Kills} Kills )",
+                        [50] = "{ShooterName} IS AMD ENTHUSIAST : ( #{Kills} Kills )",
+                        [60] = "{ShooterName} IS AMD KING : ( #{Kills} Kills )",
+                        [80] = "{ShooterName} IS AMD GOD : ( #{Kills} Kills )",
+                        [90] = "{ShooterName} IS AMD SUPREME RULER : ( #{Kills} Kills )",
+                        [100] = "{ShooterName} is LISA SU : ( #{Kills} Kills )"
+                    }, ---< KillMessages
+
+                    --- the message list for DEATH streaks
+                    DeathMessages = {
+                        [05] = "{TargetName} is on a DEATH STREAK : ( #{Kills} Deaths )",
+                        [10] = "{TargetName} is SUICIDAL MASTER : ( #{Kills} Deaths )",
+                        [15] = "{TargetName} is INTEL USER : ( #{Kills} Deaths )",
+                        [20] = "{TargetName} is ASHAMED of their INTEL : ( #{Kills} Deaths )",
+                        [25] = "{TargetName} is INTEL ENTHUSIAST : ( #{Kills} Deaths )",
+                        [30] = "{TargetName} is MASTER of SUICIDE : ( #{Kills} Deaths )",
+                        [35] = "{TargetName} is GOD of SUICIDE : ( #{Kills} Deaths )",
+                        [50] = "{TargetName} is Patrick P. Gelsinger : ( #{Kills} Deaths )",
+                    }, ---< DeathMessages
+
+                    --- the message list for REPEATING kills
+                    RepeatMessages = {
+                        [04] = "{ShooterName} is SLAYING {TargetName} (  #{Kills} Kills )",
+                        [08] = "{ShooterName} is DESTROYING {TargetName} (  #{Kills} Kills )",
+                        [12] = "{ShooterName} is DOMINATING {TargetName} (  #{Kills} Kills )",
+                        [14] = "{ShooterName} is ERADICATING {TargetName} (  #{Kills} Kills )",
+                        [18] = "{ShooterName} is SHOWING {TargetName} the AMD WAY (  #{Kills} Kills )",
+                        [22] = "{ShooterName} is FLEXING their AMD on {TargetName} (  #{Kills} Kills )",
+                        [26] = "{ShooterName} is TEACHING the WAY OF AMD to {TargetName} (  #{Kills} Kills )",
+                    }, ---< DeathMessages
+
+
+                }, ---< KillStreaks
+
+            }, ---< KillConfig
+
+            -- The Spawn Equipment Config
+            SpawnEquipment = {
+                PowerStruggle = {
+
+                    -- Status of this config entry
+                    Active = true,
+
+                    -- The equipment for regular players
+                    Regular = {
+                        -- For NK Team Members
+                        NK = {
+                            -- Only available to members of this rank, else Default will be equipped
+                            RankRequired = GameRank_SGT,
+                            Equip = {
+                                { "FY71", { "Reflex" } }
+                            }
+                        },
+                        -- For AMERICUUH Team Members
+                        US = {
+                            -- Only available to members of this rank, else Default will be equipped
+                            RankRequired = GameRank_SGT,
+                            Equip = {
+                                { "SCAR", {} }
+                            }
+                        },
+
+                        Default = {
+                            { "SMG", { "Relfex" }}
+                        }
+                    },
+
+                    -- The equipment for VIP members
+                    Premium = {
+                        -- For NK Team Members
+                        NK = {
+                            -- Only available to members of this rank, else Default will be equipped
+                            RankRequired = GameRank_CPL,
+                            Equip = {
+                                { "FY71", { "LAMRifle", "Reflex" } }
+                            }
+                        },
+                        -- For AMERICUUH Team Members
+                        US = {
+                            -- Only available to members of this rank, else Default will be equipped
+                            RankRequired = GameRank_CPL,
+                            Equip = {
+                                { "SCAR", { "Reflex", } }
+                            }
+                        },
+
+                        Default = {
+                            { "FY71", { "Relfex" }}
+                        }
+                    },
+                    AdditionalEquip = {
+                        'Binoculars'
+                    },
+
+                    -- Everyone spawns with these
+                    MustHave = {
+                    }
+                },
+                InstantAction = {
+
+                    -- Status of this config entry
+                    Active = true,
+
+                    -- The equipment for regular players
+                    Regular = {
+                        { "FY71", { "LAMRifle", "Reflex" } }
+                    },
+
+                    -- The equipment for VIP members
+                    Premium = {
+                        { "SMG",  { "LAMRifle", "Silencer", "Reflex" }},
+                        { "FY71", { "LAMRifle", "Silencer", "Reflex" }}
+                    },
+                    AdditionalEquip = {
+                        'Binoculars'
+                    },
+
+                    -- Everyone spawns with these
+                    MustHave = {
+                    }
+                },
+            }, ---< SpawnEquipment
+
         }, ---< GameConfig
 
         ------------------------------------------
         --- Map Configuration
         MapConfig = {
+
+            -- If the server should delete all client-only entities
+            DeleteClientEntities = true,
 
             -- A list of forbidden maps
             ForbiddenMaps = {
@@ -77,10 +243,10 @@ Server.Config:Create({
                 IgnoreNonDownloadable = true,
 
                 -- The Rotation will cycle through all available maps
-                UseAvailableMaps = true,
+                UseAvailableMaps = false,
 
                 -- The Rotation will be shuffled each cycle
-                ShuffleRotation = true,
+                ShuffleRotation = false,
 
                 -- The list of Maps
                 MapList = {
@@ -112,7 +278,10 @@ Server.Config:Create({
             ForbiddenSymbols = {
                 "$",
                 "@",
-                "%%",
+                "%",
+                "[",
+                "]",
+                '"',
             },
 
             -- Replacement Character used in sanitization
@@ -125,7 +294,6 @@ Server.Config:Create({
             MaximumLength = 18,
 
         }, ---< PlayerNames
-
 
     },
 })

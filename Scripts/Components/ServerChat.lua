@@ -33,19 +33,20 @@ Server:CreateComponent({
             ConsoleChatMessageSenderColor  = CRY_COLOR_WHITE,   -- Nomad : Hi!
 
             ChatMessageTags = {
-                Status = false,
+                ShowInConsole = false,
+                Status = true,
                 And = {
-                    { Status = true, Tag = "Coords: {Coords}", Type = ChatToTeam }
                 },
                 Or = {
+                    { Status = true, Tag = "Coord, {Coords}", Type = ChatToTeam },
                     { Tag = "SPEC",     Condition = "IsSpectating" },
                     { Tag = "DEAD",     Condition = "IsDead" },
-                    { Tag = "LAG",      Condition = "IsLagging" },
-                    { Tag = "TESTING",  Condition = "IsTesting" },
-                    { Tag = "GOD",      Condition = "HasGodMode" },
-                    { Tag = "DEV",      Condition = "IsDeveloper" },
-                    { Tag = "ADMIN",    Condition = "IsAdmin" },
-                    { Tag = "VIP",      Condition = "IsPremium" },
+                    --{ Tag = "LAG",      Condition = "IsLagging" },
+                    --{ Tag = "TESTING",  Condition = "IsTesting" },
+                    --{ Tag = "GOD",      Condition = "HasGodMode" },
+                    --{ Tag = "DEV",      Condition = "IsDeveloper" },
+                   -- { Tag = "ADMIN",    Condition = "IsAdmin" },
+                    --{ Tag = "VIP",      Condition = "IsPremium" },
                 },
             },
 
@@ -75,6 +76,10 @@ Server:CreateComponent({
                 Tag = "Script-Warning",
                 TagColor = CRY_COLOR_YELLOW
             },
+            ["Server"] = {
+                Class = "System",
+                Tag = "CryMP",
+            },
         },
 
         DefaultConsoleLogClass = {
@@ -90,6 +95,7 @@ Server:CreateComponent({
             TextMessageConsole,
         },
 
+        -- this is to stop players from receiving the console welcome message twice, unless wanted otherwise in the config
         ChannelsWelcomed = {},
 
         Protected = {
@@ -137,6 +143,46 @@ Server:CreateComponent({
             end
             self:TextMessage(ChatType_Info, hPlayerOne, "hello in chat !")
 
+        end,
+
+        BattleLog = function(self, iType, pTarget, sMessage, tFormat)
+
+            if (IsArray(iType)) then
+                for _, tType in pairs(iType) do
+                    self:BattleLog(tType, pTarget, sMessage, tFormat)
+                end
+                return
+            end
+
+            local aTargetList = {}
+
+            local iTeamId = ((IsString(pTarget) or (IsAny(pTarget, GameTeam_Neutral, GameTeam_NK, GameTeam_NK))) and Server.Utils:GetTeam_Number(pTarget))
+            if (not iTeamId and pTarget == ChatType_ToTeam) then
+                iTeamId = Server.Utils:GetTeamId(pTarget)
+            end
+
+            if (iTeamId) then
+                aTargetList = Server.Utils:GetPlayers({ ByTeam = iTeamId })
+            elseif (pTarget == ALL_PLAYERS) then
+                aTargetList = Server.Utils:GetPlayers()
+            elseif (IsArray(pTarget) and pTarget.id) then
+                aTargetList[1] = Server.Utils:GetEntity(pTarget)
+            elseif (table.IsRecursive(pTarget)) then
+                aTargetList = pTarget
+            end
+
+            local sMessageLocalized
+            if (not table.IsRecursive(tFormat)) then
+                tFormat = { tFormat }
+            end
+            for _, hPlayer in pairs(aTargetList) do
+                sMessageLocalized = Server.Logger:RidColors(hPlayer:LocalizeText(sMessage, tFormat) .. "\n")
+                if (iType == BattleLog_Information) then
+                    g_gameRules.onClient:ClClientConnect(hPlayer:GetChannel(), sMessageLocalized, false)
+                else
+                    error("unhandled battle log type")
+                end
+            end
         end,
 
         ChatMessage = function(self, pSender, pTarget, sMessage, tFormat)
@@ -197,7 +243,7 @@ Server:CreateComponent({
             if (iTeamId) then
                 return self:SendTextMessageToTeam(iType, iTeamId, sMessage, tFormat)
 
-            elseif (pTarget == ChatType_ToAll) then
+            elseif (pTarget == ChatType_ToAll or pTarget == ALL_PLAYERS) then
                 return self:SendTextMessageToAll(iType, sMessage, tFormat)
 
             end
@@ -356,6 +402,8 @@ Server:CreateComponent({
                 if (hSender ~= hTarget) then
                     table.insert(aRecipients, hTarget)
                 end
+            elseif (aLogInfo.Tag) then
+                sTag = (" $9(%s%s$9)"):format(aLogInfo.TagColor or "$1", aLogInfo.Tag)
             end
 
             for _, hRecipient in pairs(aRecipients) do
@@ -385,7 +433,7 @@ Server:CreateComponent({
                 return
             end
 
-            local sPlayerCoords = hPlayer:GetMapCoords()
+            local sPlayerCoords = hPlayer:GetTextCoords()
 
             local tAnd = aTagList.And -- all of these
             local tOr = aTagList.Or   -- plus any one of these, depending on the condition set
@@ -397,11 +445,12 @@ Server:CreateComponent({
                     bAddTag = true
 
                     if (aTagInfo.Status ~= false) then
-                        if (aTagInfo.Type and iType ~= aTagInfo.type) then
+                        if (aTagInfo.Type and iType ~= aTagInfo.Type) then
+                            DebugLog("not",aTagInfo.Tag,aTagInfo.Type,iType)
                             bAddTag = false
 
                         elseif (aTagInfo.Condition) then
-                            local bOk, sErr = pcall(hPlayer[aTagInfo.Condition])
+                            local bOk, sErr = pcall(hPlayer[aTagInfo.Condition], hPlayer)
                             if (not bOk) then
                                 self:LogError("Failed to execute Condition '%s' for Tag '%s'", aTagInfo.Condition, aTagInfo.Tag)
                                 self:LogError("%s", ToString(sErr))
@@ -425,27 +474,38 @@ Server:CreateComponent({
 
             CheckTagList(tAnd)
             CheckTagList(tOr, true)
+            if (#aTags == 0) then
+                return
+            end
 
-
-
-            local sTagParenthesis = table.concat()
-            return sChatTag, sTag
+            --local sTagParenthesis = ("(%s)"):format(table.concat(aTags, ", "))
+            return table.concat(aTags, ", ")--, aTags
         end,
 
-        FilterMessage = function(self, hSender, hTarget, sMessage, iType, bSentByServer)
+        FilterMessage = function(self, hSender, hTarget, sMessage, iType, bSentByServer, aInfo)
 
             local bLogMessage = true
             if (bSentByServer) then
                 bLogMessage = false
             end
 
+            local aLogInfo = {
+                Type    = iType,
+                Sender  = hSender,
+                Target  = hTarget,
+                Message = sMessage
+            }
+
+            local sChatTag = self:GetChatPrefixTag(iType, hSender)
+            if (sChatTag) then
+                aInfo.NewMessage = ("(%s) %s"):format(sChatTag, aInfo.NewMessage)
+                if (self.Properties.ChatMessageTags.ShowInConsole) then
+                    aLogInfo.Tag = sChatTag
+                end
+            end
+
             if (bLogMessage) then
-                self:LogChatMessage({
-                    Type    = iType,
-                    Sender  = hSender,
-                    Target  = hTarget,
-                    Message = sMessage
-                })
+                self:LogChatMessage(aLogInfo)
             end
             return true
         end,
@@ -464,7 +524,7 @@ Server:CreateComponent({
                     if (Server.ChatCommands:CheckMessage(hSender, sMessage, iType)) then
                         aInfo.Ok = false
 
-                    elseif (not self:FilterMessage(hSender, hTarget, sMessage, iType, bSentByServer)) then
+                    elseif (not self:FilterMessage(hSender, hTarget, sMessage, iType, bSentByServer, aInfo)) then
                         aInfo.Ok = false
 
                     end
@@ -561,8 +621,17 @@ Server:CreateComponent({
                 self:ConsoleMessage(hPlayer, ("{Gray}%s"):format(sLine))
             end
             self:ConsoleMessage(hPlayer, (" {Gray}%s"):format(string.rep("=", self:GetConsoleWidth() - 3)))
-            CreateInfoLine({ NoSpace = true, Name = "USER$5", Value = "INFO" }, {Value = "@welcome_toTheServer"}, { NoSpace = true, Name = "SERVER$4", Value = "INFO" })
-            CreateInfoLine({ NoSpace = true, Empty = true }, { Value = "$5" .. sPlayerName }, { NoSpace = true, Empty = true })
+
+            -- TODO: prettify
+            for _, tInfo in pairs({
+                { { NoSpace = true, Name = "USER$5", Value = "INFO" },  { Value = "@welcome_toTheServer" }, { NoSpace = true, Name = "SERVER$4", Value = "INFO" } },
+                { { NoSpace = true, Empty = true },                     { Value = "$5" .. sPlayerName },    { NoSpace = true, Empty = true } },
+
+            }) do
+                CreateInfoLine(unpack(tInfo))
+            end
+            --CreateInfoLine()
+            --CreateInfoLine()
             CreateInfoLine({ Name = "Access", Value = sAccessColor .. sAccessName }, {}, { Name = "Up-Time", Value = Date:Colorize(Date:Format(_time, DateFormat_Minutes + DateFormat_Cramped)) })
             CreateInfoLine({ Name = "ProfileID", Value = "$5" .. hPlayer:GetProfileId() }, { Value = "@yourLastVisit: $4" .. sLastVisit }, { Name = "Memory", Value = sMemory })
             CreateInfoLine({ Name = "IP", Value = "$8" .. hPlayer:GetIPAddress() }, {}, { Name = "CPU", Value = sCPU })
