@@ -774,6 +774,224 @@ Server.LocalizationManager:Add({
             English = "FUCKiNG AiMBOT ({Percent}%%)"
         }
     },
+    {
+        String = "first_blood_instantAction",
+        Languages = {
+            English = "{Shooter} SCORED FIRST:BLOOD for TEAM {Team}"
+        }
+    },
+    {
+        String = "first_blood_powerStruggle",
+        Languages = {
+            -- [ PirateSoftware ] SCORED FIRST:BLOOD for TEAM US (WiNS +500 PP, +25 CP)
+            -- [ PirateSoftware ] SCORED FIRST:BLOOD for TEAM US (Entire Team +500 PP, +25 CP)
+            English = "{Red}{Shooter}{Gray} SCORED {Red}{Amplified}{Gray}FIRST{Red}:{Gray}BLOOD for TEAM {Red}{Team}{Gray} ({TeamReward}+{Red}{PP}{Gray} PP, +{Red}{CP}{Gray} CP)"
+        }
+    },
+    {
+        String = "entire_team",
+        Languages = {
+            English = "Entire Team"
+        }
+    },
+    {
+        String = "enemy",
+        Languages = {
+            English = "Enemy"
+        }
+    },
+    {
+        String = "Eliminated",
+        Languages = {
+            English = "Eliminated"
+        }
+    },
+    {
+        String = "factory_defended",
+        Languages = {
+            English = "Factory Defended"
+        }
+    },
+    {
+        String = "suicide",
+        Languages = {
+            English = "Suicide"
+        }
+    },
+    {
+        String = "special_sniper_kill",
+        Languages = {
+            English = "SNiPER:KiLL {Distance}m"
+        }
+    },
+    {
+        String = "team_kill",
+        Languages = {
+            English = "Team Kill"
+        }
+    },
+    {
+        String = "vehicle",
+        Languages = {
+            English = "Vehicle"
+        }
+    },
+    {
+        String = "Ammo",
+        Languages = {
+            English = "Ammo"
+        }
+    },
+    {
+        String = "Refund",
+        Languages = {
+            English = "Refund"
+        }
+    },
+    {
+        String = "Bought",
+        Languages = {
+            English = "Bought"
+        }
+    },
+    {
+        String = "sold",
+        Languages = {
+            English = "Sold"
+        }
+    },
+    {
+        String = "destroyed",
+        Languages = {
+            English = "Destroyed"
+        }
+    },
+    {
+        String = "disarmed",
+        Languages = {
+            English = "Disarmed"
+        }
+    },
+    {
+        String = "repaired",
+        Languages = {
+            English = "Repaired"
+        }
+    },
+    {
+        String = "stolen",
+        Languages = {
+            English = "Stolen"
+        }
+    },
+    {
+        String = "headquarters",
+        Languages = {
+            English = "HQ"
+        }
+    },
+    {
+        String = "captured",
+        Languages = {
+            English = "Captured"
+        }
+    },
+    {
+        String = "item_invest_reward",
+        Languages = {
+            English = "Item Share"
+        }
+    },
+    {
+        String = "hostiles_on_radar",
+        Languages = {
+            English = "Detected {Count} Hostiles Nearby"
+        }
+    },
+    {
+        String = "spawn_prestige",
+        Languages = {
+            English = "Spawn Prestige"
+        }
+    },
+    {
+        String = "x_entities_scanned",
+        Languages = {
+            English = "{Count} Entities Scanned"
+        }
+    },
+    {
+        String = "no_entities_scanned",
+        Languages = {
+            English = "No Activity Nearby"
+        }
+    },
+    {
+        String = "hits_remaining",
+        Languages = {
+            English = "Hits Remaining"
+        }
+    },
+    {
+        String = "turret",
+        Languages = {
+            English = "Turret"
+        }
+    },
+    {
+        String = "Item",
+        Languages = {
+            English = "Item"
+        }
+    },
+    {
+        String = "unclaimed_vehicle_countdown",
+        Languages = {
+            English = "Unclaimed Vehicle will be Removed in ({Time}) Seconds"
+        }
+    },
+    {
+        String = "cannot_sell_item",
+        Languages = {
+            English = "{Class} - Cannot be Sold"
+        }
+    },
+    {
+        String = "no_item_to_sell",
+        Languages = {
+            English = "No sellable Item Holstered"
+        }
+    },
+    {
+        String = "ammo_not_found",
+        Languages = {
+            English = "Ammo {Class} Not Found"
+        }
+    },
+    {
+        String = "item_not_found",
+        Languages = {
+            English = "Item {Class} Not Found"
+        }
+    },
+    {
+        String = "insufficient_pp_vehicle",
+        Languages = {
+            English = "You need {Missing} more Prestige to buy the Vehicle {Class}"
+        }
+    },
+    {
+        String = "insufficient_pp_item",
+        Languages = {
+            English = "You need {Missing} more Prestige to buy the Item {Class}"
+        }
+    },
+    {
+        String = "sellItem_not_inside_buyZone",
+        Languages = {
+            English = "Enter a Buy Zone to sell Equipment"
+        }
+    },
 })
 
 

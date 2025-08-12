@@ -12,8 +12,18 @@
 Vector = {}
 
 -- ======================================
+Vector.New = function(x, y, z)
+    error("implementation missing. for raw vectors, use NewVec()")
+end
+
+-- ======================================
+Vector.NewVec = function(x, y, z)
+    return { x = (x or 0), y = (y or 0), z = (z or 0) }
+end
+
+-- ======================================
 Vector.Empty = function()
-    return { x = 0, y = 0, z = 0 }
+    return Vector.NewVec() -- ?? Que paso aqui
 end
 
 -- ======================================
@@ -24,6 +34,27 @@ end
 -- ======================================
 Vector.Copy = function(vec_a)
     return { x = vec_a.x, y = vec_a.y, z = vec_a.z }
+end
+
+-- ======================================
+Vector.Distance3d = function(vec_a, vec_b)
+    local x = (vec_a.x - vec_b.x)
+    local y = (vec_a.y - vec_b.y)
+    local z = (vec_a.z - vec_b.z)
+    return math.sqrt(x * x + y * y + z * z)
+end
+
+-- ======================================
+Vector.Distance2d = function(vec_a, vec_b)
+    local x = (vec_a.x - vec_b.x)
+    local y = (vec_a.y - vec_b.y)
+    return math.sqrt(x * x + y * y)
+end
+
+-- ======================================
+Vector.Distance1d = function(vec_a, vec_b)
+    local x = (vec_a.x - vec_b.x)
+    return math.sqrt(x * x)
 end
 
 -- ======================================

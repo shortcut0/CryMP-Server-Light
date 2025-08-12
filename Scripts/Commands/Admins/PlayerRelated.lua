@@ -23,7 +23,6 @@ Server.ChatCommands:Add({
         },
         Function = function(self, hTarget, sOption)
             if (hTarget == self) then
-                DebugLog(not sOption and self:GetPos())
                 Server.Utils:RevivePlayer(self, (not sOption and self:GetPos()))
                 Server.Utils:SpawnEffect(Effect_LightExplosion, hTarget:GetPos())
                 return true
@@ -32,7 +31,7 @@ Server.ChatCommands:Add({
                     Server.Utils:RevivePlayer(hVictim, (not sOption and hVictim:GetPos()))
                     Server.Utils:SpawnEffect(Effect_LightExplosion, hVictim:GetPos())
                     if (hVictim ~= self) then
-                        Server.Chat:ChatMessage(Server:GetEntity(), hVictim, "@you_were_revived", {})
+                        Server.Chat:ChatMessage(ChatEntity_Server, hVictim, "@you_were_revived", {})
                     end
                 end
                 return true
@@ -40,7 +39,7 @@ Server.ChatCommands:Add({
 
             Server.Utils:RevivePlayer(hTarget, (not sOption and hTarget:GetPos()))
             Server.Utils:SpawnEffect(Effect_LightExplosion, hTarget:GetPos())
-            Server.Chat:ChatMessage(Server:GetEntity(), hTarget, "@you_were_revived", {})
+            Server.Chat:ChatMessage(ChatEntity_Server, hTarget, "@you_were_revived", {})
             return true
         end
     },
@@ -71,7 +70,7 @@ Server.ChatCommands:Add({
                             hVictim:SvMoveTo(vPos)
                         end
                         Server.Utils:SpawnEffect(Effect_LightExplosion, vPos)
-                        Server.Chat:ChatMessage(Server:GetEntity(), hVictim, "@you_were_broughtTo", { To = self:GetName() })
+                        Server.Chat:ChatMessage(ChatEntity_Server, hVictim, "@you_were_broughtTo", { To = self:GetName() })
                         if (bIntoVehicle) then
                             local hVehicle = self:GetVehicle()
                             local iFreeSeat = self:GetFreeVehicleSeat()
@@ -97,7 +96,7 @@ Server.ChatCommands:Add({
                 end
             end
             Server.Utils:SpawnEffect(Effect_LightExplosion, vPos)
-            Server.Chat:ChatMessage(Server:GetEntity(), hTarget, "@you_were_broughtTo", { To = self:GetName() })
+            Server.Chat:ChatMessage(ChatEntity_Server, hTarget, "@you_were_broughtTo", { To = self:GetName() })
             return true
         end
     },
@@ -129,8 +128,8 @@ Server.ChatCommands:Add({
                 end
             end
             Server.Utils:SpawnEffect(Effect_LightExplosion, vPos)
-            Server.Chat:ChatMessage(Server:GetEntity(), self, "@you_teleportedTo", { To = hTarget:GetName() })
-            Server.Chat:ChatMessage(Server:GetEntity(), hTarget, "@x_teleportedToYou", { X = self:GetName() })
+            Server.Chat:ChatMessage(ChatEntity_Server, self, "@you_teleportedTo", { To = hTarget:GetName() })
+            Server.Chat:ChatMessage(ChatEntity_Server, hTarget, "@x_teleportedToYou", { X = self:GetName() })
             return true
         end
     },

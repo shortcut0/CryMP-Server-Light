@@ -230,15 +230,20 @@ Server:CreateComponent({
                     if (sName == sCommandName) then
                         aResults = { aCommand }
                         break
-                    elseif (string.match(sName, ("^" .. sCommandName))) then
-                        table.insert(aResults, aCommand)
-                    elseif (bGreedy and iCommandLength > 1) then
-                        local iStepBack = math.GetMax(3, iCommandLength - 3)
-                        for i = string.len(sCommandName), iStepBack, -1 do
-                            local sGreedyMatch = string.sub(sCommandName, 1, i)
-                            if (string.match(sName, ("^" .. sGreedyMatch))) then
-                                table.insert(aResults, aCommand)
-                                break
+
+                    -- ris:
+                    -- don't autocomplete on disabled or hidden commands
+                    elseif (not aCommand:IsHidden() and not aCommand:IsDisabled()) then
+                        if (string.match(sName, ("^" .. sCommandName))) then
+                            table.insert(aResults, aCommand)
+                        elseif (bGreedy and iCommandLength > 1) then
+                            local iStepBack = math.GetMax(3, iCommandLength - 3)
+                            for i = string.len(sCommandName), iStepBack, -1 do
+                                local sGreedyMatch = string.sub(sCommandName, 1, i)
+                                if (string.match(sName, ("^" .. sGreedyMatch))) then
+                                    table.insert(aResults, aCommand)
+                                    break
+                                end
                             end
                         end
                     end
@@ -366,8 +371,6 @@ Server:CreateComponent({
 
             end
 
-
-
             -- Don't log invalid command attempts to admins!
             if (tMessage == self.Responses.NotFound) then
                 sChat_Log = nil
@@ -381,7 +384,7 @@ Server:CreateComponent({
             -- Admins:
             if (not tMessage.NoAdminLog) then
                 if (string.emptyN(sChat_Log)) then
-                    Server.Chat:ChatMessage(hPlayer, aChatLogRecipients, ("(!%s  :  %s{Gray})"):format(sCommandUpper, sChat_Log), tFormat)
+                    Server.Chat:ChatMessage(hPlayer, aChatLogRecipients, ("< !%s >  %s{Gray}"):format(sCommandUpper, sChat_Log), tFormat)
                 end
                 if (string.emptyN(sConsole_Log)) then
                     self:LogEvent({
@@ -404,12 +407,13 @@ Server:CreateComponent({
 
             -- Players:
             if (string.emptyN(sChat_Msg)) then
-                Server.Chat:ChatMessage(Server:GetEntity(), hPlayer, ("[ !%s ] %s"):format(sCommandUpper, sChat_Msg), tFormat)
+                Server.Chat:ChatMessage(ChatEntity_Info, hPlayer, ("< !%s > %s"):format(sCommandUpper, sChat_Msg), tFormat)
             end
             if (string.emptyN(sConsole_Msg)) then
                 -- So, we only do the normal log if the user used the "say" console command
                 -- Otherwise, we will just insert the user to the admin log recipients
                 local bSayConsoleLog = true
+
                 if (not bSayConsoleLog and iMessageType ~= ChatToTarget) then
                     self:LogEvent({
                         Event = self:GetFriendlyName(),
@@ -574,7 +578,7 @@ Server:CreateComponent({
             Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. "[ " .. string.mspace(sInfoHelp .. CRY_COLOR_GRAY, iBoxWidth - 4, nil, string.COLOR_CODE) .. " ]")
             Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. string.rspace("", iBoxWidth, string.COLOR_CODE, "="))
 
-            Server.Chat:ChatMessage(Server:GetEntity(), hPlayer, hPlayer:LocalizeText("@commandHelp_Chat", { Name = string.lower(sName) }))
+            Server.Chat:ChatMessage(ChatEntity_Server, hPlayer, hPlayer:LocalizeText("@commandHelp_Chat", { Name = string.lower(sName) }))
 
             local x = {
                 "== [ Commands ] ===================================================================================",
@@ -593,6 +597,8 @@ Server:CreateComponent({
         end,
 
         ProcessCommand = function(self, hPlayer, aCommand, tArgs, iType)
+
+            Server.Statistics:Event(StatisticsEvent_OnCommandUsed)
 
             local sCommand = aCommand.Name
             local aCommandArgs   = aCommand.Arguments

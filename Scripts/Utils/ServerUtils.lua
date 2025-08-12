@@ -159,13 +159,14 @@ Server:CreateComponent({
         GetTeam_String = function(self, sId)
 
             sId = string.lower(sId)
+            DebugLog(sId)
             if (IsAny(sId, "nk", "korea", tostring(GameTeam_NK))) then
                 return GameTeam_NK_String
 
             elseif (IsAny(sId, "us", "america", tostring(GameTeam_US))) then
                 return GameTeam_US_String
 
-            elseif (IsAny(sId, "neutral", "none", GameTeam_Neutral)) then
+            elseif (IsAny(sId, "neutral", "none", tostring(GameTeam_Neutral))) then
                 return GameTeam_Neutral_String
             end
 
@@ -225,7 +226,7 @@ Server:CreateComponent({
             local iPlayerX = vPos.x
             local iPlayerY = vPos.y
 
-            -- TODO: Move to MapRotation component?! make this REDUNDANT
+            -- [will not]: Move to MapRotation component?! make this REDUNDANT
             local iMiniMapXLength = math.abs(aMiniMap.EndX - aMiniMap.StartX)
             local iMiniMapYLength = math.abs(aMiniMap.EndY - aMiniMap.StartY)
 
@@ -258,6 +259,18 @@ Server:CreateComponent({
 
             local iGridX, iGridY = self:GetEntityMapCoords(hEntity)
             return ("%s%s"):format(sNumeric[iGridX], sAlpha[iGridY])
+        end,
+
+        GetDistance = function(self, vPos1, vPos2)
+
+            if (self:IsEntity(vPos1)) then
+                vPos1 = vPos1:GetPos()
+            end
+            if (self:IsEntity(vPos2)) then
+                vPos2 = vPos2:GetPos()
+            end
+
+            return Vector.Distance3d(vPos1, vPos2)
         end,
 
         IsEntity = function(self, pEntity)
@@ -296,8 +309,11 @@ Server:CreateComponent({
         RevivePlayer = function(self, hPlayer, vPosition)
             if (vPosition) then
                 hPlayer.RevivePosition = vPosition
+            else
+                hPlayer.RevivePosition = nil
             end
-            g_gameRules:RevivePlayer(hPlayer:GetChannel(), hPlayer, true, (vPosition))
+
+            g_gameRules:RevivePlayer(hPlayer:GetChannel(), hPlayer, true, hPlayer.RevivePosition ~= nil)
             if (g_gameRules.IS_PS) then
                 g_gameRules:ResetRevive(hPlayer.id, true)
             end
@@ -380,7 +396,7 @@ Server:CreateComponent({
 
                 if (aInfo.ByTeam) then
                     bOk = (bOk and (self:GetTeamId(hEntity.id) == aInfo.ByTeam))
-               elseif (aInfo.NotByTeam) then
+                elseif (aInfo.NotByTeam) then
                     bOk = (bOk and (self:GetTeamId(hEntity.id) ~= aInfo.NotByTeam))
                 end
 
@@ -388,6 +404,14 @@ Server:CreateComponent({
                     bOk = (bOk and (hEntity:HasAccess(aInfo.ByAccess)))
                 elseif (aInfo.NotByAccess) then
                     bOk = (bOk and (not hEntity:HasAccess(aInfo.NotByAccess)))
+                end
+
+                if (aInfo.FromPos) then
+                    if (aInfo.InRange) then
+                        bOk = bOk and self:GetDistance(hEntity, aInfo.FromPos) < aInfo.InRange
+                    elseif (aInfo.OutsideRange) then
+                        bOk = bOk and self:GetDistance(hEntity, aInfo.FromPos) > aInfo.OutsideRange
+                    end
                 end
 
                 if (bOk) then

@@ -22,14 +22,13 @@ Server:CreateComponent({
             { Name = "*.lua$", Path = SERVER_DIR_SCRIPTS .. "/Game/Patcher/", Recursive = true, ReadOnly = true }
         },
 
-        CurrentEnvironment = {},
+        Environments = {},
         EnvironmentChanges = {},
         TotalHookCount = 0,
         ActiveHooks = {
         },
 
         Initialize = function(self)
-            ServerDLL.GameRulesInitScriptTables()
             self:LogEvent({
                 Message = "@patcher_initialized",
                 MessageFormat = { Classes = table.size(self.ActiveHooks), Functions = self.TotalHookCount }
@@ -48,18 +47,17 @@ Server:CreateComponent({
         end,
 
         PostInitialize = function(self)
-
         end,
 
-        SnapshotEnvironment = function(self)
-            self.CurrentEnvironment = {}
+        SnapshotEnvironment = function(self, sId)
+            self.Environments[sId] = {}
             for sKey in pairs(_G) do
-                self.CurrentEnvironment[sKey] = true
+                self.Environments[sId][sKey] = true
             end
         end,
 
-        CompareEnvironment = function(self)
-            local tOld = self.CurrentEnvironment or {}
+        CompareEnvironment = function(self, sId)
+            local tOld = self.Environments[sId] or {}
             local tChanges = {}
             for sKey in pairs(_G) do
                 if (not tOld[sKey]) then -- new global
@@ -70,11 +68,13 @@ Server:CreateComponent({
         end,
 
         OnLoadingScript = function(self, sPath)
-            self:SnapshotEnvironment()
+            self:SnapshotEnvironment(sPath)
         end,
 
         OnScriptLoaded = function(self, sPath)
-            local tChange = (self.EnvironmentChanges[sPath] or self:CompareEnvironment())
+
+            -- Track changes per-script, combine any possilbe new pollutions
+            local tChange = table.Combine_Values(self.EnvironmentChanges[sPath] or {}, self:CompareEnvironment(sPath))
             if (table.emptyN(tChange)) then
                 for _, sKey in pairs(tChange) do
                     if (_G[sKey] ~= nil and type(_G[sKey]) == "table") then
@@ -263,6 +263,7 @@ Server:CreateComponent({
 
             local sClass = (aInfo.Class)
             local sParent = (aInfo.Parent)
+            local aEvents = (aInfo.Events or {})
             local bHookNow = (aInfo.HookNow)
             if (IsArray(sClass)) then
                 for _, tClass in pairs(sClass) do
@@ -271,10 +272,12 @@ Server:CreateComponent({
                         Body    = aInfo.Body,
                         Parent  = sParent,
                         ReplaceBody = aInfo.ReplaceBody,
+                        Events = aInfo.Events,
                     })
                 end
                 return
             end
+
 
             local aClassEntities = Server.Utils:GetEntities({ ByClass = sClass })
             local aBody = aInfo.Body
@@ -306,6 +309,7 @@ Server:CreateComponent({
         HookBody = function(self, aInfo)
 
             self.ActiveHooks[aInfo.Class] = (self.ActiveHooks[aInfo.Class] or {
+                OnInitFunction = (aInfo.OnInit),
                 ReplaceBody = (aInfo.ReplaceBody),
                 Body = {}
             })

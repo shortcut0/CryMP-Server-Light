@@ -145,6 +145,47 @@ table.Random = function(tbl)
 end
 
 ----------------------------------
+--- Combines the values of two tables, making sure the result wont contain duplicates
+table.Combine_Values = function(table_one, table_two)
+
+    local table_new = {}
+    local table_index = {}
+    for i, v in pairs(table_one) do
+        table_index[v] = true
+        table.insert(table_new, v)
+    end
+    for _, v in pairs(table_two) do
+        if (not table_index[v]) then
+            table.insert(table_new, v)
+        end
+    end
+    return table_new
+end
+
+----------------------------------
+--- Removes the key from a table
+table.Remove_Key = function(tbl, key)
+    tbl[key] = nil
+    return tbl
+end
+
+----------------------------------
+--- Removes Values from a table
+table.Remove_Value = function(tbl, value, limit)
+    local c = 0
+    for _, v in pairs(tbl) do
+        if (v == value) then
+            tbl[_] = nil
+            c = c + 1
+            if (limit and c >= limit) then
+                break
+            end
+        end
+    end
+    return tbl
+end
+
+----------------------------------
 --- Formats a table to string
 table.ToString = function(tbl, tInfo)
 

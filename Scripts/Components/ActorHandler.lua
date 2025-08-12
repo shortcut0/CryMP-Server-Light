@@ -113,13 +113,23 @@ Server:CreateComponent({
             hActor.IsPlayer = bIsPlayer
             hActor.Timers = {
                 Initialized = TimerNew(),
-                Connection = Server.Network:GetConnectionTimer(iChannel),
-                Spawn = TimerNew()
+                Connection  = Server.Network:GetConnectionTimer(iChannel),
+                Spawn       = TimerNew(),
+                WallJump    = TimerNew(),
+                UnclaimedVehicle = TimerNew(),
+            }
+
+            hActor.TagAward = {
+                CP = 0,
+                PP = 0,
+                Num = 0,
+                Hostiles = 0,
             }
 
             hActor.Data = {
-                LastConnect = -1, -- Never
-                ServerTime = 0, -- Time spent on this server
+                LastConnect      = -1, -- Never
+                ServerTime       = 0, -- Time spent on this server
+                FirstBloodScored = 0, -- the amount of times this player scored first blood, used to amplify rewards
             }
             hActor.Info = {
 
@@ -350,9 +360,7 @@ Server:CreateComponent({
                 end
             end
             hActor.AwardPrestige   = function(this, pp, reason, tFormat)
-                g_gameRules:AwardPPCount(this.id, pp, nil, this:HasClientMod())
-                if (reason) then
-                end
+                g_gameRules:PrestigeEvent(this.id, pp, reason, tFormat)
             end
 
             hActor.LocalizeText = function(this, sMessage, tFormat) return Server.LocalizationManager:LocalizeForPlayer(this, sMessage, tFormat)  end

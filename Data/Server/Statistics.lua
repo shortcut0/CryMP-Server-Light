@@ -10,7 +10,10 @@
 -- Server Component 
 -- ===================================================================================
 return {
+ ["PlayerRecord"] = 2,
+ ["ServerLifetime"] = 46647,
+ ["TotalWallJumps"] = 21,
+ ["ChatCommandsUsed"] = 297,
+ ["ChannelCount"] = 88,
  ["ChannelRecord"] = 12,
- ["ChannelCount"] = 63,
- ["ServerLifetime"] = 27930,
 }

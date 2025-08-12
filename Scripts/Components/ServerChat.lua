@@ -18,6 +18,9 @@ Server:CreateComponent({
 
         Properties = {
 
+            -- The Class used when spawning new chat entities
+            ChatEntityClass = "Reflex",
+
             ShowConsoleWelcomeAlways = false,
 
             -- Examples of how it will look!
@@ -80,6 +83,10 @@ Server:CreateComponent({
                 Class = "System",
                 Tag = "CryMP",
             },
+            ["GameRules"] = {
+                Class = "System",
+                Tag = "GameRules",
+            },
         },
 
         DefaultConsoleLogClass = {
@@ -104,7 +111,6 @@ Server:CreateComponent({
 
         Initialize = function(self)
             for _, aComponentInfo in pairs(Server.ComponentList) do
-
                 local aComponent = Server[aComponentInfo.Name]
                 local sComponent = aComponent.Name
                 local aConsoleLogInfo = (Server[sComponent].ConsoleLogClass or {
@@ -120,7 +126,15 @@ Server:CreateComponent({
 
         PostInitialize = function(self)
 
+            for sKey, sName in pairs(_G) do
+                if (type(sKey) == "string" and string.match(sKey, "ChatEntity_%w") and type(sName) == "string") then
+                --    self:GetChatEntity(sName)
+                end
+            end
+        end,
 
+        OnReset = function(self)
+            self:DeleteAllChatEntities()
         end,
 
         GetConsoleWidth = function(self)
@@ -134,9 +148,9 @@ Server:CreateComponent({
         TestAll = function(self)
 
             local hPlayerOne = Server.Utils:GetPlayers()[1] or Server:GetEntity()
-            self:ChatMessage(Server:GetEntity(), ChatType_ToAll, "Spam!!!")
+            self:ChatMessage(ChatEntity_Server, ChatType_ToAll, "Spam!!!")
             for i=1, 10 do
-                self:ChatMessage(Server:GetEntity(), ChatType_ToAll, "Spam!!!")
+                self:ChatMessage(ChatEntity_Server, ChatType_ToAll, "Spam!!!")
                 self:TextMessage(ChatType_Error, ChatType_ToAll, "Spam!!!")
                 self:ConsoleMessage(ChatType_Console, hPlayerOne, "PLAYER ONE!!!")
                 self:ConsoleMessage(ChatType_Console, hPlayerOne, "PLAYER ONE!!!", {}, "System")
@@ -185,9 +199,46 @@ Server:CreateComponent({
             end
         end,
 
+        SpawnChatEntity = function(self, sName)
+
+            local sNameLower = sName:lower()
+            local hEntity = System.SpawnEntity({
+                name = sName,
+                class = (self.Properties.ChatEntityClass or "Reflex"),
+                position = Vector.NewVec(0, 0, 0),
+                orientation = Vector.NewVec(0, 0, 1),
+            })
+
+            if (not hEntity) then
+                self:LogError("Failed to Spawn new Chat Entity with Name '%s'", sName)
+                return
+            end
+
+            hEntity.IS_CHAT_ENTITY = true
+            self.ChatEntities[sNameLower] = hEntity
+            self:Log("Spawned new Chat Entity with Name '%s' (Id: '%s')", sName, sNameLower)
+            return hEntity
+        end,
+
+        DeleteAllChatEntities = function(self)
+            --self.ChatEntities = {}
+        end,
+
+        GetChatEntity = function(self, sName)
+
+            local sNameLower = sName:lower()
+            local hEntity = self.ChatEntities[sNameLower]
+            if (not hEntity or (hEntity:GetName() ~= sName or not hEntity.IS_CHAT_ENTITY)) then
+                return self:SpawnChatEntity(sName)
+            end
+
+            self:Log("Found entity with name '%s' (%s)", sName, hEntity:GetName())
+            return hEntity
+        end,
+
         ChatMessage = function(self, pSender, pTarget, sMessage, tFormat)
 
-            local hSender = Server.Utils:GetEntity(pSender)
+            local hSender = (not IsString(pSender) and Server.Utils:GetEntity(pSender))
             if (pSender == ChatEntity_Server) then
                 hSender = Server:GetEntity()
             end
@@ -214,7 +265,7 @@ Server:CreateComponent({
                 end
                 return --self:SendMessageToTeam(pSender, iTeamId, sMessage)
 
-            elseif (pTarget == ChatType_ToAll) then
+            elseif (pTarget == ChatType_ToAll or pTarget == ALL_PLAYERS) then
                 for _, hTarget in pairs(Server.Utils:GetPlayers()) do
                     g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, (Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
                 end
@@ -305,6 +356,7 @@ Server:CreateComponent({
             end
 
             if (pClass) then
+
 
                 local aClassInfo = (IsTable(pClass) and pClass) or self:GetConsoleLogClass(pClass) or self.DefaultConsoleLogClass
                 local sClassColor   = (aMessageInfo.ClassColor or aClassInfo.ClassColor or self.Properties.ConsoleLogClassColor)
@@ -608,7 +660,7 @@ Server:CreateComponent({
             end
 
             -- Chat
-            self:ChatMessage(Server:GetEntity(), hPlayer, "@welcome_toTheServer, " .. sAccessName .. " " .. sPlayerName, {})
+            self:ChatMessage(ChatEntity_Server, hPlayer, "@welcome_toTheServer, " .. sAccessName .. " " .. sPlayerName, {})
 
             if (not self.Properties.ShowConsoleWelcomeAlways and not bShowAlways) then
                 if (self.ChannelsWelcomed[hPlayer:GetChannel()]) then

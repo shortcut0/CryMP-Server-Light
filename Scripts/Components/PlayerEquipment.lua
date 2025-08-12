@@ -211,5 +211,36 @@ Server:CreateComponent({
                 hShooter:UpdateHitAccuracy("Shot")
             end
         end,
+
+        CanBuyItem = function(self, hPlayer, sItem, aDef)
+            DebugLog("check buy!")
+
+            return true
+        end,
+
+        OnItemBought = function(self, hPlayer, hItem, aDef, iPrice, aFactory)
+
+            if (not hItem) then
+                return
+            end
+
+            --[[
+            local aEquipConfig = (hPlayer.Data[PlayerData_Equipment] or {})[hItem.class]
+            if (aEquipConfig) then
+                if (self:AttachOnWeapon(hPlayer, hItem, { IsPickup = false })) then
+                    if (hPlayer:TimerExpired(ePlayerTimer_EquipmentLoadedMsg, 120, true)) then
+                        SendMsg(CHAT_EQUIP, hPlayer, hPlayer:Localize("@l_ui_accessoryloaded", { string.upper(hItem.class) }))
+                    end
+                end
+            end
+
+            local hWeapon = hPlayer:GetCurrentItem()
+            if (not hItem.weapon and (hWeapon and hWeapon.weapon)) then
+                self:AttachOnWeapon(hPlayer, hWeapon, { hItem.class }, true, false)
+            end
+            ]]
+
+            --hUser:Execute([[ClientEvent(eEvent_BLE,eBLE_Currency,"]]..hUser:LocalizeNest("@l_ui_investmentShare ( +" .. iShare .. " PP )")..[[")]])
+        end
     },
 })

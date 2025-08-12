@@ -110,13 +110,18 @@ Server:CreateComponent({
         PostInitialize = function(self)
             if (self.Properties.DeleteClientEntities) then
                 local iDeletedCount = 0
+                local aDeletedClasses = {}
                 for _, hEntity in pairs(System.GetEntities()) do
                     if (hEntity:HasFlags(ENTITY_FLAG_CLIENT_ONLY)) then
-                        System.RemoveEntity(hEntity.id)
                         iDeletedCount = (iDeletedCount + 1)
+                        if (not table.find_value(aDeletedClasses, hEntity.class)) then
+                            table.insert(aDeletedClasses, hEntity.class)
+                        end
+                        System.RemoveEntity(hEntity.id)
                     end
                 end
                 self:Log("Deleted %d Client-Side Entities", iDeletedCount)
+                self:Log("Classes: %s", table.concat(aDeletedClasses, ", "))
             end
         end,
 

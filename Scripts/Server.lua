@@ -122,7 +122,7 @@ Server.PostInitialize = function(self)
 
     local iPostInitStart = os.clock()
     local iFullInitStart = self.FullInitializationStart
-    self.Chat:ChatMessage(self:GetEntity(), ChatType_ToAll, "@post_initialization_start")
+    self.Chat:ChatMessage(ChatEntity_Server, ChatType_ToAll, "@post_initialization_start")
     self.Logger:LogEvent({ Event = "Server", Message = ("@post_initialization_start"), Recipients = self.Utils:GetPlayers() })
 
     self.ErrorHandler:PostInitialize()
@@ -239,8 +239,8 @@ end
 ----------------------------------
 Server.CheckServerEntity = function(self)
 
-    local hServerEntity = self.ServerEntity
-    if (not self.Utils:GetEntity(hServerEntity.id)) then
+    local hServerEntity = self.Utils:GetEntity(self.ServerEntity.id)
+    if (not hServerEntity or not hServerEntity.IS_CHAT_ENTITY) then
         self:SpawnServerEntity()
     else
         self:Log("Server Entity already Spawned")
@@ -262,6 +262,7 @@ Server.SpawnServerEntity = function(self)
         self:LogError("Failed to Spawn the Server Entity!")
     end
 
+    hEntity.IS_CHAT_ENTITY = true
     self.ServerEntity = hEntity
     self.ActorHandler:OnServerSpawn(hEntity)
     self:Log("Spawned Server Entity")

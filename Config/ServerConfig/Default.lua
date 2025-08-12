@@ -40,11 +40,65 @@ Server.Config:Create({
         --- Game Configuration
         GameConfig = {
 
+            --- Gun Turret Configuration
+            Buying = {
+
+                -- The maximum amount of kits a player can buy
+                KitLimit = 2,
+
+                -- Rewards scale when selling items
+                SellItemPriceScale = 0.75,
+
+                -- When someone captures a buildings, they will be marked as the "shareholders" of that building
+                -- Now, when someone buys something inside one of those buildings, the shareholders will receive a .. share
+                -- A Value of 0 will disable this feature
+                AwardItemInvestPrestige = 0.25,
+                AwardVehicleInvestPrestige = 0.15,
+
+            }, ---< Buying
+
+            --- Gun Turret Configuration
+            TurretConfig = {
+
+                -- Damage Scale for RPGs
+                RPGDamageScale = 1,
+
+                -- Will enable turrets shooting at players who are attacking them (within reason, of course)
+                TargetPlayersOnAttack = true,
+
+                -- Repair upon repairing a turret
+                RepairReward = 100,
+
+            }, ---< TurretConfig
+
+            --- Prestige Configuration
+            Prestige = {
+
+                -- Multiplier for VIP Members!
+                PremiumSpawnPrestigeMultiplier = 1.25,
+
+                -- Will award prestige even to team members
+                AwardDisarmPrestigeAlways = true,
+
+                -- Reward for stealing a vehicle
+                VehicleTheftReward = 50,
+
+                -- Reward for repairing a vehicle
+                VehicleRepairAward = 15,
+
+            }, ---< Prestige
+
             -- Will skip the annoying Pre-Game!
             SkipPreGames = true,
 
+            -- After this amount of time of being dead, players will be put into spectator mode
+            AutoSpectateTimer = 30,
+
             -- Configuration for Kills
             KillConfig = {
+
+                -- Will Split the kill reward among all players who assisted in the kill (the actual killer will receive the full reward)
+                KillAssistReward = true,
 
                 -- if players should drop all their equipment upon death
                 DropAllEquipment = true,
@@ -63,6 +117,56 @@ Server.Config:Create({
 
                 -- Will enable new Kill Messages
                 EnableNewKillMessages = true,
+
+                -- The Rewards scale for VIP members
+                PremiumRewardsScale = 1.25,
+
+                --- Sniping Configuration
+                SnipingRewards = {
+
+                    -- Status of this feature
+                    Enabled = true,
+
+                    -- The Minimum Distance for a kill to be considered special
+                    MinimumDistance = 100,
+
+                    RewardPP = 500,
+
+                    -- Reward scale for headshots
+                    HeadshotAmplification = 1.5,
+
+                }, ---< SnipingRewards
+
+                --- First Blood
+                FirstBlood = {
+
+                    -- Sets the status of the first blood
+                    Enabled = true,
+
+                    Reward = {
+
+                        -- Will reward the entire team!
+                        RewardTeam = true,
+
+                        -- Reward Amplifications for repeated first blood scores!
+                        Amplifications = {
+                            [ 3] = 1.25,
+                            [ 5] = 1.50,
+                            [ 8] = 1.75,
+                            [10] = 2.00,
+                            [15] = 2.50,
+                            [20] = 3.00,
+                            [99] = 10.0, -- !!!
+                        },
+
+                        -- The amount of prestige points
+                        PP = 500,
+
+                        -- The amount of experience points
+                        CP = 25,
+                    }
+
+                }, ---< FirstBlood
 
                 --- Kill Streaks
                 KillStreaks = {
@@ -213,7 +317,8 @@ Server.Config:Create({
         MapConfig = {
 
             -- If the server should delete all client-only entities
-            DeleteClientEntities = true,
+            -- Disabled for now. I suspect this can cause aspect errors during map change.
+            DeleteClientEntities = false,
 
             -- A list of forbidden maps
             ForbiddenMaps = {

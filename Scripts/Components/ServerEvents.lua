@@ -34,6 +34,7 @@ Server:CreateComponent({
             end,
 
             OnPostInitialize = function(this)
+                g_gameRules:PostInitialize()
                 Server.Events:CallEvent(ServerEvent_OnPostInit)
             end,
 
@@ -97,8 +98,18 @@ Server:CreateComponent({
             OnClientEnteredGame     = function() end,
             OnClientConnect     = function(self, hPlayer, iChannel, bIsReset, bWasOnHold)
                 Server.Network:OnClientConnected(hPlayer, iChannel)
+                Server.Statistics:Event(StatisticsEvent_PlayerRecord, #(Server.Utils:GetPlayers() or {}))
             end,
-            OnWallJump              = function() end,
+            OnWallJump              = function(self, hPlayerId)
+
+                local hPlayer = Server.Utils:GetEntity(hPlayerId)
+                if (hPlayer and hPlayer.IsPlayer) then
+                    local sWeaponClass = hPlayer:GetCurrentItemClass()
+                    if (sWeaponClass == "Fists" and hPlayer.Timers.WallJump.expired_refresh()) then
+                        Server.Statistics:Event(StatisticsEvent_OnWallJumped)
+                    end
+                end
+            end,
             OnChatMessage           = function(self, hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
                 return Server.Chat:OnChatMessage(hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
             end,
@@ -113,7 +124,9 @@ Server:CreateComponent({
             OnLevelStart       = function(self)
                 return Server:OnLoadingStart()
             end,
-            OnRadarScanComplete     = function() end,
+            OnRadarScanComplete     = function(self, hShooterID, hWeaponID, iScanDistance)
+                g_gameRules:OnRadarScanComplete(hShooterID, hWeaponID, iScanDistance)
+            end,
             OnGameShutdown          = function() end,
             OnMapStarted            = function() end,
             OnEntitySpawn           = function(this, hEntity, hEntityId, bVehicle, bItem, bActor, iType)
@@ -128,6 +141,8 @@ Server:CreateComponent({
 
                 if (bItem) then
                 end
+
+                --Server.Patcher:OnClassSpawned(hEntity)
             end,
             OnVehicleSpawn          = function() end,
             OnLoadingScript          = function(self, sFileName)

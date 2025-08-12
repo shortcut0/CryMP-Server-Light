@@ -185,9 +185,8 @@ Server:CreateComponent({
 
             local sIPAddress = ServerDLL.GetChannelIP(iChannel)
             local sNickname = ServerDLL.GetChannelNick(iChannel)
-            sIPAddress="137.57.23." .. math.random(1,255)
 
-            local aGeoInfo = self:GetGeoInfo(sIPAddress, iChannel)
+            local aGeoInfo, bIsInvalidIP = self:GetGeoInfo(sIPAddress, iChannel)
 
             local sCountryName = aGeoInfo.CountryName
             local sCountryCode = aGeoInfo.CountryCode
@@ -204,7 +203,7 @@ Server:CreateComponent({
                 NickNick = sNickname,
             }
 
-            if (self.SavedGeoData[sIPAddress]) then
+            if (self.SavedGeoData[sIPAddress] or bIsInvalidIP) then
                 self:OnGeoDataQueried(iChannel)
             end
 
@@ -214,7 +213,7 @@ Server:CreateComponent({
 
         GetConnectionTimer = function(self, iChannel)
             if (not self.ActiveConnections[iChannel]) then
-                return
+                return error("timer not found!")
             end
             return self.ActiveConnections[iChannel].Timer
         end,
@@ -273,7 +272,7 @@ Server:CreateComponent({
                         CountryName = sCountryName,
                     }
                 })
-                Server.Chat:ChatMessage(Server:GetEntity(), Server.Utils:GetPlayers(), "@player_connectedChat", { Name = hPlayer:GetName(), Channel = hPlayer:GetChannel(), CountryCode = sCountryCode, ISP = hPlayer:GetISP() })
+                Server.Chat:ChatMessage(ChatEntity_Server, Server.Utils:GetPlayers(), "@player_connectedChat", { Name = hPlayer:GetName(), Channel = hPlayer:GetChannel(), CountryCode = sCountryCode, ISP = hPlayer:GetISP() })
             elseif (sMessage == "Disconnected") then
 
                 local sReasonShort, sReason = self:ParseDisconnectReason(aInfo.Description)
@@ -287,7 +286,7 @@ Server:CreateComponent({
                         ShortReason = sReasonShort
                     }
                 })
-                Server.Chat:ChatMessage(Server:GetEntity(), Server.Utils:GetPlayers(), "@player_disconnectedChat", { Name = sPlayerName, Channel = iChannel, Time = Date:Format(hPlayer.Timers.Initialized.diff()), Reason = sReason, ShortReason = sReasonShort })
+                Server.Chat:ChatMessage(ChatEntity_Server, Server.Utils:GetPlayers(), "@player_disconnectedChat", { Name = sPlayerName, Channel = iChannel, Time = Date:Format(hPlayer.Timers.Initialized.diff()), Reason = sReason, ShortReason = sReasonShort })
             end
         end,
 
@@ -341,7 +340,7 @@ Server:CreateComponent({
             -- Assumable an NPC
             if (self.FailedQueries[iChannel] or iChannel == 0 or sIPAddress == "127.0.0.1") then
                 self:Log("[%d, %s] Invalid IP-Address, Skipping Query", iChannel, sIPAddress)
-                return table.copy(self.DefaultGeoData)
+                return table.copy(self.DefaultGeoData), true
             end
 
             local aGeoInfo = self.SavedGeoData[sIPAddress]

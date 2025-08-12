@@ -89,6 +89,8 @@ ChatType_Info    = TextMessageInfo
 ChatType_Server  = TextMessageServer
 
 ChatEntity_Server = -1000
+ChatEntity_Template = "<Template DO NOT USE>" -- This will be the literal name of the entity!
+ChatEntity_Info = "iNFO"
 
 ----------------------------
 ---       GAME VARS      ---
@@ -163,10 +165,16 @@ PlayerData_Equipment = "Equipment"
 ---
 StatisticsEvent_OnNewChannel = 1
 StatisticsEvent_ServerLifetime = 2
+StatisticsEvent_OnCommandUsed = 3
+StatisticsEvent_OnWallJumped = 4
+StatisticsEvent_PlayerRecord = 5
 
 StatisticsValue_ServerLifetime = "ServerLifetime"
 StatisticsValue_ChannelCount = "ChannelCount"
 StatisticsValue_ChannelRecord = "ChannelRecord"
+StatisticsValue_ChatCommandsUsed = "ChatCommandsUsed"
+StatisticsValue_TotalWallJumps = "TotalWallJumps"
+StatisticsValue_PlayerRecord = "PlayerRecord"
 
 ----------------------------
 

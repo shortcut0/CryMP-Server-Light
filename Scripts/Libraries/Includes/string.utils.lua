@@ -462,15 +462,6 @@ string.matchand = function(s, ...)
 	return bMatched
 end
 
----------------------------
-string.MatchesNone = function(str, none_of_this)
-	for _, not_this in pairs(none_of_this) do
-		if (string.match(str, not_this)) then
-			return false
-		end
-	end
-	return true
-end
 
 ---------------------------
 -- string.matchany (USELESS COPY OF string.matchex ????)

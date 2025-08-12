@@ -31,14 +31,23 @@ Server:CreateComponent({
 
             LuaUtils.Switch (hEvent,
 
-                    -- Total Channels & Channel Records
+                    -- Total Channels & Channel Records (Record meaning the highest channel achieved without a server shut-down/crash)
                     { StatisticsEvent_OnNewChannel, {
                         { self.AddValue, self, StatisticsValue_ChannelCount, 1 },
                         { self.IncreaseValue, self, StatisticsValue_ChannelRecord, hValue }
                     } },
 
+                    -- Player Record (Record meaning the most players online at the same time)
+                    { StatisticsEvent_PlayerRecord, { self.IncreaseValue, self, StatisticsValue_PlayerRecord, hValue }},
+
                     -- Server life time in seconds
-                    { StatisticsEvent_ServerLifetime, { self.AddValue, self, StatisticsValue_ServerLifetime, hValue } }
+                    { StatisticsEvent_ServerLifetime, { self.AddValue, self, StatisticsValue_ServerLifetime, hValue }},
+
+                    -- a command was used
+                    { StatisticsEvent_OnCommandUsed, { self.AddValue, self, StatisticsValue_ChatCommandsUsed, 1 }},
+
+                    -- record WallJump
+                    { StatisticsEvent_OnWallJumped, { self.AddValue, self, StatisticsValue_TotalWallJumps, 1 }}
             )
         end,
 
