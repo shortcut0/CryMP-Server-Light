@@ -115,6 +115,13 @@ Server.Patcher:HookClass({
                     AwardInvestVehiclePrestige = Server.Config:Get("GameConfig.Buying.AwardVehicleInvestPrestige", 0.15, ConfigType_Number),
                 }
 
+                self.KillAssistConfig = {
+                    Enabled     = Server.Config:Get("GameConfig.KillConfig.KillAssistance.Enabled", true, ConfigType_Boolean),
+                    Type        = Server.Config:Get("GameConfig.KillConfig.KillAssistance.Type", 1, ConfigType_Number),
+                    Threshold   = Server.Config:Get("GameConfig.KillConfig.KillAssistance.Threshold", 15, ConfigType_Number),
+                    Timeout     = Server.Config:Get("GameConfig.KillConfig.KillAssistance.Timeout", 12.5, ConfigType_Number),
+                }
+
                 Server.Utils:SetCVar("mp_killMessages", (self.KillConfig.NewMessages and "0" or "1"))
                 ServerDLL.GameRulesInitScriptTables()
                 self:Log("PostInitialize")
@@ -759,6 +766,7 @@ Server.Patcher:HookClass({
                 hTarget.death_pos = hTarget:GetWorldPos(hTarget.death_pos)
 
                 self.game:KillPlayer(tKillHit.targetId, true, true, tKillHit.shooterId, tKillHit.weaponId, tKillHit.damage, tKillHit.materialId, tKillHit.typeId, tKillHit.dir)
+                self:AwardAssistPPAndCP(tKillHit)
                 self:ProcessScores(tKillHit)
 
                 -- PowerStruggle Specific
@@ -782,9 +790,45 @@ Server.Patcher:HookClass({
                 local hShooter = tHitInfo.shooter
 
                 if (hShooter and hShooter.IsPlayer) then
+
+                    if (hShooter ~= hTarget) then
+                        self:UpdateHitAssist(hShooter, hTarget, tHitInfo)
+                    end
                     if (not hShooter:HitAccuracyExpired()) then
                         hShooter:UpdateHitAccuracy("Hit")
                     end
+                end
+            end,
+        },
+        {
+            ------------------------------
+            ---   ProcessActorDamage_CryMP
+            ------------------------------
+            Name = "UpdateHitAssist",
+            Value = function(self, hShooter, hTarget, tHitInfo)
+
+                if (not self.IS_PS) then
+                    return
+                end
+
+                if (hShooter.IsPlayer and hTarget.class == "Player" and hShooter:GetTeam() ~= self.game:GetTeam(hTarget.id)) then
+
+                    hTarget.CollectedHits = (hTarget.CollectedHits or {})
+                    hTarget.CollectedHits[hShooter.id] = (hTarget.CollectedHits[hShooter.id] or {
+                        Timer       = TimerNew(self.KillAssistConfig.Timeout),
+                        HitCount    = 0,
+                        DamageCount = 0
+                    })
+
+                    if (hTarget.CollectedHits[hShooter.id].Timer.expired()) then
+                        hTarget.CollectedHits[hShooter.id].HitCount     = 0
+                        hTarget.CollectedHits[hShooter.id].DamageCount  = 0
+                    end
+
+                    hTarget.CollectedHits[hShooter.id].Timer.refresh()
+                    hTarget.CollectedHits[hShooter.id].HitCount     = (hTarget.CollectedHits[hShooter.id].DamageCount + 1)
+                    hTarget.CollectedHits[hShooter.id].DamageCount  = (hTarget.CollectedHits[hShooter.id].DamageCount + tHitInfo.damage)
+
                 end
             end,
         },
@@ -1209,6 +1253,90 @@ Server.Patcher:HookClass({
                 Script.SetTimer(1, function()
                     System.RemoveEntity(hEntityID)
                 end)
+            end
+        },
+        {
+            ------------------------------
+            ---     AwardKillAssistPPAndCP
+            ------------------------------
+            Name = "AwardKillAssistPPAndCP",
+            Value = function(self, aHitInfo)
+
+                if (not self.IS_PS) then
+                    return
+                end
+
+                local hTarget    = aHitInfo.target
+                local hShooter   = aHitInfo.shooter
+
+                if (not hShooter or not hTarget) then
+                    return
+                end
+
+                local tAssistConfig = self.KillAssistConfig
+                if (not tAssistConfig.Enabled) then
+                    return
+                end
+
+                local hMethod = tAssistConfig.Type
+                local iThreshold = tAssistConfig.Threshold
+
+                local iPP = self:CalcKillPP(aHitInfo)
+                local iCP = self:CalcKillCP(aHitInfo)
+
+                if (hTarget.id ~= hShooter.id) then
+                    local aCollectedHits = hTarget.CollectedHits
+                    if (table.empty(aCollectedHits)) then
+                        return
+                    end
+
+                    local iTotalHits   = 0
+                    local iTotalDamage = 0
+
+                    for hPlayerID, aInfo in pairs(aCollectedHits) do
+                        if (hPlayerID ~= hTarget.id and Server.Utils:GetEntity(hPlayerID)) then
+
+                            -- only add hits from players who actually assisted in the kill
+                            if (not aInfo.Timer.expired()) then
+                                iTotalHits   = iTotalHits   + aInfo.HitCount
+                                iTotalDamage = iTotalDamage + aInfo.DamageCount
+                            end
+                        end
+                    end
+
+                    local iAssistance = 0
+                    for hPlayerID, aInfo in pairs(aCollectedHits) do
+                        local hPlayer = Server.Utils:GetEntity(hPlayerID)
+                        if (hPlayerID ~= hShooter.id and hPlayerID ~= hTarget.id and hPlayer and hPlayer.IsPlayer) then
+
+                            -- only add hits from players who actually assisted in the kill
+                            if (not aInfo.Timer.expired()) then
+
+                                -- Divide the rewards by the percentage of hits
+                                iAssistance = (aInfo.HitCount / iTotalHits)
+                                if (hMethod == 1) then
+
+                                    -- Divide the rewards by the percentage of damage dealt
+                                    iAssistance = (aInfo.DamageCount / iTotalDamage)
+                                end
+
+                                DebugLog(hPlayerID,"assistance:",iAssistance,">",(iThreshold or 0))
+                                if ((iAssistance * 100) > (iThreshold or 0)) then
+
+                                    -- TODO: ClientMod()
+                                    -- ClientMod()
+
+                                    self:PrestigeEvent(hPlayerID, {
+                                        math.floor(math.max(0, iPP * iAssistance)),
+                                        math.floor(math.max(0, iCP * iAssistance))
+                                    }, "@kill_assist")
+                                end
+                            else
+                                --    throw_error("timer expired")
+                            end
+                        end
+                    end
+                end
             end
         },
         {

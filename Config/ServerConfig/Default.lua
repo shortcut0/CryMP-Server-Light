@@ -97,8 +97,23 @@ Server.Config:Create({
             -- Configuration for Kills
             KillConfig = {
 
-                -- Will Split the kill reward among all players who assisted in the kill (the actual killer will receive the full reward)
-                KillAssistReward = true,
+                --- Will Split the kill reward among all players who assisted in the kill (the actual killer will receive the full reward)
+                KillAssistance = {
+
+                    Enabled = true,
+
+                    -- The Distribution type
+                    -- Type 1 means the rewards are divided by percent the damage contributed to the kill
+                    -- Type 2 means the rewards are divided by the percentage of hits landed that ultimately lead to the kill
+                    Type = 1,
+
+                    -- The Assist threshold to receive a reward (0>100 in percentage)
+                    Threshold = 15,
+
+                    -- The time after which a players contribution expires
+                    Timeout = 13,
+
+                }, ---< KillAssistance
 
                 -- if players should drop all their equipment upon death
                 DropAllEquipment = true,
