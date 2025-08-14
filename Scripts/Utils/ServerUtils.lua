@@ -150,7 +150,7 @@ Server:CreateComponent({
             elseif (IsAny(sId, "us", "america", tostring(GameTeam_US))) then
                 return GameTeam_US
 
-            elseif (IsAny(sId, "neutral", "none", GameTeam_Neutral)) then
+            elseif (IsAny(sId, "neutral", "none", tostring(GameTeam_Neutral))) then
                 return GameTeam_Neutral
             end
 
@@ -159,7 +159,6 @@ Server:CreateComponent({
         GetTeam_String = function(self, sId)
 
             sId = string.lower(sId)
-            DebugLog(sId)
             if (IsAny(sId, "nk", "korea", tostring(GameTeam_NK))) then
                 return GameTeam_NK_String
 
@@ -193,6 +192,13 @@ Server:CreateComponent({
                 ServerLogError("CVar '%s' not Found", sCVar)
             end
             System.SetCVar(sCVar, sValue)
+        end,
+
+        FSetCVar = function(self, sCVar, sValue)
+            if (System.GetCVar(sCVar) == nil) then
+                ServerLogError("CVar '%s' not Found", sCVar)
+            end
+            ServerDLL.FSetCVar(sCVar, sValue)
         end,
 
         ExecuteCommand = function(self, sCommand, hAdmin)
@@ -279,7 +285,7 @@ Server:CreateComponent({
 
         GetEntities = function(self, aInfo)
             local aEntities
-            if (aInfo.ByClass) then
+            if (aInfo and aInfo.ByClass) then
                 aEntities = System.GetEntitiesByClass(aInfo.ByClass)
             end
 
@@ -306,14 +312,23 @@ Server:CreateComponent({
             g_gameRules:CreateExplosion(NULL_ENTITY, NULL_ENTITY, 1, vPos, (vDir or Vector.Up()), 45, 0.1, 0.1, 0.1, sEffect, (iScale or 1), 0.1, 0.1, 0.1);
         end,
 
-        RevivePlayer = function(self, hPlayer, vPosition)
+        RevivePlayer = function(self, hPlayer, vPosition, bKeepEquip, tEquip)
             if (vPosition) then
                 hPlayer.RevivePosition = vPosition
             else
                 hPlayer.RevivePosition = nil
             end
 
-            g_gameRules:RevivePlayer(hPlayer:GetChannel(), hPlayer, true, hPlayer.RevivePosition ~= nil)
+            if (bKeepEquip == nil) then
+                bKeepEquip = true
+            end
+
+            if (g_gameRules.IS_PS) then
+                if ((not hPlayer.spawnGroupId or hPlayer.spawnGroupId == NULL_ENTITY)) then
+                    hPlayer.spawnGroupId = g_gameRules.game:GetTeamDefaultSpawnGroup(hPlayer:GetTeam())
+                end
+            end
+            g_gameRules:RevivePlayer(hPlayer:GetChannel(), hPlayer, bKeepEquip, hPlayer.RevivePosition ~= nil, tEquip)
             if (g_gameRules.IS_PS) then
                 g_gameRules:ResetRevive(hPlayer.id, true)
             end

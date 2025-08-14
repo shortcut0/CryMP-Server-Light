@@ -37,3 +37,18 @@ end
 string.MatchesAny = function(str, none_of_these)
     return (not string.MatchesNone(str, none_of_these))
 end
+
+-- =============================================
+string.CleanNonASCII = function(s, sPattern)
+    local sCleaned = ""
+    local sCleanedPattern = sPattern or "[a-zA-Z0-9_'{}\"%(%) %*&%%%$#@!%?/\\;:,%.<>%-%[%]%+]"
+
+    for i = 1, #s do
+        local sChar = s:sub(i, i)
+        if sChar:match(sCleanedPattern) then
+            sCleaned = sCleaned .. sChar
+        end
+    end
+
+    return sCleaned
+end

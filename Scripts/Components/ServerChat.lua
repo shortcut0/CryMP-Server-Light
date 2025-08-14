@@ -44,12 +44,12 @@ Server:CreateComponent({
                     { Status = true, Tag = "Coord, {Coords}", Type = ChatToTeam },
                     { Tag = "SPEC",     Condition = "IsSpectating" },
                     { Tag = "DEAD",     Condition = "IsDead" },
+                    --{ Tag = "VIP",      Condition = "IsPremium" },
                     --{ Tag = "LAG",      Condition = "IsLagging" },
                     --{ Tag = "TESTING",  Condition = "IsTesting" },
                     --{ Tag = "GOD",      Condition = "HasGodMode" },
                     --{ Tag = "DEV",      Condition = "IsDeveloper" },
-                   -- { Tag = "ADMIN",    Condition = "IsAdmin" },
-                    --{ Tag = "VIP",      Condition = "IsPremium" },
+                    --{ Tag = "ADMIN",    Condition = "IsAdmin" },
                 },
             },
 
@@ -430,6 +430,9 @@ Server:CreateComponent({
             end
 
             sMessage = Server.LocalizationManager:LocalizeForPlayer(hClient, sMessage, tFormat)
+            if (iType ~= TextMessageConsole) then
+                sMessage = Server.Logger:RidColors(sMessage)
+            end
             g_gameRules.game:SendTextMessage(iType, sMessage, TextMessageToClient, hClient.id)
         end,
 
@@ -486,7 +489,6 @@ Server:CreateComponent({
             end
 
             local sPlayerCoords = hPlayer:GetTextCoords()
-
             local tAnd = aTagList.And -- all of these
             local tOr = aTagList.Or   -- plus any one of these, depending on the condition set
 
@@ -498,7 +500,6 @@ Server:CreateComponent({
 
                     if (aTagInfo.Status ~= false) then
                         if (aTagInfo.Type and iType ~= aTagInfo.Type) then
-                            DebugLog("not",aTagInfo.Tag,aTagInfo.Type,iType)
                             bAddTag = false
 
                         elseif (aTagInfo.Condition) then
@@ -527,7 +528,11 @@ Server:CreateComponent({
             CheckTagList(tAnd)
             CheckTagList(tOr, true)
             if (#aTags == 0) then
-                return
+                if (Server.PlayerRanks:IsEnabled()) then
+                    aTags = { ("%s"):format(Server.PlayerRanks:GetRankName(hPlayer)) }
+                else
+                    return
+                end
             end
 
             --local sTagParenthesis = ("(%s)"):format(table.concat(aTags, ", "))

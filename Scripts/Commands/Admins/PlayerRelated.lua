@@ -114,7 +114,8 @@ Server.ChatCommands:Add({
         },
         Function = function(self, hTarget, bIntoVehicle)
 
-            local vPos = hTarget:CalcPos(1)
+            local bUseDV = true -- directional vector instead of actual look direction
+            local vPos = hTarget:CalcPos(1, bUseDV)
             if (self:IsDead()) then
                 Server.Utils:RevivePlayer(self, vPos)
             else
@@ -130,6 +131,36 @@ Server.ChatCommands:Add({
             Server.Utils:SpawnEffect(Effect_LightExplosion, vPos)
             Server.Chat:ChatMessage(ChatEntity_Server, self, "@you_teleportedTo", { To = hTarget:GetName() })
             Server.Chat:ChatMessage(ChatEntity_Server, hTarget, "@x_teleportedToYou", { X = self:GetName() })
+            return true
+        end
+    },
+
+    -- ================================================================
+    -- !Spec <Target>
+    {
+        Name = "Spec",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", Required = false, Type = CommandArg_TypePlayer },
+        },
+        Properties = {
+        },
+        Function = function(self, hTarget)
+
+            if (hTarget) then
+
+                return true
+            end
+
+            -- Stop
+            if (self:IsSpectating()) then
+                self:Revive(self:GetPos(), self:GetTemp("SpectatorEquip", true))
+                return true
+            end
+
+            -- Start
+            self:SetTemp("SpectatorEquip", self:GetEquipment())
+            self:Spectate(1, hTarget)
             return true
         end
     },

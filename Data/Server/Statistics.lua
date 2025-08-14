@@ -11,9 +11,9 @@
 -- ===================================================================================
 return {
  ["PlayerRecord"] = 2,
- ["ServerLifetime"] = 46647,
- ["TotalWallJumps"] = 21,
- ["ChatCommandsUsed"] = 297,
- ["ChannelCount"] = 88,
- ["ChannelRecord"] = 12,
+ ["ServerLifetime"] = 81768,
+ ["TotalWallJumps"] = 59,
+ ["ChatCommandsUsed"] = 1033,
+ ["ChannelCount"] = 181,
+ ["ChannelRecord"] = 45,
 }

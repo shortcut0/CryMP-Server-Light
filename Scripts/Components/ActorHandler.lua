@@ -55,6 +55,11 @@ Server:CreateComponent({
             local aData = self.PlayerData[sId]
             if (aData) then
                 table.MergeInPlace(hPlayer.Data, aData)
+                local sLastName = aData.LastName
+                if (string.emptyN(sLastName)) then
+                    Server.NameHandler:Command_Rename(Server:GetEntity(), hPlayer, sLastName, "@last_used_name")
+                    --"@last_used_name"
+                end
             end
         end,
 
@@ -90,6 +95,7 @@ Server:CreateComponent({
                 IPAddress = "127.0.0.1",
                 HostName  = "localhost",
                 HardwareId = nil,
+                Access    = 999,
                 Language = {
                     Detected = Language_English,
                     Preferred = Language_English
@@ -126,6 +132,7 @@ Server:CreateComponent({
                 Hostiles = 0,
             }
 
+            hActor.TempData = {}
             hActor.Data = {
                 LastConnect      = -1, -- Never
                 ServerTime       = 0, -- Time spent on this server
@@ -215,12 +222,38 @@ Server:CreateComponent({
             if (hActor.Info.IsPlayer) then
             end
 
-            hActor.CalcPos             = function(this, distance, dv) local d = this:SmartGetDir(dv) local p = this:GetHeadPos() Vector.FastSum(p, p, Vector.Scale(d, (distance or 5))) return p end
+            hActor.SetTemp = function(this, sId, hData)
+                this.TempData[sId] = hData
+            end
+
+            hActor.GetTemp = function(this, sId, bDestroy)
+                local hTemp = this.TempData
+                if (not sId) then
+                    return hTemp
+                end
+                local hRetTemp = hTemp[sId]
+                if (bDestroy) then
+                    hTemp[sId] = nil
+                end
+                return hRetTemp
+            end
+
+            hActor.GetUniqueID = function(this) return this.Info.UniqueId  end
+            hActor.GetUniqueName = function(this) return this.Info.UniqueName  end
+
+            hActor.WasKicked = function(this) return this.Info.WasKicked  end
+            hActor.WasBanned = function(this) return this.Info.WasBanned  end
+            hActor.SetBanned = function(this, mode) this.Info.WasBanned = mode  end
+            hActor.SetKicked = function(this, mode) this.Info.WasKicked = mode  end
+            hActor.SetIntentionalDisconnect = function(this, mode) this:SetKicked(mode) this:SetBanned(mode)  end
+            hActor.WasIntentionallyDisconnected = function(this) return this:WasBanned() or this:WasKicked()  end
+
+            hActor.CalcPos             = function(this, distance, dv) local d = this:SmartGetDir(dv) local p = this:GetPos() Vector.FastSum(p, p, Vector.Scale(d, (distance or 5))) return p end
             hActor.IsSwimming          = function(this) return this:IsUnderwater(1) or this:GetStance(STANCE_SWIM)  end
             hActor.GetHeadPos          = function(this) return this.actor:GetHeadPos() end
             hActor.GetHeadDir          = function(this) return this.actor:GetHeadDir()  end
             hActor.GetViewPoint        = function(this, dist) return (this.actor:GetLookAtPoint(dist or 9999))  end
-            hActor.SvMoveTo            = function(this, pos, ang) this:SetInvulnerability(5) local v = this:GetVehicle() if (v) then v:SetWorldPos(pos) return end g_gameRules.game:MovePlayer(this.id, Vector.ModifyZ(pos, 0.25), (ang or this:GetWorldAngles()))  end
+            hActor.SvMoveTo            = function(this, pos, ang) this:SetInvulnerability(3) local v = this:GetVehicle() if (v) then v:SetWorldPos(pos) return end g_gameRules.game:MovePlayer(this.id, Vector.ModifyZ(pos, 0), (ang or this:GetWorldAngles()))  end
             hActor.SetInvulnerability  = function(this, time) g_gameRules.game:SetInvulnerability(this.id, true, (time or 2.5)) end
             hActor.GetSpectatorDir     = function(this) return (this.actor:GetLookDirection() or this.PseudoDirection or Vector.Empty()) end
             hActor.GetVehicleDir       = function(this) return (this.actor:GetVehicleViewDir()) end
@@ -261,6 +294,17 @@ Server:CreateComponent({
             hActor.GetSuitMode     = function(this, mode) local m = this.actor:GetNanoSuitMode() if (mode) then return (m == mode) end return m  end
             hActor.SetSuitMode     = function(this, mode) this.actor:SetNanoSuitMode(mode) end -- NOT synched
 
+            hActor.Revive          = function(this, pos, tEquipList)
+
+                local bKeepEquip = true
+                if (tEquipList) then
+                    bKeepEquip = false
+                end
+                Server.Utils:RevivePlayer(this, pos, bKeepEquip, tEquipList)
+                g_gameRules:RevivePlayer(this:GetChannel(), this, bKeepEquip, tEquipList)
+                this.RevivePosition = nil
+                this.ReviveAngles = nil
+            end
 
             hActor.LeaveVehicle    = function(this)
                 local hVehicle = this:GetVehicle()

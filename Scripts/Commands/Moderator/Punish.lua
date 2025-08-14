@@ -9,21 +9,22 @@
 -- ===================================================================================
 
 Server.ChatCommands:Add({
-    Name = "validate",
-    Access = ServerAccess_Lowest,
-    Arguments = {
-        { Name = "@arg_profileId", Required = true, Type = CommandArg_TypeNumber },
-        { Name = "@arg_hash",      Required = true },
-        { Name = "@arg_name",      Required = true }
-    },
-    Properties = {
-        Hidden = true,
-        IsQuiet = true
-    },
-    Function = function(self, iProfileId, sHash, sName)
-        if (Server.Network:ValidateProfile(self, iProfileId, sHash, sName)) then
-            return true
+
+    -- ================================================================
+    -- !Kick <Player> <Reason>
+    {
+        Name = "Kick",
+        Access = ServerAccess_Moderator,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer },
+            { Name = "@reason", Desc = "@reason_desc", Default = "@admin_decision", Type = CommandArg_TypeMessage },
+        },
+        Properties = {
+            This = "Server.Punisher"
+        },
+        Function = function(self, hPlayer, hTarget, sReason)
+            return self:Command_KickPlayer(hPlayer, hTarget, sReason)
         end
-        return false
-    end
+    },
+
 })

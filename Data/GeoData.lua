@@ -10,4 +10,17 @@
 -- Server Component 
 -- ===================================================================================
 return {
+ ["148.222.205.147"] = {
+  ["CountryCode"] = "CL",
+  ["AS"] = "AS14593 Space Exploration Technologies Corporation",
+  ["CountryName"] = "Chile",
+  ["Timezone"] = "America/Santiago",
+  ["ContinentName"] = "South America",
+  ["City"] = "Santiago",
+  ["RegionName"] = "Santiago Metropolitan",
+  ["Organisation"] = "Starlink Chile SpA",
+  ["ISP"] = "SpaceX Starlink",
+  ["District"] = "",
+  ["ContinentCode"] = "SA",
+ },
 }

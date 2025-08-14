@@ -54,6 +54,15 @@ Server:CreateComponent({
 
         MapList = {
             List = {},
+            GetAll = function(this)
+                local aResult = {}
+                for _, aMaps in pairs(this.List) do
+                    for __, tMap in pairs(aMaps) do
+                        table.insert(aResult, tMap)
+                    end
+                end
+                return aResult
+            end,
             GetMap = function(this, sMap)
                 for _, aMaps in pairs(this.List) do
                     for __, tMap in pairs(aMaps) do
@@ -68,9 +77,9 @@ Server:CreateComponent({
                 local aResults = {}
                 for _, aMaps in pairs(this.List) do
                     for __, tMap in pairs(aMaps) do
-                        if (tMap:GetPath() == sMap) then
+                        if (tMap:GetName():lower() == sMap:lower()) then
                             return { tMap }
-                        elseif (tMap:GetName():match(string.Escape(aResults))) then
+                        elseif (tMap:GetName():lower():match(string.Escape(sMap:lower()))) then
                             table.insert(aResults, tMap)
                         end
                     end
@@ -404,10 +413,122 @@ Server:CreateComponent({
             return table.copy((aMiniMaps or {})[1] or {})
         end,
 
-        Command_StartMap = function(self, sMap, iTimer, hPlayer)
+
+        ListMapsToConsole = function(self, hPlayer, sFilter, aMaps)
+
+            ----------
+            local aList = aMaps
+            if (not aList) then
+                aList = self.MapList:GetAll()
+                DebugLog("sss",#aList)
+                if (table.countRec(aList) == 0) then
+                    return false, hPlayer:LocalizeText("@no_maps_found")
+                end
+            end
+
+            local sTypeFilter
+            sFilter = string.lower(sFilter or "")
+            if (string.findex(sFilter, "po", "pow", "power", "power+struggle")) then
+                sTypeFilter = "ps"
+                sFilter = nil
+            elseif (string.findex(sFilter, "ins", "inst", "instant", "instant+action", "action", "iaction")) then
+                sTypeFilter = "ia"
+                sFilter = nil
+            end
+
+            ----------
+            local aPrintableList = {}
+            local iMatchingMaps = 0
+
+            for _, tMap in pairs(aList) do
+                local sMapType = tMap:GetRules()
+                if (aPrintableList[sMapType] == nil) then
+                    aPrintableList[sMapType] = {}
+                end
+
+                if (string.empty(sTypeFilter) or sMapType:lower() == sTypeFilter) then
+                    table.insert(aPrintableList[sMapType], tMap)
+                    iMatchingMaps = iMatchingMaps + 1
+                end
+            end
+
+            if (iMatchingMaps == 0) then
+                if (not sTypeFilter) then
+                    return false, hPlayer:LocalizeText("@no_maps_found")
+                end
+                return false, hPlayer:LocalizeText("@no_maps_foundOfType", { Type = self:GetLongRules(sTypeFilter) })
+            end
+
+            local iDisplayedMaps = 0
+            local iLineWidth = Server.Chat:GetConsoleWidth()
+            local iMapNameWidth = 25
+            for sType, tMapList in pairs(aPrintableList) do
+
+                local iIndex = 0
+                local iCounter = 0
+                local iMapCount = #(tMapList)
+                local sLine = "     "
+
+                Server.Chat:ConsoleMessage(hPlayer, " ")
+                Server.Chat:ConsoleMessage(hPlayer, "$9" .. string.mspace(" [ ~ $4" .. self:GetLongRules(sType) .. "$9 ~ ] ", iLineWidth, nil, string.COLOR_CODE, "="))
+                Server.Chat:ConsoleMessage(hPlayer, " ")
+
+
+                for _, tMap in pairs(tMapList) do
+
+                    local bDisplay = true
+                    local sMapName = tMap:GetName()
+                    if (sFilter ~= "") then
+                        local iStart, iEnd = string.find(sMapName:lower(), sFilter:lower())
+                        if (iStart) then
+                            sMapName = ("$9%s$6%s$9%s"):format((sMapName:sub(1, iStart - 1)), (sMapName:sub(iStart, iEnd)):upper(), (sMapName:sub(iEnd + 1)))
+                        else
+                            bDisplay = false
+                        end
+                    end
+
+                    if (bDisplay) then
+                        iIndex = iIndex + 1
+                        iCounter = iCounter + 1
+                        iDisplayedMaps = iDisplayedMaps + 1
+
+                        local sMapColor = "$9"
+                        local sMapPath = tMap:GetPath()
+                        local bHasLink = (Server.Network.Properties.MapLinkList[string.lower(sMapPath)] ~= nil)
+                        if (self:IsMapForbidden(sMapPath)) then
+                            sMapColor = "$4"
+                        elseif (not bHasLink) then
+                            sMapColor = "$6"
+                        end
+
+                        sLine = sLine .. "$1" .. string.lspace(iCounter, 2, nil, " ") .. ") " .. sMapColor .. sMapName .. string.rep(" ", iMapNameWidth -
+                                string.len(string.gsub(sMapName, string.COLOR_CODE, "")))
+
+                        if (iIndex >= 4 or iIndex == iMapCount) then
+                            Server.Chat:ConsoleMessage(hPlayer, sLine)
+                            sLine = "     "
+                            iIndex = 0
+                        end
+                    end
+                end
+            end
+
+            Server.Chat:ConsoleMessage(hPlayer, " ")
+            Server.Chat:ConsoleMessage(hPlayer, "     $9" .. hPlayer:LocalizeText("@map_list_info1"))
+            Server.Chat:ConsoleMessage(hPlayer, "$9================================================================================================================")
+            return true, hPlayer:LocalizeText("@entitiesListedInConsole", { Class = "@maps", Count = iDisplayedMaps })
+        end,
+
+        Command_StartMap = function(self, hPlayer, sMap, iTimer)
 
             hPlayer = (hPlayer or Server:GetEntity())
-            iTimer = (iTimer or 0)
+            iTimer = math.max(5, (iTimer or 0))
+            sMap = sMap or ""
+
+            if (not sMap) then
+                self:ListMapsToConsole(hPlayer)
+                return true
+            end
 
             local sMapLower = sMap:lower()
             if (sMapLower == "stop") then
@@ -422,12 +543,13 @@ Server:CreateComponent({
                 return true, "@map_start_stopped"
             end
 
-            local aMapResults = self.MapList:GetMap(sMap)
+            local aMapResults = self.MapList:FindMaps(sMap)
             if (#aMapResults == 0) then
                 return false, hPlayer:LocalizeText("@map_not_found", { Map = sMap })
 
             elseif (#aMapResults > 1) then
-                return true, hPlayer:LocalizeText("@entitiesListedInConsole", { Class = "@maps", Count = #aMapResults })
+                --self:ListMapsToConsole(hPlayer, sMap)
+                return self:ListMapsToConsole(hPlayer, sMap)
             end
 
 
@@ -439,15 +561,15 @@ Server:CreateComponent({
                     self.MapStartTimer = nil
                 end
                 self.MapStartTimer = Script.SetTimer((iTimer * 1000), function()
-                    self:LoadMap(tMap:GetPath(), tMap:GetRules(), tMap:GetDefaultTimeLimit())
+                    self:StartMap(tMap:GetPath(), tMap:GetRules(), tMap:GetDefaultTimeLimit())
                 end)
 
-                local aFormat = { Time = Date:Format(iTimer), Mode = tMap:GetRules():upper(), Map = tMap:GetName() }
+                local aFormat = { Next = "",Time = Date:Format(iTimer), Mode = tMap:GetRules():upper(), Map = tMap:GetName() }
                 self:LogEvent({ Message = "@map_start_queued" , MessageFormat = aFormat })
                 return true, hPlayer:LocalizeText("@map_start_queued", aFormat)
             end
 
-            self:LoadMap(tMap:GetPath(), tMap:GetRules(), tMap:GetDefaultTimeLimit())
+            self:StartMap(tMap:GetPath(), tMap:GetRules(), tMap:GetDefaultTimeLimit())
             return true
         end,
 

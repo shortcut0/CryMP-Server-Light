@@ -19,8 +19,142 @@ Server.Config:Create({
 
             -- A list of CVars which will be forced to specified value
             ForcedCVars = {
+
+                -- Timeout before disconnecting a channel
+                net_inactivitytimeout = 50,
+
+                -- Aim Assist Disable
+                aim_assistAimEnabled = 0,
+                aim_assistAutoCoeff = 0,
+                aim_assistMaxDistance = 0,
+                aim_assistRestrictionTimeout = 2000,
+                aim_assistSearchBox = 0,
+                aim_assistSingleCoeff = 0,
+                aim_assistSnapDistance = 0,
+                aim_assistTriggerEnabled = 0,
+                aim_assistVerticalScale = 0,
+                hit_assistMultiplayerEnabled = 0,
+                hit_assistSingleplayerEnabled = 0,
+
+                ca_AttachmentCullingRation = 200,
+
+                -- Bandwidth
+                cl_bandwidth = 100000,
+                sv_bandwidth = 100000,
+
+                sv_dedicatedMaxRate = 30,
+                sv_cheatprotection = 0,
+
+                -- Some performance related CVars
+                e_profile_level_loading = 0,
+                e_vegetation_sprites = 0,
+                e_view_dist_ratio_vegetation = 30,
+                fg_abortOnLoadError = -1,
+                g_breakage_particles_limit = 150,
+                g_enableIdleCheck = 0,
+                g_enableloadingscreen = 1,
+                g_radialBlur = 0,
+                r_ColorGrading = 1,
+                r_GlowScreenMultiplier = 0.5,
+                sys_flash_warning_level = 0,
+                sys_spec_MotionBlur = 4,
+
+                -- other
+                hud_onScreenFarSize = 0.5,
+                hud_onScreenNearSize = 1.1,
+                hud_attachBoughEquipment = 1,
+                hud_showBigVehicleReload = 1,
+
+                p_max_object_splashes = 0,
+                p_max_velocity = 400,
+                p_max_player_velocity = 50,
+                p_max_substeps_large_group = 5,
+                p_splash_force0 = 15000,
+                p_splash_force1 = 150000,
+                pl_zeroGAimResponsiveness = 100,
+                pl_zeroGBaseSpeed = 4,
+                pl_zeroGEnableGBoots = 1,
+                pl_zeroGParticleTrail = 1,
+                pl_zeroGSpeedModeEnergyConsumption = 0.1,
+                v_altitudeLimit = 1000,
+                v_vehicle_quality = 4,
+
+                p_net_minsnapdist = 10,
+
+                -- CryMP-Client
+                MP_CRYMP          = 0,
+                MP_CIRCLEJUMP     = 0.45,
+                MP_WALLJUMP       = 1.75,
+                MP_FLYMODE        = 0,
+                MP_PICKUPOBJECTS  = 1,
+                MP_PICKUPVEHICLES = 0,
+                MP_WEAPONSONBACK  = 1,
+                MP_THRIDPERSON    = 1,
+                MP_AALOCKON       = 1,
+
+                MP_UNRESTRICTEDRAGDOOLS   = 1,
+                mp_animationGrenadeSwitch = 1,
+                mp_C4StrengthThrowMult = 3.0,
+
+                -- Server Only CVars
                 SERVER_USE_HIT_QUEUE = 0,
-            } ---< ForcedCVars
+
+            }, ---< ForcedCVars
+
+            -- There is a few servers who clearly do this
+            -- This is just an option for the sake of adding it, using it is something else!
+            PingMultiplier = 1.0,
+
+            -- The threshold to start logging ping warnings
+            AveragePingWarningThreshold = 200,
+
+            -- Warning Thresholds for net Usage
+            NetworkUsageWarningThresholds = {
+                Up = 20000,
+                Down = 10000,
+            },
+
+            --- Ping Control Config
+            PingControl = {
+
+                Enabled = true,
+
+                -- The maximum tolerated ping a player can have
+                Tolerance = 300,
+
+                -- After exceeding the tolerated limit, give them this amount of warnings
+                WarningLimit = 5,
+
+                -- With this amount of time passing between each warning
+                WarningDelay = 10,
+
+                -- Enables resetting of warnings upon players ping recovering to tolerated levels
+                ResetWarnings = false
+
+            }, ---< PingControl
+
+            --- Connection Filter (not racially motivated)
+            ConnectionFilter = {
+
+                Enabled = true,
+                Blacklist = {
+
+                    --- You must escape all entries in here for the filters to work!
+                    IPAddresses = {
+                        --"127%.0%.0%.1"
+                    },
+
+                    Countries = {
+                        --"Nigeria"
+                    },
+
+                    Providers = {
+                        --"Starlink"
+                    }
+
+                }, ---< Blacklist
+
+            }, ---< ConnectionFilter
 
         }, ---< Network
 
@@ -30,9 +164,10 @@ Server.Config:Create({
 
             -- The Name of Server
             ServerName = "CryMP ~ {MapName} ~",
+            ServerName = "Lord Farquaad's Dungeon",
 
             -- The Description which will appear on the Website
-            ServerDescription = "CryMP-Server"
+            ServerDescription = "When you get older, plainer, saner\nWill you remember all the danger we came from?\nBurnin' like embers, falling tender\nLonging for the days of no surrender, years ago\nAnd will you know?"
 
         }, ---< Server
 
@@ -178,7 +313,7 @@ Server.Config:Create({
                         PP = 500,
 
                         -- The amount of experience points
-                        CP = 25,
+                        CP = 35,
                     }
 
                 }, ---< FirstBlood

@@ -126,6 +126,11 @@ Server:CreateComponent({
             hPlayer.Info.UniqueId = hId
             hPlayer.Info.UniqueName = self:GetUniqueName(hId)
             self:Log("Resolved Unique ID for User '%s' ID: %s, Name: %s", hPlayer:GetName(), hId, hPlayer.Info.UniqueName)
+
+            -- Check for Hard Bans here
+            if (Server.Punisher:CheckPlayerForBan(hPlayer, true, true)) then
+                return
+            end
         end,
 
         GetUniqueName = function(self, hId)
@@ -191,11 +196,11 @@ Server:CreateComponent({
 
             if (self.Properties.KickInvalidProfiles) then
                 -- TODO
-                Server.Security:KickPlayer(Server:GetEntity(), hPlayer, "Profile Validation Failed")
+                Server.Punisher:KickPlayer(Server:GetEntity(), hPlayer, "Profile Validation Failed")
 
             elseif (self.Properties.BanInvalidProfiles) then
                 -- TODO
-                Server.Security:BanPlayer(Server:GetEntity(), hPlayer, { Duration = FIVE_MINUTES, Reason = "Profile Validation Failed" })
+                Server.Punisher:BanPlayer(Server:GetEntity(), hPlayer, { Duration = FIVE_MINUTES, Reason = "Profile Validation Failed" })
 
             else
                 self:AssignIPProfile(hPlayer)

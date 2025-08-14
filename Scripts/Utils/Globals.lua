@@ -142,6 +142,7 @@ CommandArg_TypeMessage = 5  -- Concat all args
 CommandArg_TypeTime = 6     -- a Time value (1d, 86400)
 CommandArg_TypeAccess = 7   -- a valid server access level
 CommandArg_TypeCVar = 8     -- a valid cvar
+CommandArg_TypeTeam = 9     -- a valid team name or id
 
 ----------------------------
 ALL_PLAYERS = 1000
@@ -185,6 +186,40 @@ Effect_Firework	        = "misc.extremly_important_fx.celebrate";
 Effect_C4Explosive      = "explosions.C4_explosion.ship_door";
 Effect_Claymore	        = "explosions.mine.claymore";
 Effect_AlienBeam	    = "alien_weapons.singularity.Tank_Singularity_Spinup";
+
+----------------------------
+
+DisconnectType_Timeout                 = 0
+DisconnectType_ProtocolError           = 1
+DisconnectType_ResolveFailed           = 2
+DisconnectType_VersionMismatch         = 3
+DisconnectType_ServerFull              = 4
+DisconnectType_Kicked                  = 5
+DisconnectType_Banned                  = 6
+DisconnectType_ContextCorruption       = 7
+DisconnectType_AuthenticationFailed    = 8
+DisconnectType_NotLoggedIn             = 9
+DisconnectType_CDKeyCheckFailed        = 10
+DisconnectType_GameError               = 11
+DisconnectType_NotDX10Capable          = 12
+DisconnectType_NubDestroyed            = 13
+DisconnectType_ICMPError               = 14
+DisconnectType_NatNegError             = 15
+DisconnectType_PunkDetected            = 16
+DisconnectType_DmoPlaybackFinished     = 17
+DisconnectType_DmoPlaybackFileNotFound = 18
+DisconnectType_UserRequested           = 19
+DisconnectType_NoController            = 20
+DisconnectType_CantConnect             = 21
+DisconnectType_ModMismatch             = 22
+DisconnectType_MapNotFound             = 23
+DisconnectType_MapVersion              = 24
+DisconnectType_Unknown                 = 25
+
+----------------------------
+GLOBAL_SERVER_IP_KEY            = 1000
+GLOBAL_SERVER_PUBLIC_PORT_KEY	= 1001
+GLOBAL_SERVER_NAME_KEY          = 1002
 
 ----------------------------
 PRIORITY_NONE = 1

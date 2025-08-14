@@ -29,6 +29,8 @@ Server = {
         ServerEntityName = "CryMP-Server",
     },
 
+    FrameCounters = {},
+
     PreInitializeList = {}, -- A list of functions to call before Initializing
     InitializeList = {},    -- A list of functions to call upon Initializing
     PostInitializeList = {},-- A list of functions to call upon Post-Initializing
@@ -271,6 +273,45 @@ end
 
 ----------------------------------
 Server.OnUpdate = function(self, iFrameTime, iFrameID)
+
+    local iClock = os.clock()
+    local iFrameCounterLimit = 30
+    local iFrameCounters = #self.FrameCounters
+    local iRateAverage = 0
+
+    if (iFrameCounters > iFrameCounterLimit) then
+        table.remove(self.FrameCounters, 1)
+    end
+    if (iFrameCounters > 1) then
+        for _, tInfo in pairs(self.FrameCounters) do
+            iRateAverage = iRateAverage + tInfo.Rate
+        end
+        iRateAverage = iRateAverage / iFrameCounters
+    end
+
+    self.FrameSteps = ((self.FrameSteps or 0) + 1)
+    self.FrameStepReset = (self.FrameStepReset or os.clock())
+    local iActualFPS = (self.FrameStepsPerSecond or 0)
+    local sActualFPSDiff = ""
+    if (self.FrameStepsPerSecondLast) then
+        local iDiff = (self.FrameStepsPerSecond - self.FrameStepsPerSecondLast)
+        sActualFPSDiff = ", $4" .. (iDiff >= 0 and "$3+" or "").. "" .. iDiff
+    end
+
+    if (iClock - self.FrameStepReset >= 1.0) then
+        self.FrameStepReset = iClock
+        self.FrameStepsPerSecondLast = self.FrameStepsPerSecond
+        self.FrameStepsPerSecond = self.FrameSteps
+        self.FrameSteps = 0
+    end
+
+    local iLastCounter = (self.FrameCounters[#self.FrameCounters] or { Clock = iClock }).Clock
+    local iFrameDiff = (iClock - iLastCounter)
+    if (iFrameDiff > 0.08) then
+        ServerLogWarning("{Gray}Frame Time {Red}%0.3f{Gray} (Avg: {Red}%0.3f{Gray}) | FPS: {Red}%0.2f{Gray} (Steps/s: {Red}%d{Gray}%s{Gray})", iFrameDiff, iRateAverage, (1 / iFrameDiff), iActualFPS, sActualFPSDiff)
+        --self.Network:OnFrameLag(iFrameDiff, iRateAverage, (1 / iFrameDiff), iActualFPS, sActualFPSDiff)
+    end
+    table.insert(self.FrameCounters, { Clock = iClock, Rate = iFrameDiff})
 end
 
 ----------------------------------
@@ -802,6 +843,7 @@ Server.Logger = {
     end,
 
     LogWarning = function(self, sMessage, ...)
+        sMessage = self:FormatTags(sMessage)
         self:Log(sMessage, ...)
         self:LogEvent({
             Event = ServerLogEvent_ScriptWarning,
@@ -811,6 +853,7 @@ Server.Logger = {
     end,
 
     LogError = function(self, sMessage, ...)
+        sMessage = self:FormatTags(sMessage)
         self:Log(sMessage, ...)
         self:LogEvent({
             Event = ServerLogEvent_ScriptError,
@@ -820,6 +863,7 @@ Server.Logger = {
     end,
 
     LogFatal = function(self, sMessage, ...)
+        sMessage = self:FormatTags(sMessage)
         self:Log(sMessage, ...)
         self:LogEvent({
             Event = ServerLogEvent_ScriptFatal,

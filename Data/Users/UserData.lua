@@ -10,49 +10,33 @@
 -- Server Component 
 -- ===================================================================================
 return {
- ["1073246"] = {
-  ["LastConnect"] = 1754954980,
+ ["1073264"] = {
+  ["LastConnect"] = 1755135412,
   ["FirstBloodScored"] = 0,
-  ["ServerTime"] = 2561,
-  ["LastName"] = "Nomad(1)",
+  ["ServerTime"] = 2021,
+  ["Rank"] = {
+   ["RankXP"] = 25,
+  },
  },
- ["1073194"] = {
-  ["LastConnect"] = 1754805460,
-  ["ServerTime"] = 1669,
+ ["1073297"] = {
+  ["LastConnect"] = 1755135886,
+  ["FirstBloodScored"] = 0,
+  ["ServerTime"] = 73,
+  ["Rank"] = {
+   ["RankXP"] = 0,
+   ["Name"] = "PLASTIC I",
+  },
  },
- ["1073219"] = {
-  ["LastConnect"] = 1754924133,
-  ["ServerTime"] = 16403,
- },
- ["ip0"] = {
-  ["LastConnect"] = 1754953259,
-  ["ServerTime"] = 4193,
- },
- ["1073216"] = {
-  ["LastConnect"] = 1754852961,
-  ["ServerTime"] = 1906,
- },
- ["1073245"] = {
-  ["LastConnect"] = 1754954810,
-  ["FirstBloodScored"] = 7,
-  ["ServerTime"] = 1060,
- },
- ["1073247"] = {
-  ["LastConnect"] = 1754966696,
-  ["FirstBloodScored"] = 40,
-  ["ServerTime"] = 9619,
- },
- ["1073218"] = {
-  ["LastConnect"] = 1754924133,
-  ["ServerTime"] = 14948,
- },
- ["1073248"] = {
-  ["LastConnect"] = 1754966696,
-  ["FirstBloodScored"] = 1,
-  ["ServerTime"] = 6938,
- },
- ["1073215"] = {
-  ["LastConnect"] = 1754852017,
-  ["ServerTime"] = 1735,
+ ["1073295"] = {
+  ["LastConnect"] = 1755135411,
+  ["FirstBloodScored"] = 4,
+  ["ServerTime"] = 1995,
+  ["Rank"] = {
+   ["Name"] = "COPPER I",
+   ["RankXP"] = 720.750000,
+   ["RankStage"] = 1,
+   ["Rank"] = 4,
+   ["NextRankXP"] = 800,
+  },
  },
 }

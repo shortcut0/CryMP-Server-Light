@@ -174,18 +174,20 @@ Server:CreateComponent({
                 m_DisabledReason = "@admin_decision",
                 m_IsDisabled = false,
                 m_IsBroken   = false,
-                m_IsHidden   = (tProperties.Hidden),
+                m_IsHidden   = (tProperties.Hidden or tProperties.IsHidden),
 
                 CoolDowns = {
                 },
 
                 Name        = string.lower(sName),
+                RealName    = sName,
                 Access      = (iAccessLevel),
                 Properties  = tProperties,
                 Arguments   = aArguments,
                 Function    = hFunction,
 
                 -- Functions
+                GetName     = function(this) return this.RealName  end,
                 IsHidden    = function(this) return this.m_IsHidden  end,
                 Hide        = function(this, bMode) this.m_IsHidden = bMode end,
                 IsDisabled  = function(this) return this.m_IsDisabled end,
@@ -739,14 +741,55 @@ Server:CreateComponent({
             -- Check Arguments
 
             local sUserArg, sUserArgLower
+            self.CommandEvaluateTemp = nil
             for iArg, aCmdArg in pairs((aCommandArgs)) do
 
                 sUserArg = tArgs[iArg]
 
                 -- Assign default
-                if (sUserArg == nil and aCmdArg.Default) then
-                    sUserArg = aCmdArg.Default
-                    tArgs[iArg] = aCmdArg.Default
+                if (sUserArg == nil) then
+                    if (aCmdArg.Default) then
+                        sUserArg = tostring(aCmdArg.Default)
+                        tArgs[iArg] = tostring(aCmdArg.Default)
+                    elseif (aCmdArg.DefaultEval) then
+                        self.CommandEvaluateTemp = {
+                            Player = hPlayer,
+                            Command = aCommand,
+                            Argument = aCmdArg
+                        }
+                        local sEvalCode =
+                        "local Player = Server.ChatCommands.CommandEvaluateTemp.Player;" ..
+                        "local Command = Server.ChatCommands.CommandEvaluateTemp.Command;" ..
+                        "local Argument = Server.ChatCommands.CommandEvaluateTemp.Argument;" ..
+                        aCmdArg.DefaultEval
+
+                        local function reader()
+                            local s = sEvalCode
+                            sEvalCode = nil
+                            return s
+                        end
+
+                        -- Crysis lua 'load' will only accept a function that returns a chunk, not a chunk directly..
+                        local bOk, sError = load(reader)
+                        if (not bOk) then
+                            aCommand:Break()
+                            SendMessage(self.Responses.ScriptError, { Name = sCommand })
+                            self:LogError("Failed to Load DefaultEvaluation for Command '%s' for Argument [%d]'%s'", aCommand:GetName(), iArg, (aCmdArg.Name or "<Null>"))
+                            self:LogError("%s", sError or "<Null>")
+                            return
+                        end
+
+                        bOk, sError = pcall(bOk)
+                        if (not bOk) then
+                            aCommand:Break()
+                            SendMessage(self.Responses.ScriptError, { Name = sCommand })
+                            self:LogError("Failed to Execute DefaultEvaluation for Command '%s' for Argument [%d]'%s'", aCommand:GetName(), iArg, (aCmdArg.Name or "<Null>"))
+                            self:LogError("%s", sError or "<Null>")
+                            return
+                        end
+                        sUserArg = tostring(sError)
+                        tArgs[iArg] = tostring(sError)
+                    end
                 end
 
                 -- Still empty!
@@ -848,7 +891,10 @@ Server:CreateComponent({
                 elseif (iArgType == CommandArg_TypeTime) then
 
                     hArgReplacement = Date:ParseTime(sUserArg)
-                    if (hArgReplacement < 1) then
+                    if (aCmdArg.AcceptInvalidTime and (sUserArgLower == "-1" or sUserArgLower == "never")) then
+                        hArgReplacement = -1
+
+                    elseif (hArgReplacement < 1) then
                         SendMessage({
                             Message = "@command_argInvalidTime"
                         }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
@@ -875,6 +921,15 @@ Server:CreateComponent({
                             }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                             return
                         end
+                    end
+
+                elseif (iArgType == CommandArg_TypeTeam) then
+                    hArgReplacement = Server.Utils:GetTeam_Number(sUserArgLower)
+                    if (not hArgReplacement) then
+                        SendMessage({
+                            Message = "@command_argInvalidTeam"
+                        }, { Team = sUserArgLower, Name = sCommand })
+                        return
                     end
 
                 elseif (iArgType == CommandArg_TypeCVar) then
@@ -1112,7 +1167,8 @@ Server:CreateComponent({
 
                 if (iPlayerAccess >= _ and table.count(aCommands) > 0) then
                     Server.Chat:ConsoleMessage(hPlayer, " ")
-                    Server.Chat:ConsoleMessage(hPlayer, "$9" .. string.mspace((" [ " .. sRankColor .. sRank .. " $9($1" .. table.count(aCommands) .. "$9)" .. " $9] "), iLineWidth, 1, string.COLOR_CODE, "="))
+                    Server.Chat:ConsoleMessage(hPlayer, "$9===" .. string.rspace((" [ " .. sRankColor .. sRank .. " $9($1" .. table.count(aCommands) .. "$9)" .. " $9] "), iLineWidth, string.COLOR_CODE, "="))
+                    ---Server.Chat:ConsoleMessage(hPlayer, "$9" .. string.mspace((" [ " .. sRankColor .. sRank .. " $9($1" .. table.count(aCommands) .. "$9)" .. " $9] "), iLineWidth, 1, string.COLOR_CODE, "="))
                     Server.Chat:ConsoleMessage(hPlayer, " ")
 
                     sCmdLine = "    "

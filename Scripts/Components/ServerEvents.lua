@@ -45,7 +45,8 @@ Server:CreateComponent({
             -- ============================================================================
             -- C++ Callbacks
 
-            OnUpdate = function()
+            OnUpdate = function(self, ...)
+                Server:OnUpdate(...)
                 Server.Events:CallEvent(ServerEvent_OnUpdate, System.GetFrameTime(), System.GetFrameID())
             end,
 

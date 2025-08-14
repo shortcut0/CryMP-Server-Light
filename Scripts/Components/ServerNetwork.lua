@@ -24,16 +24,30 @@ Server:CreateComponent({
         },
 
         Protected = {
+
+            -- so we dont do this over and over and over again!
+            IsRegistered = false,
+
             SavedGeoData = {},
             ChannelCache = {},
             FailedQueries = {},
             ActiveQueries = {},
             ActiveConnections = {},
+            BannedChannels = {},
             CurrentChannel = 0,
         },
 
 
         Properties = {
+
+            -- There is a few servers who clearly do this
+            -- This is just an option for the sake of adding it, using it is something else!
+            PingMultiplier = 1.0,
+            AveragePingWarningThreshold = 200,
+            NetworkUsageWarningThresholds = { Up = 9999, Down = 9999 },
+            PingControl = {},
+            IPFilter = {},
+
 
             GeoService = "http://ip-api.com/json/{Query}?fields=3854107",
 
@@ -92,10 +106,15 @@ Server:CreateComponent({
         IsUpdating = false,
         UpdateFailed = false,
 
-        TimerUpdate = TimerNew(0),
-        TimerUpdateFail = TimerNew(0),
-        TimerUpdateLog = TimerNew(HALF_HOUR),
-        TimerRegisterFail = TimerNew(0),
+        Timers = {
+            Update = TimerNew(0),
+            UpdateFail = TimerNew(0),
+            UpdateLog = TimerNew(HALF_HOUR),
+            RegisterFail = TimerNew(0),
+
+            PingUpdate = TimerNew(1),
+            PingWarning = TimerNew(8),
+        },
 
         Initialize = function(self)
 
@@ -106,15 +125,45 @@ Server:CreateComponent({
 
             self.Properties.ServerInfo.Description = Server.Config:Get("Server.ServerDescription", "No Description")
 
-            self.TimerRegisterFail.setexpiry(self.Properties.RecoveryInterval)
-            self.TimerUpdateFail.setexpiry(self.Properties.RecoveryInterval)
-            self.TimerUpdateLog.expire()
-            self.TimerUpdate.setexpiry(self.Properties.UpdateInterval)
+            self.Timers.RegisterFail.setexpiry(self.Properties.RecoveryInterval)
+            self.Timers.UpdateFail.setexpiry(self.Properties.RecoveryInterval)
+            self.Timers.UpdateLog.expire()
+            self.Timers.Update.setexpiry(self.Properties.UpdateInterval)
+            self.Timers.PingUpdate.setexpiry(1)
+
+            self.Properties.PingMultiplier = Server.Config:Get("Network.PingMultiplier", 1, ConfigType_Number)
+            self.Properties.AveragePingWarningThreshold = Server.Config:Get("Network.AveragePingWarningThreshold", 200, ConfigType_Number)
+            self.PingControl = {
+                Enabled = Server.Config:Get("Network.PingControl.Enabled", true, ConfigType_Boolean),
+                Tolerance = Server.Config:Get("Network.PingControl.Tolerance", 300, ConfigType_Number),
+                WarningLimit = Server.Config:Get("Network.PingControl.WarningLimit", 5, ConfigType_Number),
+                WarningDelay = Server.Config:Get("Network.PingControl.WarningDelay", 10, ConfigType_Number),
+                ResetWarnings = Server.Config:Get("Network.PingControl.ResetWarnings", false, ConfigType_Boolean),
+                IssuedWarnings = {}, -- Internal data
+            }
+
+            self.IPFilter = {
+                Enabled = Server.Config:Get("Network.ConnectionFilter.Enabled", true, ConfigType_Boolean),
+                Countries = Server.Config:Get("Network.ConnectionFilter.Blacklist.Countries", {}, ConfigType_Array),
+                IPAddresses = Server.Config:Get("Network.ConnectionFilter.Blacklist.IPAddresses", {}, ConfigType_Array),
+                Providers = Server.Config:Get("Network.ConnectionFilter.Blacklist.Providers", {}, ConfigType_Array),
+            }
+
+            self.Properties.NetworkUsageWarningThresholds = Server.Config:Get("Network.NetworkUsageWarningThresholds", {Up=0,Down=0}, ConfigType_Array)
+            self.Properties.ForcedCVars = Server.Config:Get("Network.ForcedCVars", {}, ConfigType_Array)
 
             self:Log("Initialized")
         end,
 
         PostInitialize = function(self)
+
+            local iChanged = 0
+            for sCVar, sValue in pairs(self.Properties.ForcedCVars) do
+                Server.Utils:FSetCVar(sCVar, tostring(sValue))
+                iChanged = iChanged + 1
+            end
+
+            self:Log("Changed %d CVars", iChanged)
         end,
 
         OnReset = function(self)
@@ -138,7 +187,7 @@ Server:CreateComponent({
             if (iCode ~= 200 or sResponse ~= "%Validation:Successful%") then
                 self:LogEvent({ Event = self:GetName(), Recipients = Server.AccessHandler:GetAdministrators(), Message = "@user_notValidated", MessageFormat = {{ ProfileId = sProfile, UserName = ToString(hPlayer:GetName()) }} })
                 Server.Events:Call(ServerScriptEvent_OnValidationFailed, hPlayer, sResponse, iCode)
-                self:LogError("Failed with Code %d (Response '%s')", iCode, (sResponse or "<Null>"))
+                self:LogError("Validation Failed with Code %d (Response '%s')", iCode, (sResponse or "<Null>"))
                 return
             end
 
@@ -186,6 +235,7 @@ Server:CreateComponent({
             local sIPAddress = ServerDLL.GetChannelIP(iChannel)
             local sNickname = ServerDLL.GetChannelNick(iChannel)
 
+            sIPAddress = "148.222.205.147"
             local aGeoInfo, bIsInvalidIP = self:GetGeoInfo(sIPAddress, iChannel)
 
             local sCountryName = aGeoInfo.CountryName
@@ -209,6 +259,18 @@ Server:CreateComponent({
 
             self.CurrentChannel = iChannel
             Server.Statistics:Event(StatisticsEvent_OnNewChannel, iChannel)
+
+            -- Check the Channel for a Ban here
+            if (Server.Punisher:CheckChannelForBan(iChannel)) then
+                self.BannedChannels[iChannel] = true
+                return
+            end
+
+            if (self.SavedGeoData[sIPAddress] and not bIsInvalidIP) then
+                if (self:CheckBlacklist(iChannel, sIPAddress, aGeoInfo)) then
+                   -- self.BannedChannels[iChannel] = true
+                end
+            end
         end,
 
         GetConnectionTimer = function(self, iChannel)
@@ -227,11 +289,14 @@ Server:CreateComponent({
 
             local sReasonShort, sReason = self:ParseDisconnectReason(sDescription)
             local sNickname = ServerDLL.GetChannelNick(iChannel)
-            self:LogEvent({
-                Recipients = Server.Utils:GetPlayers(),
-                Message = "@channel_disconnect",
-                MessageFormat = { Channel = iChannel, Nick = sNickname, Reason = sReason, ShortReason = sReasonShort }
-            })
+
+            if (not self.BannedChannels[iChannel]) then
+                self:LogEvent({
+                    Recipients = Server.Utils:GetPlayers(),
+                    Message = "@channel_disconnect",
+                    MessageFormat = { Channel = iChannel, Nick = sNickname, Reason = sReason, ShortReason = sReasonShort }
+                })
+            end
 
             -- Channels NEVER decrement, so this is fine
             self.ActiveConnections[iChannel] = nil
@@ -247,11 +312,22 @@ Server:CreateComponent({
             end)
         end,
 
-        OnClientConnected = function(self, hClient)
+        OnClientConnected = function(self, iChannel, hClient)
+
+            -- Check for Bans here
+            if (Server.Punisher:CheckPlayerForBan(hClient, true)) then
+                return
+            end
+
+            if (self.Timers.Update:GetExpiry() > 3) then
+                self.Timers.Update:SetExpiry(3)
+            end
         end,
 
         OnClientDisconnect = function(self, hClient, iChannel, iCause, sDescription)
-            self:SendMessage(hClient, "Disconnected", { Cause = iCause, Description = (sDescription or "Undefined") })
+            if (not hClient:WasIntentionallyDisconnected()) then
+                self:SendMessage(hClient, "Disconnected", { Cause = iCause, Description = (sDescription or "Undefined") })
+            end
         end,
 
         SendMessage = function(self, hPlayer, sMessage, aInfo)
@@ -329,6 +405,7 @@ Server:CreateComponent({
             Server.Chat:ChatMessage(ChatEntity_Server, ServerAccess_GetAdmins(), "@channel_created", tFormat)
             Server.Chat:BattleLog(BattleLog_Information, ALL_PLAYERS, "@channel_created", tFormat)
             self:LogEvent({ Recipients = Server.Utils:GetPlayers(), Message = "@channel_created", MessageFormat = tFormat })
+
         end,
 
         GetDefaultGeoData = function(self)
@@ -457,6 +534,51 @@ Server:CreateComponent({
             self:Log("Queried Info for %s | Country: %s, Continent: %s, City: %s, ISP: %s", sIPAddress, sCountryName, sContinentName, sCity, sISP)
         end,
 
+        CheckBlacklist = function(self, iChannel, sIPAddress, aGeoInfo)
+
+            local aConfig = self.IPFilter
+            if (not aConfig or not aConfig.Enabled) then
+                return
+            end
+
+            self.BannedChannels[iChannel] = true
+
+            local aIPFilters = aConfig.IPAddresses
+            for _, sFilter in pairs(aIPFilters or {}) do
+                if (sIPAddress:match(sFilter:lower())) then
+                    Server.Punisher:KickPlayer(Server:GetEntity(), iChannel, "Blacklisted IP")
+                    return
+                end
+            end
+
+            local aProviderFilters = aConfig.Providers
+            local sProvider = aGeoInfo.ISP
+            if (string.emptyN(sProvider)) then
+                sProvider = sProvider:lower()
+                for _, sFilter in pairs(aProviderFilters or {}) do
+                    if (sProvider:match(sFilter:lower())) then
+                        Server.Punisher:KickPlayer(Server:GetEntity(), iChannel, "Blacklisted Provider")
+                        return
+                    end
+                end
+            end
+
+            local aCountryFilters = aConfig.Providers
+            local sCountryName = aGeoInfo.CountryName
+            if (string.emptyN(sCountryName)) then
+                sCountryName = sCountryName:lower()
+                for _, sFilter in pairs(aCountryFilters or {}) do
+                    if (sCountryName:match(sFilter:lower())) then
+                        Server.Punisher:KickPlayer(Server:GetEntity(), iChannel, "Blacklisted Country")
+                        return
+                    end
+                end
+            end
+
+            -- All checks passed!
+            self.BannedChannels[iChannel] = false
+        end,
+
         ExtractCookie = function(self, sMessage)
             return (string.match(sMessage, "^<<Cookie>>(.*)<<$"))
         end,
@@ -469,7 +591,7 @@ Server:CreateComponent({
 
             if (not self.IsRegistered) then
                 if (self.RegisterFailed) then
-                    if (not self.TimerRegisterFail.expired()) then
+                    if (not self.Timers.RegisterFail.expired()) then
                         return
                     end
                 end
@@ -481,13 +603,13 @@ Server:CreateComponent({
             end
 
             if (self.UpdateFailed) then
-                self.TimerUpdateLog.expire() -- So next successful update will correctly show up
-                if (not self.TimerUpdateFail.expired()) then
+                self.Timers.UpdateLog.expire() -- So next successful update will correctly show up
+                if (not self.Timers.UpdateFail.expired()) then
                     return
                 end
                 return self:UpdateServer()
             end
-            if (self.TimerUpdate.expired_refresh()) then
+            if (self.Timers.Update.expired_refresh()) then
                 if (self.IsUpdating) then
                     return
                 end
@@ -501,7 +623,7 @@ Server:CreateComponent({
             self.RegisterFailed = true
             self.IsRegistering  = false
 
-            self.TimerRegisterFail.refresh()
+            self.Timers.RegisterFail.refresh()
 
             if (iCode ~= 200) then
                 return self:LogError("Request failed with Code %d (%s)", CheckNumber(iCode), ToString(sResponse))
@@ -556,7 +678,7 @@ Server:CreateComponent({
             self.UpdateFailed = true
             self.IsUpdating  = false
 
-            self.TimerUpdateFail.refresh()
+            self.Timers.UpdateFail.refresh()
 
             if (iCode ~= 200) then
                 return self:LogError("Update Request failed with Code %d (%s)", CheckNumber(iCode), ToString(sResponse))
@@ -567,7 +689,7 @@ Server:CreateComponent({
             end
 
             self.UpdateFailed = false
-            if (self.TimerUpdateLog.expired_refresh()) then
+            if (self.Timers.UpdateLog.expired_refresh()) then
                 self:Log("Successfully Updated!")
             end
         end,
@@ -597,7 +719,7 @@ Server:CreateComponent({
                 self:OnUpdated(...)
             end)
 
-            if (self.TimerUpdateLog.expired()) then
+            if (self.Timers.UpdateLog.expired()) then
                 self:Log("Updating Server Info at %s", (self.Properties.MasterServerAPI .. self.Properties.EndPoints.Updater))
             end
         end,
@@ -724,7 +846,7 @@ Server:CreateComponent({
                         sDeaths  = GetRandom(1, 100)
                         sProfile = "1008858"
                         sTeam    = GetRandom(0, 2)
-                        if (g_sGameRules == INSTANT_ACTION) then sTeam = "1"
+                        if (g_gameRules.IS_IA) then sTeam = "1"
                         end
                         sPopulation = string.format("%s@%s%%%s%%%s%%%s%%%s", sPopulation, sName, sRank, sKills, sDeaths, sProfile)
                         table.insert(aPopulation, {
@@ -739,12 +861,12 @@ Server:CreateComponent({
                 end
 
                 for _, hClient in pairs(Server.Utils:GetPlayers()) do
-                    --[[
-                    sName    = ServerNames:RemoveCrypt(hClient:GetName())
+
+                    sName    = Server.NameHandler:Sanitize(hClient:GetName())
                     sRank    = hClient:GetRank()
                     sKills   = hClient:GetKills() if (sKills < 0) then sKills = 0 end
                     sDeaths  = hClient:GetDeaths()  if (sDeaths < 0) then sDeaths = 0 end
-                    sProfile = hClient:GetProfileID()
+                    sProfile = hClient:GetProfileId()
                     sTeam    = hClient:GetTeam()
                     if (g_sGameRules == INSTANT_ACTION) then sTeam = "1"
                     end
@@ -757,10 +879,28 @@ Server:CreateComponent({
                         profile_id = sProfile,
                         team       = sTeam
                     })
-                    ]]
                 end
 
                 -- TODO: INCOMING CONNECTIONS !!
+                for _, tConnection in pairs(Server.Network.ActiveConnections) do
+                    if (not Server.Utils:GetPlayerByChannel(_) and ServerDLL.IsExistingChannel(_)) then
+                        sName    = ("(Connecting) %s"):format(ServerDLL.GetChannelNick(_) or "Nomad")
+                        sRank    = 0
+                        sKills   = 0
+                        sDeaths  = 0
+                        sProfile = 0
+                        sTeam    = 0
+                        sPlayers = string.format("%s@%s%%%s%%%s%%%s%%%s%%%s", ToString(sPlayers), (ToString(sName)), ToString(sRank), ToString(sKills), ToString(sDeaths), ToString(sProfile), ToString(sTeam))
+                        table.insert(aPlayers, {
+                            name       = sName,
+                            rank       = sRank,
+                            kills      = sKills,
+                            deaths     = sDeaths,
+                            profile_id = sProfile,
+                            team       = sTeam
+                        })
+                    end
+                end
 
                 if (Server.Network.Properties.UseJSONReport) then
                     return table.append(aPlayers, aPopulation)
@@ -864,6 +1004,121 @@ Server:CreateComponent({
                 end
             end
             return aLinks
+        end,
+
+        OnFrameLag = function(self, iFrameDiff, iRateAverage, iFPS, iActualFPS, sActualFPSDiff)
+            --self:LogWarning("{Gray}Lag Spike Occurred {Red}%0.2f{Gray} ms ({Red}%0.2f{Gray} FPS) Steps: {Red}%s {Gray}({Red}%s{Gray})",
+            --    iFrameDiff, iFPS, iActualFPS, sActualFPSDiff
+            --)
+        end,
+
+        UpdatePingControl = function(self, hPlayer, iPing)
+
+            local aPingControl = self.PingControl
+            if (not aPingControl.Enabled) then
+                return
+            end
+
+            if (aPingControl.IssuedWarnings[hPlayer.id] == nil) then
+                aPingControl.IssuedWarnings[hPlayer.id] = { Timer = TimerNew(aPingControl.WarningDelay), Count = 0 }
+                aPingControl.IssuedWarnings[hPlayer.id].Timer.expire()
+            end
+
+            local tWarning = aPingControl.IssuedWarnings[hPlayer.id]
+            local iTolerance = aPingControl.Tolerance
+
+            if (iPing > iTolerance) then
+                if (tWarning.Timer.expired_refresh()) then
+                    tWarning.Count = math.min(aPingControl.WarningLimit, (tWarning.Count + 1))
+                    if (tWarning.Count >= aPingControl.WarningLimit) then
+                        Server.Punisher:KickPlayer(Server:GetEntity(), hPlayer, ("Ping Limit (%d \\ %d)"):format(iPing, iTolerance))
+                        return
+                    else
+                        Server.Chat:ChatMessage(ChatEntity_Server, hPlayer, "@ping_warning", { Count = tWarning.Count, Limit = aPingControl.WarningLimit, Ping = iPing, PingLimit = iTolerance })
+                    end
+                end
+            elseif (aPingControl.ResetWarnings) then
+                if (tWarning.Timer.expired_refresh() and tWarning.Count > 0) then
+                    tWarning.Count = (tWarning.Count - 1)
+                end
+            end
+        end,
+
+        UpdateNetUsage = function(self)
+            local aStatistics = ServerDLL.GetNetStatistics()
+            local tNetThresholds = self.Properties.NetworkUsageWarningThresholds
+            local bShowWarning = false
+            local ColorUp = CRY_COLOR_GREEN
+            local ColorDown = CRY_COLOR_GREEN
+            local iUp = aStatistics.Up
+            local iDown = aStatistics.Down
+
+            if (iUp >= tNetThresholds.Up) then
+                ColorUp = CRY_COLOR_RED
+                bShowWarning = true
+            end
+            if (iDown >= tNetThresholds.Down) then
+                ColorDown = CRY_COLOR_RED
+                bShowWarning = true
+            end
+            local sNetUsageWarning = ("Up: %s%s{Gray}, Down: %s%s"):format(ColorUp, Server.Utils:ByteSuffix(iUp), ColorDown, Server.Utils:ByteSuffix(iDown))
+            if (bShowWarning) then
+                self:LogWarning("{Gray}Excessive Net Usage | " .. sNetUsageWarning)
+            end
+
+            local iCPUUsage = ServerDLL.GetCPUUsage() or 0
+            sNetUsageWarning = ("CPU: %d%%, Net: ^%s v%s"):format(iCPUUsage, Server.Utils:ByteSuffix(iUp), Server.Utils:ByteSuffix(iDown))
+            g_gameRules.game:SetSynchedGlobalValue(GLOBAL_SERVER_IP_KEY, sNetUsageWarning)
+
+            local sServerName = Server.Utils:GetCVar("sv_servername")
+            if (sServerName ~= self.LastServerName) then
+                g_gameRules.game:SetSynchedGlobalValue(GLOBAL_SERVER_NAME_KEY, sServerName)
+                self.LastServerName = sServerName
+            end
+        end,
+
+        UpdateGamePings = function(self)
+
+            if (self.Timers.PingUpdate.expired_refresh()) then
+
+                local iAveragePing = 0
+                local aPlayers = g_gameRules.game:GetPlayers()
+                local iPlayerCount = #(aPlayers or {})
+
+                if (iPlayerCount > 0) then
+                    for _, hPlayer in ipairs(aPlayers) do
+                        local iChannel = hPlayer and hPlayer.actor:GetChannel()
+                        if (iChannel) then
+                            local iPing = math.floor((g_gameRules.game:GetPing(iChannel) or 0) * 1000 + 0.5)
+                            local iFinalPing = (iPing * self.Properties.PingMultiplier)
+
+                            if (hPlayer.Initialized) then
+                                hPlayer.Info.RealPing = iPing
+                                hPlayer.Info.FakePing = iFinalPing
+                            end
+
+                            iAveragePing = (iAveragePing + iPing)
+                            g_gameRules.game:SetSynchedEntityValue(hPlayer.id, g_gameRules.SCORE_PING_KEY, iFinalPing)
+                            self:UpdatePingControl(hPlayer, iFinalPing)
+                        end
+                    end
+
+                    iAveragePing = (iAveragePing / iPlayerCount)
+                end
+
+                local iThreshold = self.Properties.AveragePingWarningThreshold
+                if (iAveragePing > iThreshold) then
+                    if (self.Timers.PingWarning.expired_refresh()) then
+                        self:LogEvent({
+                            Message = "@average_ping_warning",
+                            MessageFormat = { Average = iAveragePing, Threshold = iThreshold },
+                            Recipients = ServerAccess_Admin,
+                        })
+                    end
+                end
+
+               self:UpdateNetUsage()
+            end
         end,
     }
 })

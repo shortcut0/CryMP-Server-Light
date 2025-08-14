@@ -36,6 +36,15 @@ Date = {
 --------------
 Date.Init = function(self)
 
+    self.MaxNonScientificInteger = 1
+    while (not tostring(self.MaxNonScientificInteger):find("e")) do
+        self.MaxNonScientificInteger = self.MaxNonScientificInteger * 1000
+    end
+    self.MaxNonScientificInteger = (self.MaxNonScientificInteger / 1000)
+    self.MaxNonScientificInteger = tonumber(string.rep("9", #tostring(self.MaxNonScientificInteger) + 1))
+
+    ServerLog("Max Safe Non-Scientific Integer: %f", self.MaxNonScientificInteger)
+
     --[[
     local sometime = math.random(1000,99999)
     local future = math.random(1000,99999)
@@ -159,6 +168,13 @@ Date.New = function(self, hTime)
     end
 
     return hDate
+end
+
+--------------
+Date.ClampToMaxInteger = function(self, iDuration)
+    local iMaxInt = self.MaxNonScientificInteger
+    local iMaxDuration = (iMaxInt - self:GetTimestamp())
+    return math.min(iMaxDuration, iDuration)
 end
 
 --------------
@@ -340,7 +356,7 @@ Date.ParseTime = function(self, sInput)
         tonumber(string.match(sTime, "(%d+)s")      or 0) * ONE_SECOND, -- Seconds
     }
 
-    return table.it(aParsed, function(x, i, v) return ((x or 0) + v)  end)
+    return table.it(aParsed, function(x, i, v) return self:ClampToMaxInteger((x or 0) + v)  end)
 end
 
 --------------

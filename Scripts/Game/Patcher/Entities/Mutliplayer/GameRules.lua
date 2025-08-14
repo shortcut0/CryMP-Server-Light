@@ -51,6 +51,42 @@ Server.Patcher:HookClass({
         },
         {
             ------------------------------
+            ---   cpList
+            ------------------------------
+            Name = "cpList",
+            Value = {
+
+                IA_XP_MULT          = 1.35, -- multiplier in IA games
+
+                FIRST_BLOOD         = 30,
+                HEADSHOT_BONUS      = 4,
+                BUY_DOOMSDAYMACHINE = 10, -- tac/tac vehicles TODO!!
+                CAPTURE_SPECIAL     = 18, -- proto TODO!!
+
+                KILL                = 5,
+                KILL_RANKDIFF_MULT  = 1.2,
+                TURRETKILL          = 12,
+                REPAIR              = 3,
+                LOCKPICK            = 3,
+                CAPTURE             = 15,
+                BUYVEHICLE          = 7,
+
+                TAG_ENEMY           = 1,	--TODO once design is confirmed
+
+                VEHICLE_KILL_MIN    = 5,
+                VEHICLE_KILL_MULT   = 0.02,
+
+                --ATTACKING FACILITY (Killing inside hostile facility)
+                --DEFENDING FACILITY (Killing inside owned facility)
+                --DESTROYING ENEMY TURRETS
+                --REPAIRING TURRET
+                --DAMAGING ENEMY HQ
+                --DESTROYING ENEMY HQ
+                --KILLING TAC WEAPON BEARER
+            }
+        },
+        {
+            ------------------------------
             ---      PostInitialize
             ------------------------------
             Name = "PostInitialize",
@@ -72,7 +108,8 @@ Server.Patcher:HookClass({
                     SuicideDeaths   = Server.Config:Get("GameConfig.KillConfig.SuicideAddDeaths", 1,    ConfigType_Number),
                     TeamKill        = Server.Config:Get("GameConfig.KillConfig.DeductTeamKill", 1,      ConfigType_Number),
                     BotScore        = Server.Config:Get("GameConfig.KillConfig.DeductBotKills", false,  ConfigType_Boolean),
-                    NewMessages     = Server.Config:Get("GameConfig.KillConfig.EnableNewKillMessages", true, ConfigType_Boolean)
+                    NewMessages     = Server.Config:Get("GameConfig.KillConfig.EnableNewKillMessages", true, ConfigType_Boolean),
+                    PremiumAmplification = Server.Config:Get("GameConfig.KillConfig.PremiumRewardsScale", 1.25, ConfigType_Number)
                 }
 
                 self.StreakMessages = {
@@ -92,9 +129,6 @@ Server.Patcher:HookClass({
                 }
 
                 self.AutoSpectateTimer = Server.Config:Get("GameConfig.AutoSpectateTimer", 30, ConfigType_Number)
-                self.PremiumSpawnPrestigeMultiplier = Server.Config:Get("GameConfig.Prestige.PremiumSpawnPrestigeMultiplier", 1.25, eConfigGet_Number)
-
-                self.PremiumKillRewardScale = Server.Config:Get("GameConfig.KillConfig.PremiumRewardsScale", 1.25, ConfigType_Number)
 
                 self.TurretConfig = {
                     RPGTurretDamageScale = Server.Config:Get("GameConfig.TurretConfig.RPGDamageScale", 1, ConfigType_Number),
@@ -105,9 +139,8 @@ Server.Patcher:HookClass({
                 self.PrestigeConfig = {
                     AwardDisarmPrestigeAlways = Server.Config:Get("GameConfig.Prestige.AwardDisarmPrestigeAlways", true, ConfigType_Boolean),
                     VehicleTheftReward = Server.Config:Get("GameConfig.Prestige.VehicleTheftReward", 50, ConfigType_Number),
-
+                    PremiumSpawnAmplification = Server.Config:Get("GameConfig.Prestige.PremiumSpawnPrestigeMultiplier", 1.25, eConfigGet_Number)
                 }
-
                 self.BuyingConfig = {
                     KitLimit = Server.Config:Get("GameConfig.Buying.KitLimit", 1, ConfigType_Number),
                     ItemSellPriceScale = Server.Config:Get("GameConfig.Buying.SellItemPriceScale", 75, ConfigType_Number),
@@ -122,9 +155,112 @@ Server.Patcher:HookClass({
                     Timeout     = Server.Config:Get("GameConfig.KillConfig.KillAssistance.Timeout", 12.5, ConfigType_Number),
                 }
 
+                self:CollectPSBuildings()
+
                 Server.Utils:SetCVar("mp_killMessages", (self.KillConfig.NewMessages and "0" or "1"))
                 ServerDLL.GameRulesInitScriptTables()
                 self:Log("PostInitialize")
+            end,
+        },
+        {
+            ------------------------------
+            ---   CollectPSBuildings
+            ------------------------------
+            Name = "CollectPSBuildings",
+            Value = function(self)
+                if (not self.IS_PS) then
+                    return
+                end
+
+                self.Buildings = {}
+                self.SortedBuildings = {
+                    ["Bunker"] 	= {},
+                    ["Base"]	= {},
+                    ["Alien"]	= {},
+                    ["Hqs"]		= {},
+                    ["Air"]		= {},
+                    ["Small"]	= {},
+                    ["War"]		= {},
+                    ["Boat"] 	= {},
+                    ["Proto"] 	= {}
+                }
+
+                local hBuildings = System.GetEntitiesByClass("Factory")
+                local sType, sLocale
+                if (hBuildings) then
+                    for _, hFactory in pairs(hBuildings) do
+                        table.insert(self.Buildings, hFactory)
+                        if (hFactory.Properties.buyOptions.bPrototypes == 1) then
+                            sType = "Proto"
+                            sLocale = "@building_type_prototypeFac"
+                        elseif (hFactory:GetName():lower():find("air")) then
+                            sType = "Air"
+                            sLocale = "@building_type_airFac"
+                        elseif (hFactory:GetName():lower():find("naval")) then
+                            sType = "Boat"
+                            sLocale = "@building_type_navalFac"
+                        elseif (hFactory:GetName():lower():find("small")) then
+                            sType = "Small"
+                            sLocale = "@building_type_smallFac"
+                        else
+                            sType = "War"
+                            sLocale = "@building_type_warFac"
+                        end
+                        hFactory.LocaleType = sLocale
+                        hFactory.BuildingType = sType
+                        table.insert(self.SortedBuildings[sType], hFactory)
+                        table.insert(self.Buildings, hFactory)
+                    end
+                end
+
+                -- Spawn Groups
+                hBuildings = System.GetEntitiesByClass("SpawnGroup")
+                if (hBuildings) then
+                    for _, hSpawn in pairs(hBuildings) do
+                        table.insert(self.Buildings, hSpawn)
+                        if ((hSpawn.Properties.teamName == "tan" or hSpawn.Properties.teamName == "black") and not hSpawn.Properties.bCaptureable) then
+                            sType = "Base"
+                            sLocale = "@building_type_base"
+                        else
+                            sType = "Bunker"
+                            sLocale = "@building_type_bunker"
+                        end
+                        hSpawn.BuildingType = sType
+                        hSpawn.LocaleType = sLocale
+                        table.insert(self.SortedBuildings[sType], hSpawn)
+                        table.insert(self.Buildings, hSpawn)
+                    end
+                end
+
+                -- Alien Energy Sites
+                hBuildings = System.GetEntitiesByClass("AlienEnergyPoint")
+                if (hBuildings) then
+                    for _, hAlienSite in pairs(hBuildings) do
+
+                        hAlienSite.BuildingType = "Alien"
+                        hAlienSite.LocaleType = "@building_type_alien"
+                        table.insert(self.Buildings, hAlienSite)
+                        table.insert(self.SortedBuildings["Alien"], hAlienSite)
+                    end
+                end
+
+                -- HQs
+                hBuildings = System.GetEntitiesByClass("HQ")
+                if (hBuildings) then
+                    for _, hHQ in pairs(hBuildings) do
+                        hHQ.BuildingType = "HQ"
+                        hHQ.LocaleType = "@building_type_hq"
+                        table.insert(self.Buildings, hHQ)
+                        table.insert(self.SortedBuildings["Hqs"], hHQ)
+                    end
+                end
+
+                -- Init Functions
+                for _, hBuilding in pairs(self.Buildings) do
+                    if (hBuilding.GetTeam == nil) then
+                        hBuilding.GetTeam = function(this) return self.game:GetTeam(this.id)  end
+                    end
+                end
             end,
         },
         {
@@ -137,6 +273,15 @@ Server.Patcher:HookClass({
                 self:Initialize_CryMP()
                 self:InitHitMaterials()
                 self:InitHitTypes()
+            end,
+        },
+        {
+            ------------------------------
+            ---        UpdatePings
+            ------------------------------
+            Name = "UpdatePings",
+            Value = function(self, iFrameTime)
+                Server.Network:UpdateGamePings(iFrameTime)
             end,
         },
         {
@@ -227,6 +372,29 @@ Server.Patcher:HookClass({
             ------------------------------
             ---       AwardPPCount
             ------------------------------
+            Name = "AwardCPCount",
+            Value = function(self, hPlayerId, iCount, sWhy, bQuiet)
+
+                local hPlayer = Server.Utils:GetEntity(hPlayerId)
+                if (not hPlayer) then
+                    return
+                end
+
+                if (Server.PlayerRanks:IsEnabled()) then
+                    Server.PlayerRanks:AwardRankXP(hPlayer, iCount)
+                end
+
+                if (self.IS_IA) then
+                    return
+                end
+                self:SetPlayerCP(hPlayerId, self:GetPlayerCP(hPlayerId) + iCount)
+            end
+
+        },
+        {
+            ------------------------------
+            ---       AwardPPCount
+            ------------------------------
             Name = "AwardPPCount",
             Value = function(self, hPlayerId, iCount, sWhy, bQuiet)
 
@@ -270,7 +438,7 @@ Server.Patcher:HookClass({
                 if (sMessage) then
                     bSilent = false
                     if (type(iPPCount) == "table") then
-                        sMessage = hPlayer:LocalizeText(("%s ( %s%d PP, %s%d CP )"):format(sMessage, (iPPCount[1] >= 0 and "+" or ""), iPPCount[1], (iPPCount[2] >= 0 and "+" or "-"), iPPCount[2]), { tFormat })
+                        sMessage = hPlayer:LocalizeText(("%s ( %s%d PP, %s%d XP )"):format(sMessage, (iPPCount[1] >= 0 and "+" or ""), iPPCount[1], (iPPCount[2] >= 0 and "+" or "-"), iPPCount[2]), { tFormat })
                     else
                         sMessage = hPlayer:LocalizeText(("%s ( %s%d PP )"):format(sMessage, (iPPCount >= 0 and "+" or ""), iPPCount), { tFormat })
                     end
@@ -326,7 +494,7 @@ Server.Patcher:HookClass({
                 local shooter = aHitInfo.shooter
                 local headshot = self:IsHeadShot(aHitInfo)
                 local melee = aHitInfo.type=="melee"
-                local iPremiumBonus = self.PremiumKillRewardScale
+                local iPremiumBonus = self.KillConfig.PremiumAmplification
 
                 if (target ~= shooter) then
                     local team1 = self.game:GetTeam(shooter.id)
@@ -413,6 +581,10 @@ Server.Patcher:HookClass({
                 if (self.IS_PS) then
                     if (iPP < 0) then -- negative points are assumed to be a teamkill here
                         local revive = self.reviveQueue[hPlayer.id]
+                        if (not revive) then
+                            self:ResetRevive(hPlayer.id)
+                            revive = self.reviveQueue[hPlayer.id]
+                        end
                         revive.tk = true
                     end
                 end
@@ -517,9 +689,12 @@ Server.Patcher:HookClass({
                         local iRewardPP = aFirstBlood.RewardPP or 100
                         local iRewardCP = aFirstBlood.RewardCP or 10
                         local iFirstBloodCount = hShooter.Data.FirstBloodScored + 1
+                        local iAmplification = aFirstBlood.RewardAmplification[iFirstBloodCount]
 
                         if (self.IS_IA) then
-                            Server.Chat:ChatMessage(ChatEntity_Server, ALL_PLAYERS, ("@first_blood_instantAction"), { Shooter = hShooter:GetName() })
+                            local iXP = (self.cpList.FIRST_BLOOD + iFirstBloodCount) * (iAmplification or 1)
+                            Server.Chat:ChatMessage(ChatEntity_Server, ALL_PLAYERS, ("@first_blood_instantAction"), { XP = iXP, Shooter = hShooter:GetName() })
+                            self:AwardCPCount(hShooter.id, iXP)
                         else
                             local sTeamReward, sAmplified = "", ""
                             if (aFirstBlood.RewardTeam) then
@@ -537,9 +712,6 @@ Server.Patcher:HookClass({
                                 end
                             end
 
-
-
-                            local iAmplification = aFirstBlood.RewardAmplification[iFirstBloodCount]
                             if (iAmplification) then
                                 sAmplified = ("#%d "):format(iFirstBloodCount)
                                 iRewardCP = (iRewardCP or 0) * iAmplification
@@ -741,9 +913,13 @@ Server.Patcher:HookClass({
                         aMessages = { "%s Eliminated %s" }
                     end
 
+                    local sShooterName = hShooter:GetName()
+                    if (not hShooter.actor) then
+                        sShooterName = hShooter.class
+                    end
                     local sMessage = Server.Logger:FormatTags(table.Random(aMessages):format(hShooter:GetName(), hTarget:GetName()), {
                         TargetName  = hTarget:GetName(),
-                        ShooterName = hShooter:GetName(),
+                        ShooterName = sShooterName,
                     })
 
                     local aRecipients = ALL_PLAYERS
@@ -753,6 +929,129 @@ Server.Patcher:HookClass({
                     Server.Chat:BattleLog(BattleLog_Information, aRecipients , sMessage)
                 end
             end,
+        },
+        {
+            ------------------------------
+            ---      CalcKillCP
+            ------------------------------
+            Name = "CalcKillCP",
+            Value = function(self, tHitInfo)
+
+                local target = tHitInfo.target
+                local shooter = tHitInfo.shooter
+                local headshot = self:IsHeadShot(tHitInfo)
+
+                if (target ~= shooter) then
+
+                    -- This is for player ranks, nothing more
+                    if (self.IS_IA) then
+                        -- More XP in Instant Action Games
+                        return (self.cpList.KILL * (self.cpList.IA_XP_MULT) +(headshot and self.cpList.HEADSHOT_BONUS or 0))
+                    end
+
+
+                    local team1 = self.game:GetTeam(shooter.id)
+                    local team2 = self.game:GetTeam(target.id)
+                    if (team1 ~= team2) then
+                        local ownRank = self:GetPlayerRank(shooter.id)
+                        local enemyRank = self:GetPlayerRank(target.id)
+
+                        return self.cpList.KILL + math.max(0, (enemyRank - ownRank) * self.cpList.KILL_RANKDIFF_MULT) + (headshot and self.cpList.HEADSHOT_BONUS or 0)
+                    else
+                        return -10
+                    end
+                end
+
+                return 0
+            end
+        },
+        {
+            ------------------------------
+            ---      AwardKillCP
+            ------------------------------
+            Name = "AwardKillCP",
+            Value = function(self, tHitInfo)
+                local xp = self:CalcKillCP(tHitInfo)
+                self:AwardCPCount(tHitInfo.shooter.id, xp)
+            end
+        },
+        {
+            ------------------------------
+            ---      OnTeamKill
+            ------------------------------
+            Name = "OnTeamKill",
+            Value = function(self, hPlayerId)
+
+                -- TODO: Custom Handler
+                --[[
+                if(System.GetCVar("g_tk_punish")==0) then
+                    return;
+                end
+
+                self.teamkills[playerId] = 1 + (self.teamkills[playerId] or 0);
+                if (self.teamkills[playerId] >= System.GetCVar("g_tk_punish_limit")) then
+                    CryAction.BanPlayer(playerId, "You were banned for exceeding team kill limit");
+                end
+                ]]
+            end
+        },
+        {
+            ------------------------------
+            ---      ProcessScores
+            ------------------------------
+            Name = "ProcessScores",
+            Value = function(self, tHitInfo)
+
+                local target = tHitInfo.target
+                local shooter = tHitInfo.shooter
+                local headshot = self:IsHeadShot(tHitInfo)
+
+                local h = 0
+                if (headshot) then
+                    h = 1
+                end
+
+                if (target.actor and target.actor:IsPlayer()) then
+                    self:Award(target, 1, 0, 0)
+                end
+
+                if (self.IS_IA) then
+
+                    if (shooter and shooter.actor and shooter.actor:IsPlayer()) then
+                        if (target ~= shooter) then
+                            self:Award(shooter, 0, 1, h)
+                        else
+                            self:Award(shooter, 0, -1, 0)
+                        end
+                        self:AwardKillCP(tHitInfo)
+                    end
+                else
+
+                    if (shooter and shooter.actor and shooter.actor:IsPlayer()) then
+                        if (target ~= shooter) then
+                            local team1=self.game:GetTeam(shooter.id)
+                            local team2=self.game:GetTeam(target.id)
+
+                            if (team1~=team2) then
+                                self:Award(shooter, 0, 1, h)
+
+                                -- update team score
+                                self:SetTeamScore(team1, self:GetTeamScore(team1)+1)
+                            else
+                                self:Award(shooter, 0, -1, 0)
+                                self:OnTeamKill(shooter.id)
+                            end
+                        else
+                            self:Award(shooter, 0, -1, 0)
+                        end
+                    end
+
+                    if (shooter and shooter.actor and shooter.actor:IsPlayer()) then
+                        self:AwardKillPP(tHitInfo)
+                        self:AwardKillCP(tHitInfo)
+                    end
+                end
+            end
         },
         {
             ------------------------------
@@ -766,14 +1065,15 @@ Server.Patcher:HookClass({
                 hTarget.death_pos = hTarget:GetWorldPos(hTarget.death_pos)
 
                 self.game:KillPlayer(tKillHit.targetId, true, true, tKillHit.shooterId, tKillHit.weaponId, tKillHit.damage, tKillHit.materialId, tKillHit.typeId, tKillHit.dir)
-                self:AwardAssistPPAndCP(tKillHit)
                 self:ProcessScores(tKillHit)
 
                 -- PowerStruggle Specific
                 if (self.IS_PS) then
+                    self:AwardAssistPPAndCP(tKillHit)
                     if (tKillHit.target and tKillHit.target.actor) then
                         self:VehicleOwnerDeath(tKillHit.target)
                     end
+                elseif (self.IS_IA) then
                 end
 
                 self:OnPlayerKilled_CryMP(tKillHit)
@@ -802,7 +1102,7 @@ Server.Patcher:HookClass({
         },
         {
             ------------------------------
-            ---   ProcessActorDamage_CryMP
+            ---   UpdateHitAssist
             ------------------------------
             Name = "UpdateHitAssist",
             Value = function(self, hShooter, hTarget, tHitInfo)
@@ -876,6 +1176,36 @@ Server.Patcher:HookClass({
         },
         {
             ------------------------------
+            ---     Server.RequestRevive
+            ------------------------------
+            Name = "Server.RequestRevive",
+            Value = function(self, hPlayerId)
+                local hPlayer = System.GetEntity(hPlayerId)
+                if (not hPlayer) then
+                    return
+                end
+
+                if (hPlayer and hPlayer.actor) then
+
+                    if (self.IS_PS) then
+                        -- Send Warning message if player has no spawn group selected!
+                        if (not hPlayer.spawnGroupId or hPlayer.spawnGroupId == NULL_ENTITY) then
+                            Server.Chat:TextMessage(ChatType_Error, hPlayer, "@no_spawnGroup_selected")
+                        end
+                        -- allow respawn if spectating player and on a team
+                        if (((hPlayer.actor:GetSpectatorMode() == 3 and self.game:GetTeam(hPlayerId)~=0) or (hPlayer:IsDead() and hPlayer.death_time and _time-hPlayer.death_time>2.5)) and (not self:IsInReviveQueue(hPlayerId))) then
+                            self:QueueRevive(hPlayerId)
+                        end
+                    else
+                        if (hPlayer.death_time and _time-hPlayer.death_time>2.5 and hPlayer:IsDead()) then
+                            self:RevivePlayer(hPlayer.actor:GetChannel(), hPlayer)
+                        end
+                    end
+                end
+            end
+        },
+        {
+            ------------------------------
             ---     RevivePlayer
             ------------------------------
             Name = "RevivePlayer",
@@ -917,7 +1247,7 @@ Server.Patcher:HookClass({
                     bKeepEquip = false
                 end
 
-                if (self.USE_SPAWN_GROUPS and iGroupId and iGroupId~=NULL_ENTITY) then
+                if (self.USE_SPAWN_GROUPS and iGroupId and iGroupId ~= NULL_ENTITY) then
                     local spawnGroup = System.GetEntity(iGroupId)
                     if (spawnGroup and spawnGroup.vehicle) then -- spawn group is a vehicle, and the vehicle has some free seats then
                         bResult = false
@@ -937,7 +1267,7 @@ Server.Patcher:HookClass({
                         end
                     end
                 elseif (self.USE_SPAWN_GROUPS) then
-                    Log("Failed to spawn %s! iTeamId: %d  iGroupId: %s  groupiTeamId: %d", hPlayer:GetName(), self.game:GetTeam(hPlayer.id), tostring(iGroupId), self.game:GetTeam(iGroupId or NULL_ENTITY))
+                    Log("<1> Failed to spawn %s! iTeamId: %d  iGroupId: %s  group TeamId: %d", hPlayer:GetName(), self.game:GetTeam(hPlayer.id), tostring(iGroupId), self.game:GetTeam(iGroupId or NULL_ENTITY))
 
                     return false
                 end
@@ -1112,7 +1442,7 @@ Server.Patcher:HookClass({
                 end
 
                 local iAutoSpecTime   = self.AutoSpectateTimer --ConfigGet("General.GameRules.AutoSpectateTimer", 30, eConfigGet_Number)
-                local iPremiumSpawnPP = self.PremiumSpawnPrestigeMultiplier --ConfigGet("General.GameRules.PremiumSpawnPP", 1.25, eConfigGet_Number)
+                local iPremiumSpawnPP = self.PrestigeConfig.PremiumSpawnAmplification --ConfigGet("General.GameRules.PremiumSpawnPP", 1.25, eConfigGet_Number)
 
                 local reviveTimer = self.game:GetRemainingReviveCycleTime()
                 if (reviveTimer>0) then
@@ -1210,10 +1540,8 @@ Server.Patcher:HookClass({
                                 sName = def.name
                             end
                         end
-
-                        --self:AwardPPCount(aHitInfo.shooterId, pp);
                         self:PrestigeEvent(aHitInfo.shooterId, pp, (sName and "%%1" or "@vehicle") .. " @destroyed", {}, {sName})
-                        self:AwardCPCount(aHitInfo.shooterId, cp);
+                        self:AwardCPCount(aHitInfo.shooterId, cp)
                     end
                 end
             end,
@@ -1257,9 +1585,9 @@ Server.Patcher:HookClass({
         },
         {
             ------------------------------
-            ---     AwardKillAssistPPAndCP
+            ---   AwardAssistPPAndCP
             ------------------------------
-            Name = "AwardKillAssistPPAndCP",
+            Name = "AwardAssistPPAndCP",
             Value = function(self, aHitInfo)
 
                 if (not self.IS_PS) then
@@ -1322,14 +1650,10 @@ Server.Patcher:HookClass({
 
                                 DebugLog(hPlayerID,"assistance:",iAssistance,">",(iThreshold or 0))
                                 if ((iAssistance * 100) > (iThreshold or 0)) then
-
-                                    -- TODO: ClientMod()
-                                    -- ClientMod()
-
                                     self:PrestigeEvent(hPlayerID, {
                                         math.floor(math.max(0, iPP * iAssistance)),
                                         math.floor(math.max(0, iCP * iAssistance))
-                                    }, "@kill_assist")
+                                    }, "@kill_assist " .. ("%0.2f%%"):format(iAssistance * 100))
                                 end
                             else
                                 --    throw_error("timer expired")
@@ -1400,7 +1724,12 @@ Server.Patcher:HookClass({
                         if (self.game:GetTeam(hPlayerID) == iTeamID) then
                             local hPlayer = System.GetEntity(hPlayerID)
                             if (hPlayer and hPlayer.actor and (not hPlayer:IsDead()) and (hPlayer.actor:GetSpectatorMode() == 0)) then
-                                self:PrestigeEvent(hPlayer, { iValue, self.cpList.CAPTURE}, (hBuilding.LocaleType or "@unknown") .. " @captured")
+                                local sName
+                                if (string.emptyN(hBuilding.Properties.szName)) then
+                                    sName = hBuilding.Properties.szName
+                                end
+                                DebugLog(table.tostring(hBuilding.properties or {}))
+                                self:PrestigeEvent(hPlayer, { iValue, self.cpList.CAPTURE}, (sName and "%1" or (hBuilding.LocaleType or "@unknown")) .. " @captured", { sName })
                             end
                         end
                     end
@@ -2255,7 +2584,6 @@ Server.Patcher:HookClass({
                             hPlayer = System.GetEntity(idPlayer)
                             if (hPlayer and hPlayer:IsAlive()) then
                                 hSpawn.CapturedBy[idPlayer] = hPlayer
-                                DebugLog("Captured by ",hPlayer:GetName())
                             end
                         end
                     end

@@ -32,6 +32,10 @@ Server:CreateComponent({
         PostInitialize = function(self)
         end,
 
+        Sanitize = function(self, sName)
+            return string.CleanNonASCII(sName)
+        end,
+
         ValidateName = function(self, sName)
 
             local sReplaceChar = (self.Properties.ReplacementCharacter or "_")

@@ -216,7 +216,13 @@ Server.LocalizationManager:Add({
     {
         String = "command_argNotACVar",
         Languages = {
-            English = "Invalid CVar {CVar}"
+            English = "CVar {CVar} does not exist"
+        }
+    },
+    {
+        String = "command_argInvalidTeam",
+        Languages = {
+            English = "Team {Team} is Invalid"
         }
     },
     {
@@ -601,6 +607,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "never",
+        Languages = {
+            English = "Never"
+        }
+    },
+    {
         String = "ago",
         Languages = {
             English = "Ago"
@@ -670,6 +682,12 @@ Server.LocalizationManager:Add({
         String = "Option",
         Languages = {
             English = "Option"
+        }
+    },
+    {
+        String = "you_were",
+        Languages = {
+            English = "You were"
         }
     },
     {
@@ -777,7 +795,7 @@ Server.LocalizationManager:Add({
     {
         String = "first_blood_instantAction",
         Languages = {
-            English = "{Shooter} SCORED FIRST:BLOOD for TEAM {Team}"
+            English = "{Shooter} SCORED FIRST:BLOOD ( +{XP} XP )"
         }
     },
     {
@@ -785,7 +803,7 @@ Server.LocalizationManager:Add({
         Languages = {
             -- [ PirateSoftware ] SCORED FIRST:BLOOD for TEAM US (WiNS +500 PP, +25 CP)
             -- [ PirateSoftware ] SCORED FIRST:BLOOD for TEAM US (Entire Team +500 PP, +25 CP)
-            English = "{Red}{Shooter}{Gray} SCORED {Red}{Amplified}{Gray}FIRST{Red}:{Gray}BLOOD for TEAM {Red}{Team}{Gray} ({TeamReward}+{Red}{PP}{Gray} PP, +{Red}{CP}{Gray} CP)"
+            English = "{Red}{Shooter}{Gray} SCORED {Red}{Amplified}{Gray}FIRST{Red}:{Gray}BLOOD for TEAM {Red}{Team}{Gray} ({TeamReward}+{Red}{PP}{Gray} PP, +{Red}{CP}{Gray} XP)"
         }
     },
     {
@@ -885,6 +903,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "team",
+        Languages = {
+            English = "Team"
+        }
+    },
+    {
         String = "headquarters",
         Languages = {
             English = "HQ"
@@ -894,6 +918,13 @@ Server.LocalizationManager:Add({
         String = "captured",
         Languages = {
             English = "Captured"
+        }
+    },
+    {
+        String = "kill_assist",
+        Languages = {
+            -- KiLL:ASSiSTANCE 53.11% ( +60 PP, +30 CP )
+            English = "KiLL:ASSiSTANCE"
         }
     },
     {
@@ -992,6 +1023,163 @@ Server.LocalizationManager:Add({
             English = "Enter a Buy Zone to sell Equipment"
         }
     },
+    {
+        String = "everyone_movedToTeam",
+        Languages = {
+            English = "Moved all Players to Team {TeamName}"
+        }
+    },
+    {
+        String = "you_were_movedToTeam",
+        Languages = {
+            English = "You have been moved to Team {TeamName}"
+        }
+    },
+    {
+        String = "already_inTeam",
+        Languages = {
+            English = "{Target} already in Team {TeamName}"
+        }
+    },
+    {
+        String = "movedToTeam",
+        Languages = {
+            English = "{Target} Moved to Team {TeamName}"
+        }
+    },
+    {
+        String = "you_are",
+        Languages = {
+            English = "You are"
+        }
+    },
+    {
+        String = "unknown",
+        Languages = {
+            English = "Unknown"
+        }
+    },
+    {
+        String = "average_ping_warning",
+        Languages = {
+            English = "{Yellow}Warning:{Gray} Average Ping above {Red}{Threshold}{Gray} ({Red}{Average}{Gray})"
+        }
+    },
+    {
+        String = "ping_warning",
+        Languages = {
+            English = "WARNiNG #{Count}/{Limit} | Your Ping is too High! ({Ping} / {PingLimit})"
+        }
+    },
+    {
+        String = "player_kicked",
+        Extended = ServerAccess_Moderator,
+        Languages = {
+            English = {
+                Regular = "{Red}{Name}{Gray} Has been {Red}Kicked{Gray} from the Server ({Red}{Reason}{Gray})",
+                Extended = "{Red}{Name}{Gray} Has been {Red}Kicked{Gray} By {Red}{Admin}{Gray} ({Red}{Reason}{Gray})"
+            }
+        }
+    },
+    {
+        String = "player_banned",
+        Extended = ServerAccess_Moderator,
+        Languages = {
+            English = {
+                -- PirateSoftware Has been Banned form the Server (Hes out of mana)
+                -- PirateSoftware Banned shortcut0 for 10d:05h:15m (Working at blizzard sucked)
+
+                Regular = "{Name} Has been Banned from the Server (Expiry: {Time}, {Reason})",
+                Extended = "{Red}{Admin}{Gray} Banned {Red}{Name}{Gray} (Expiry: {Time}, {Red}{Reason}{Gray})"
+            }
+        }
+    },
+    {
+        String = "player_banned_ex",
+        Extended = ServerAccess_Moderator,
+        Languages = {
+            English = {
+                -- PirateSoftware Has been Banned form the Server (Hes out of mana)
+                -- PirateSoftware Banned shortcut0 for 10d:05h:15m (Working at blizzard sucked)
+
+                Regular = "{Name} Was Denied Entry to the Server (Ban Expiry: {Time}, {Reason})",
+                Extended = "{Admin} Has Denied {Name} Entry to the Server (Ban Expiry: {Time}, {Reason})"
+            }
+        }
+    },
+    {
+        String = "player_unbanned",
+        Extended = ServerAccess_Moderator,
+        Languages = {
+            English = {
+                Regular = "{Name} Has been Unbanned ({UnbanReason})",
+                Extended = "{Admin} Has Unbanned {Name} ({UnbanReason})"
+            }
+        }
+    },
+    {
+        String = "ban_expired",
+        Languages = {
+            English = "Ban Expired"
+        }
+    },
+    {
+        String = "no_maps_found",
+        Languages = {
+            English = "No Playable Maps found"
+        }
+    },
+    {
+        String = "no_maps_foundOfType",
+        Languages = {
+            English = "No Maps of Type {Type} found"
+        }
+    },
+    {
+        String = "no_maps_foundMatching",
+        Languages = {
+            English = "No Maps Matching {Filter} found"
+        }
+    },
+    {
+        String = "map_list_info1",
+        Languages = {
+            English = "Note: {Yellow}YELLOW{Gray} Maps have {Red}NO{Gray} Download-Link | {Red}RED{Gray} Maps are {Red}FORBIDDEN"
+        }
+    },
+    {
+        String = "channel",
+        Languages = {
+            English = "Channel"
+        }
+    },
+    {
+        String = "invalid_channel",
+        Languages = {
+            English = "Invalid Channel"
+        }
+    },
+    {
+        String = "last_used_name",
+        Languages = {
+            English = "Last Used Name"
+        }
+    },
+    {
+        String = "no_spawnGroup_selected",
+        Languages = {
+            English = "You have no Spawn Group Selected!"
+        }
+    },
+    {
+        String = "rank_advanced",
+        Languages = {
+            -- Nomad just Advanced to [ PLASTIC III ]
+            -- Nomad just Advanced to ~ PLASTIC III ~
+            -- Nomad just Advanced to < PLASTIC III >
+            English = "{Name} Just Advanced to League [ {Rank} ]"
+        }
+    },
 })
 
 
@@ -1046,6 +1234,18 @@ Server.LocalizationManager:Add({
 -- ===================================================================================
 
 Server.LocalizationManager:Add({
+    {
+        String = "arg_team_desc",
+        Languages = {
+            English = "The name or id of the team you wish to switch the target entity to"
+        }
+    },
+    {
+        String = "arg_channel_desc",
+        Languages = {
+            English = "The target Channel ID"
+        }
+    },
     {
         String = "arg_goto_option_desc",
         Languages = {
@@ -1140,6 +1340,12 @@ Server.LocalizationManager:Add({
         String = "arg_time_desc",
         Languages = {
             English = "The Time in Seconds (or Value Format e.g 1d50m) for the Action"
+        }
+    },
+    {
+        String = "arg_map_desc",
+        Languages = {
+            English = "The Map you wish to Start"
         }
     },
     {
