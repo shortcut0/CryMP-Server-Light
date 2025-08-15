@@ -134,6 +134,9 @@ end
 --- Returns a random index
 table.Random = function(tbl)
     local iSize = table.size(tbl)
+    if (iSize == 0) then
+        return
+    end
     local iRandom = math.random(1, iSize)
     local iCurrent = 0
     for _, v in pairs(tbl) do
@@ -243,5 +246,22 @@ table.ToString = function(tbl, tInfo)
 
     sTbl = (sTbl .. "}")
     return sTbl
+end
+
+----------------------------------
+--- Converts an input into a table, if input is nil, returns the specified default value, if no default value was provided, will return an empty table instead
+table.ToTable = function(t, d)
+
+    -- t is nil
+    if (t == nil) then
+        -- return default or empty table
+        return (d ~= nil and d or {})
+    end
+    -- t is not a table, so we encapsulate it
+    if (type(t) ~= "table") then
+        return { t }
+    end
+    -- t is a table
+    return t
 end
 

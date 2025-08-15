@@ -47,6 +47,22 @@ Server.ChatCommands:Add({
     },
 
     -- ================================================================
+    -- !RestartMap <Timer>
+    {
+        Name = "RestartMap",
+        Access = ServerAccess_Moderator,
+        Arguments = {
+            { Name = "@arg_time", Desc = "@arg_time_desc", Type = CommandArg_TypeTime, Default = "5s", Required = true }
+        },
+        Properties = {
+            This = "Server.MapRotation"
+        },
+        Function = function(self, hPlayer, iDuration)
+            return self:Command_RestartMap(hPlayer, iDuration)
+        end
+    },
+
+    -- ================================================================
     -- !RENAME <Target> <Name, ...>
     {
         Name = "rename",
@@ -83,22 +99,19 @@ Server.ChatCommands:Add({
                         end
                     end
                 end
-                Server.Chat:ChatMessage(ChatEntity_Server, self, "@everyone_movedToTeam", { TeamName = sTeamName })
-                return true
+                return true, self:LocalizeText("@everyone_movedToTeam", { TeamName = sTeamName })
             end
 
             if (hTarget:GetTeam() == iTeam) then
                 return false, self:LocalizeText("@already_inTeam", { Target = (hTarget == self and "@you_are" or hTarget:GetName()), TeamName = sTeamName })
             end
 
-            if (hTarget ~= self) then
-                Server.Chat:ChatMessage(ChatEntity_Server, hTarget, "@you_were_movedToTeam", { TeamName = sTeamName })
-            else
-                Server.Chat:ChatMessage(ChatEntity_Server, self, "@movedToTeam", { Target = "@you_were", TeamName = sTeamName })
-            end
-
             hTarget:SetTeam(iTeam)
-            return true
+            if ( hTarget ~= self) then
+                Server.Chat:ChatMessage(ChatEntity_Server, hTarget, "@you_were_movedToTeam", { TeamName = sTeamName })
+                return true, self:LocalizeText("@movedToTeam", { Target = hTarget:GetName(), TeamName = sTeamName })
+            end
+            return true, self:LocalizeText("@movedToTeam", { Target = "@you_were", TeamName = sTeamName })
         end
     },
 })

@@ -20,6 +20,17 @@ Server:CreateComponent({
             self.Game = g_gameRules.game
         end,
 
+        Protected = {
+            CVarCache = {},
+            Counters = {},
+        },
+
+        UpdateCounter = function(self, hId, iAdd)
+            local iCounter = (self.Counters[hId] or 0) + (iAdd or 1)
+            self.Counters[hId] = iCounter
+            return iCounter
+        end,
+
         ListToConsole = function(self, aParams)
 
 
@@ -187,18 +198,44 @@ Server:CreateComponent({
             return sValue
         end,
 
-        SetCVar = function(self, sCVar, sValue)
-            if (System.GetCVar(sCVar) == nil) then
+        GetCVarDefault = function(self, sCVar)
+            local sValue = System.GetCVar(sCVar)
+            if (sValue == nil) then
                 ServerLogError("CVar '%s' not Found", sCVar)
             end
-            System.SetCVar(sCVar, sValue)
+
+            local hCache = self.CVarCache[sCVar:lower()]
+            return hCache
+        end,
+
+        SetCVar = function(self, sCVar, sValue, hAdmin, bCacheOldValue)
+            local hValue = System.GetCVar(sCVar)
+            if (hValue == nil) then
+                ServerLogError("CVar '%s' not Found", sCVar)
+            end
+
+            if (bCacheOldValue) then
+                if (self.CVarCache[sCVar:lower()] == nil) then
+                    self.CVarCache[sCVar:lower()] = hValue
+                end
+            end
+
+            if (hAdmin) then
+                ServerLog("%s Sets CVar %s to %s", hAdmin:GetName(), sCVar, sValue)
+                self:LogEvent({
+                    Recipients = ServerAccess_Developer,
+                    Message = "@cvar_setTo",
+                    MessageFormat = { Admin = hAdmin:GetName(), CVar = sCVar, Value = sValue }
+                })
+            end
+            self:FSetCVar(sCVar, sValue)
         end,
 
         FSetCVar = function(self, sCVar, sValue)
             if (System.GetCVar(sCVar) == nil) then
                 ServerLogError("CVar '%s' not Found", sCVar)
             end
-            ServerDLL.FSetCVar(sCVar, sValue)
+            ServerDLL.FSetCVar(tostring(sCVar), tostring(sValue))
         end,
 
         ExecuteCommand = function(self, sCommand, hAdmin)

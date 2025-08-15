@@ -276,8 +276,12 @@ Server:CreateComponent({
             local sVictimName = hVictim:GetName()
             local iVictimChannel = hVictim:GetChannel()
             local iDuration = Date:ParseTime(sDuration)
-            if (sDuration == "-1" or sDuration:lower() == "infinite") then
+            local bAllowExtendedBans = (hAdmin:HasAccess(ServerAccess_SuperAdmin))
+            if (bAllowExtendedBans and (sDuration == "-1" or sDuration:lower() == "infinite")) then
                 iDuration = -1
+            else
+                -- Regular Admins can only ban people for up to three days
+                iDuration = math.min(iDuration, (ONE_DAY * 3))
             end
 
             self:WriteBan(hAdmin, hVictim, iDuration, sReason, bHardBan)
@@ -334,7 +338,9 @@ Server:CreateComponent({
             sReason = (sReason or "@admin_decision")
             sDuration = (sDuration or "5m")
 
-            self.BanList = {}
+            --if (iAccess <= ServerAccess_Admin) then
+            --end
+
             self:BanPlayer(hAdmin, hVictim, sDuration, sReason, bHardBan)
         end,
     }

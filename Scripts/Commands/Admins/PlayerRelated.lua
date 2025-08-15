@@ -147,11 +147,6 @@ Server.ChatCommands:Add({
         },
         Function = function(self, hTarget)
 
-            if (hTarget) then
-
-                return true
-            end
-
             -- Stop
             if (self:IsSpectating()) then
                 self:Revive(self:GetPos(), self:GetTemp("SpectatorEquip", true))

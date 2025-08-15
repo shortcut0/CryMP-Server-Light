@@ -43,3 +43,15 @@ LuaUtils.Switch = function(hState, ...)
     end
 end
 
+LuaUtils.True = function(statement, greedy_check, ignore_nil)
+    --return not ({[false]=1,[0]=1})[statement] -- yea no
+    if (greedy_check) then
+        statement = tostring(statement or ""):lower()
+        return (statement ~= "0" and statement ~= "false")
+    end
+    return (( ignore_nil or statement ~= nil) and statement ~= false and statement ~= 0)
+end
+
+LuaUtils.False = function(statement, greedy_check, ignore_nil)
+    return not LuaUtils.True(statement, greedy_check, ignore_nil)
+end

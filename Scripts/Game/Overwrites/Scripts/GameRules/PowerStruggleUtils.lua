@@ -294,7 +294,10 @@ function MakeCapturable(entity)
 	
 	-- StepUncapture
 	entity.StepUncapture=replace_post(entity.StepUncapture, function(self, frameTime, count)
-		local count=1+math.min(3, count-tonumber(self.Properties.captureRequirement))*0.33;
+
+		--local count=1+math.min(3, count-tonumber(self.Properties.captureRequirement))*0.33;
+		count = g_gameRules:GetStepUncaptureSpeed(self, count)
+
 		self.capturingTimer=self.capturingTimer-frameTime*count;
 
 		if (self.capturingTimer<=0) then
@@ -371,7 +374,14 @@ function MakeCapturable(entity)
 	
 	-- StepCapture
 	entity.StepCapture=replace_post(entity.StepCapture, function(self, frameTime, count)
-		local count=1+math.min(3, count-tonumber(self.Properties.captureRequirement))*0.33;
+
+		count = g_gameRules:GetStepCaptureSpeed(self, count)
+		--local count=1+math.min(3, count-tonumber(self.Properties.captureRequirement))*0.33;
+		--DebugLog("count=",count)
+
+
+		--DebugLog("count",count,"new=",count)
+
 		self.capturingTimer=self.capturingTimer-frameTime*count;
 		
 		if (self.capturingTimer<=0) then

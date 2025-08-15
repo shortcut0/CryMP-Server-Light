@@ -849,7 +849,7 @@ Server:CreateComponent({
                                 SendMessage(self.Responses.InsufficientAccess, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                                 return
                             end
-                        elseif (aCmdArg.NotUser and hPlayer == hArgReplacement) then
+                        elseif ((aCmdArg.NotUser or aCmdArg.NotSelf) and hPlayer == hArgReplacement) then
                             SendMessage({
                                 Message = "@command_argNotSelf"
                             }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })

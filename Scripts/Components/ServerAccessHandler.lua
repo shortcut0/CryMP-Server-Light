@@ -195,12 +195,10 @@ Server:CreateComponent({
         OnValidationFailed = function(self, hPlayer)
 
             if (self.Properties.KickInvalidProfiles) then
-                -- TODO
                 Server.Punisher:KickPlayer(Server:GetEntity(), hPlayer, "Profile Validation Failed")
 
             elseif (self.Properties.BanInvalidProfiles) then
-                -- TODO
-                Server.Punisher:BanPlayer(Server:GetEntity(), hPlayer, { Duration = FIVE_MINUTES, Reason = "Profile Validation Failed" })
+                Server.Punisher:BanPlayer(Server:GetEntity(), hPlayer, FIVE_MINUTES, "Profile Validation Failed" )
 
             else
                 self:AssignIPProfile(hPlayer)
@@ -624,7 +622,16 @@ Server:CreateComponent({
             ServerAccess_Highest = self.HighestAccessLevel
         end,
 
+        Command_ListUsers = function(self, hPlayer, sFilter)
 
+            -- Terrible, do something else.
+            --      Name |      Nomad.CV (#0005)         | Name
+            -- Unique ID |            p0001
+            --   Profile |           1008858
+            --      Host |
+            --        IP |
+
+        end,
 
     }
 })

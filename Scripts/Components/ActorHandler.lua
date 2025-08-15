@@ -215,6 +215,7 @@ Server:CreateComponent({
             end
 
             hActor.Initialized = true
+            Server.Events.Callbacks:OnActorSpawn(hActor)
         end,
 
         AddActorFunctions = function(self, hActor)
@@ -286,7 +287,7 @@ Server:CreateComponent({
             hActor.IsAlive         = function(this, ignorespec) return (this:GetHealth() > 0 and (ignorespec or not this:IsSpectating()))  end
             hActor.IsDead          = function(this) return (this:GetHealth() <= 0) end
             hActor.IsSpectating    = function(this) return (this.actor:GetSpectatorMode() ~= 0) end
-            hActor.Spectate        = function(this, mode, target) this.inventory:Destroy() this.actor:SetSpectatorMode(mode, (target and target.id or NULL_ENTITY)) end
+            hActor.Spectate        = function(this, mode, target) this.inventory:Destroy() if (target and target~=this) then g_gameRules.game:ChangeSpectatorMode(this.id, 3, target.id) return end this.actor:SetSpectatorMode(mode, (target and target.id or NULL_ENTITY)) end
             hActor.GetHealth       = function(this) return (this.actor:GetHealth() or 0)  end
             hActor.SetHealth       = function(this, health) this.actor:SetHealth(health)  end
             hActor.GetEnergy       = function(this) return (this.actor:GetNanoSuitEnergy())  end
@@ -362,7 +363,7 @@ Server:CreateComponent({
             hActor.GetTeam    = function(this) return Server.Utils:GetTeamId(this) end
 
             hActor.GetTeamName     = function(this, neutral) return Sever.Utils:GetTeam_String(this) end
-            hActor.SetTeam         = function(this, iTeam) g_pGame:SetTeam(iTeam, this.id) end
+            hActor.SetTeam         = function(this, iTeam) g_gameRules.game:SetTeam(iTeam, this.id) end
             hActor.GetKills        = function(this) return (g_gameRules:GetKills(this.id) or 0) end
             hActor.SetKills        = function(this, kills) g_gameRules:SetKills(this.id, kills) end
             hActor.GetDeaths       = function(this) return (g_gameRules:GetDeaths(this.id) or 0) end

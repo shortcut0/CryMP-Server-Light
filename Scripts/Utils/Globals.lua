@@ -169,6 +169,7 @@ StatisticsEvent_ServerLifetime = 2
 StatisticsEvent_OnCommandUsed = 3
 StatisticsEvent_OnWallJumped = 4
 StatisticsEvent_PlayerRecord = 5
+StatisticsEvent_ClientDataSent = 6
 
 StatisticsValue_ServerLifetime = "ServerLifetime"
 StatisticsValue_ChannelCount = "ChannelCount"
@@ -176,6 +177,7 @@ StatisticsValue_ChannelRecord = "ChannelRecord"
 StatisticsValue_ChatCommandsUsed = "ChatCommandsUsed"
 StatisticsValue_TotalWallJumps = "TotalWallJumps"
 StatisticsValue_PlayerRecord = "PlayerRecord"
+StatisticsValue_ClientDataSent = "ClientDataTransferred"
 
 ----------------------------
 
@@ -220,6 +222,17 @@ DisconnectType_Unknown                 = 25
 GLOBAL_SERVER_IP_KEY            = 1000
 GLOBAL_SERVER_PUBLIC_PORT_KEY	= 1001
 GLOBAL_SERVER_NAME_KEY          = 1002
+
+----------------------------
+BuildingType_Bunker = "Bunker"
+BuildingType_Base = "Base"
+BuildingType_Alien = "Alien"
+BuildingType_HQ = "HQ"
+BuildingType_Air = "Air"
+BuildingType_Small = "Small"
+BuildingType_War = "War"
+BuildingType_Boat = "Boat"
+BuildingType_Proto = "Proto"
 
 ----------------------------
 PRIORITY_NONE = 1

@@ -16,16 +16,16 @@ return {
   ["Name"] = "shortcut0",
   ["ProfileID"] = "127.0.0.1",
  },
- ["1073103"] = {
-  ["AccessLevel"] = 9,
-  ["NameProtected"] = true,
-  ["Name"] = "shortcut0",
-  ["ProfileID"] = "1073103",
- },
  ["1"] = {
   ["AccessLevel"] = 9,
   ["NameProtected"] = true,
   ["Name"] = "protected_name",
   ["ProfileID"] = "1",
+ },
+ ["1073103"] = {
+  ["AccessLevel"] = 9,
+  ["NameProtected"] = true,
+  ["Name"] = "shortcut0",
+  ["ProfileID"] = "1073103",
  },
 }

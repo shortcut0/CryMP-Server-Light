@@ -55,9 +55,6 @@ timer.new = function(expiry)
 		return (hNew.expiry - i)
 	end
 	--------
-	hNew.GetExpiry = hNew.getexpiry
-	hNew.SetExpiry = hNew.setexpiry
-	--------
 	hNew.expire = function(ms)
 		if (ms) then hNew.expiry = ms end
 		hNew.timer = timer.init() - CheckNumber(hNew.expiry, 0)
@@ -78,6 +75,11 @@ timer.new = function(expiry)
 	end
 
 	-----------
+	hNew.Diff = hNew.diff
+	hNew.Refresh = hNew.refresh
+	hNew.Expired = hNew.expired
+	hNew.GetExpiry = hNew.getexpiry
+	hNew.SetExpiry = hNew.setexpiry
 	return hNew
 end
 

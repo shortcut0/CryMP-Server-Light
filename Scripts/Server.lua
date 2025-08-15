@@ -133,9 +133,9 @@ Server.PostInitialize = function(self)
         return false
     end
 
-    -- TODO: Move this
-    g_sGameRules = g_gameRules.class
-    g_pGame = g_gameRules.game
+    -- -: Move this
+    --g_sGameRules = g_gameRules.class
+    --g_pGame = g_gameRules.game
 
     if (self:PostInitializeComponents() == false) then
         return false
@@ -274,6 +274,22 @@ end
 ----------------------------------
 Server.OnUpdate = function(self, iFrameTime, iFrameID)
 
+
+    --[[
+    -- Done in C++. thanks C
+    local iRate = self.Utils:GetCVar("sv_dedicatedMaxRate")
+    if (#self.Utils:GetPlayers() == 0) then
+        if (iRate ~= 5) then
+            self.Utils:SetCVar("sv_dedicatedMaxRate", "5")
+        end
+        return -- return early as we don't need to frame profile in this scenario
+    elseif (iRate == 5) then
+        self.Utils:SetCVar("sv_dedicatedMaxRate", "30")
+    end]]
+
+    local iRate = self.Utils:GetCVar("sv_dedicatedMaxRate")
+    local iCppIdleRate = 5 -- FIXME sync
+
     local iClock = os.clock()
     local iFrameCounterLimit = 30
     local iFrameCounters = #self.FrameCounters
@@ -305,25 +321,25 @@ Server.OnUpdate = function(self, iFrameTime, iFrameID)
         self.FrameSteps = 0
     end
 
+    if (not self.FrameCounterIdleExitTimer) then
+        self.FrameCounterIdleExitTimer = TimerNew(5)
+    end
+
     local iLastCounter = (self.FrameCounters[#self.FrameCounters] or { Clock = iClock }).Clock
     local iFrameDiff = (iClock - iLastCounter)
-    if (iFrameDiff > 0.08) then
-        ServerLogWarning("{Gray}Frame Time {Red}%0.3f{Gray} (Avg: {Red}%0.3f{Gray}) | FPS: {Red}%0.2f{Gray} (Steps/s: {Red}%d{Gray}%s{Gray})", iFrameDiff, iRateAverage, (1 / iFrameDiff), iActualFPS, sActualFPSDiff)
-        --self.Network:OnFrameLag(iFrameDiff, iRateAverage, (1 / iFrameDiff), iActualFPS, sActualFPSDiff)
+    if (iRate > iCppIdleRate) then
+        if (iFrameDiff > 0.08 and self.FrameCounterIdleExitTimer.expired()) then
+            ServerLogWarning("{Gray}Frame Time {Red}%0.3f{Gray} (Avg: {Red}%0.3f{Gray}) | FPS: {Red}%0.2f{Gray} (Steps/s: {Red}%d{Gray}%s{Gray})", iFrameDiff, iRateAverage, (1 / iFrameDiff), iActualFPS, sActualFPSDiff)
+            --self.Network:OnFrameLag(iFrameDiff, iRateAverage, (1 / iFrameDiff), iActualFPS, sActualFPSDiff)
+        end
+    else
+        self.FrameCounterIdleExitTimer.refresh()
     end
-    table.insert(self.FrameCounters, { Clock = iClock, Rate = iFrameDiff})
+    table.insert(self.FrameCounters, { Clock = iClock, Rate = iFrameDiff, This = os.clock() - iClock })
 end
 
 ----------------------------------
 Server.OnTimerSecond = function(self)
-
-    -- Inform Components
-    for _, sComponent in pairs(self.InitializedComponents) do
-        if (self[sComponent].Event_TimerSecond) then
-            self[sComponent]:Event_TimerSecond()
-        end
-    end
-
     self.Statistics:Event(StatisticsEvent_ServerLifetime, 1)
 end
 
@@ -418,6 +434,10 @@ Server.CreateComponentFunctions = function(self, aBody, sName, sFriendlyName)
     end
     aBody.GetFriendlyName = function(this)
         return this.FriendlyName or this.Name
+    end
+
+    aBody.IsComponentEnabled = aBody.IsComponentEnabled or function(this)
+        return this.ComponentStatus ~= false
     end
 
     self:CreateLogAbstract(aBody, sName)

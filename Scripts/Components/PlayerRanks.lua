@@ -63,13 +63,18 @@ Server:CreateComponent({
 
         AwardRankXP = function(self, hPlayer, iXP)
 
-            if (iXP < 0 and not self.Properties.AllowDownRanking) then
-                return
+            local tRankData = self:GetRankData(hPlayer)
+            if (iXP < 0) then
+                if (not self.Properties.AllowDownRanking) then
+                    return
+                end
+
+                -- Refresh rank from scratch upon XP decrement
+                tRankData.Rank = nil
+                tRankData.RankStage = nil
+                tRankData.NextRankXP = nil
             end
 
-            DebugLog("award xp",iXP)
-
-            local tRankData = self:GetRankData(hPlayer)
             tRankData.RankXP = (tRankData.RankXP + iXP)
             self:RefreshRank(hPlayer)
         end,
@@ -77,10 +82,13 @@ Server:CreateComponent({
         OnRankIncreased = function(self, hPlayer)
 
             local tRankData = self:GetRankData(hPlayer)
-            Server.Chat:ChatMessage(ChatEntity_Server, ALL_PLAYERS, "@rank_advanced", {
+
+            local tFormat = {
                 Name = hPlayer:GetName(),
                 Rank = tRankData.Name
-            })
+            }
+            self:LogEvent({ Message = "@rank_advanced", MessageFormat = tFormat })
+            Server.Chat:ChatMessage(ChatEntity_Server, ALL_PLAYERS, "@rank_advanced", tFormat)
 
         end,
 
@@ -128,7 +136,10 @@ Server:CreateComponent({
 
         GetEmptyData = function(self)
             return {
+                Rank = nil,
+                RankStage = nil,
                 RankXP = 0,
+                NextRankXP = nil,
                 Name = ("%s %s"):format(self.RankList.Names[1].Name, math.ToRoman(1))
             }
         end,

@@ -33,6 +33,14 @@ Server:CreateComponent({
                 Server.AccessHandler:OnProfileValidated(hPlayer, sProfile)
             end,
 
+            OnActorSpawn = function(this, hPlayer)
+                return Server.Events:CheckComponentEvents("OnActorSpawn", hPlayer)
+            end,
+
+            RequestSpectatorTarget = function(this, hPlayer, iCode)
+                return Server.Events:CheckComponentEvents("RequestSpectatorTarget", hPlayer, iCode)
+            end,
+
             OnPostInitialize = function(this)
                 g_gameRules:PostInitialize()
                 Server.Events:CallEvent(ServerEvent_OnPostInit)
@@ -53,7 +61,7 @@ Server:CreateComponent({
             OnTimer = function(self, iTimerID)
 
                 if (iTimerID == 1) then
-                    Server:OnTimerSecond()
+                    Server.Events:CheckComponentEvents("TimerSecond")
                     Server.Events:CallEvent(ServerEvent_OnTimerSecond, iTimerID)
 
                 elseif (iTimerID == 2) then
@@ -180,6 +188,20 @@ Server:CreateComponent({
 
         TestOne = function(MASTER, ...)
             ServerLog("MASTER=%s, PUSHED=%s",ToString(MASTER),table.concat({...},","))
+        end,
+
+        CheckComponentEvents = function(self, sEvent, ...)
+
+            sEvent = ("Event_%s"):format(sEvent)
+
+            local aMostRecentCall = {}
+            for _, sComponent in pairs(Server.InitializedComponents) do
+                local tComponent = Server[sComponent]
+                if (tComponent[sEvent] and tComponent:IsComponentEnabled()) then
+                    aMostRecentCall = { tComponent[sEvent](tComponent, ...) }
+                end
+            end
+            return unpack(aMostRecentCall)
         end,
 
         Call = function(self, hEvent, ...)

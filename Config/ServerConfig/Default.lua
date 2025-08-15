@@ -42,7 +42,7 @@ Server.Config:Create({
                 cl_bandwidth = 100000,
                 sv_bandwidth = 100000,
 
-                sv_dedicatedMaxRate = 30,
+                sv_dedicatedMaxRate = 60, -- overwritten elsewhere,  has no effect
                 sv_cheatprotection = 0,
 
                 -- Some performance related CVars
@@ -229,6 +229,24 @@ Server.Config:Create({
             -- After this amount of time of being dead, players will be put into spectator mode
             AutoSpectateTimer = 30,
 
+            -- Configuration for Hits
+            HitConfig = {
+
+                FriendlyFire = {
+
+                    -- Friendly fire damage ratio (0 to disable)
+                    Ratio = 0,
+
+                    -- Punish team killers
+                    Punish = true,
+
+                    -- Kick after this amount of team kills
+                    TeamKillLimit = 10,
+                }, ---< FriendlyFire
+
+
+            }, ---< HitConfig
+
             -- Configuration for Kills
             KillConfig = {
 
@@ -251,7 +269,7 @@ Server.Config:Create({
                 }, ---< KillAssistance
 
                 -- if players should drop all their equipment upon death
-                DropAllEquipment = true,
+                DropEquipment = true,
 
                 -- Deduct rewards for killing bots
                 DeductBotKills = false,
@@ -281,6 +299,7 @@ Server.Config:Create({
                     MinimumDistance = 100,
 
                     RewardPP = 500,
+                    RewardXP = 30,
 
                     -- Reward scale for headshots
                     HeadshotAmplification = 1.5,
@@ -328,25 +347,26 @@ Server.Config:Create({
 
                     --- the message list for KILL streaks
                     KillMessages = {
-                        [03] = "{ShooterName} IS on a KILLING SPREE ( #{Kills} Kills )",
+                        [03] = "{ShooterName} IS on a KILLING SPREE", -- ( #{Kills} Kills )",
                         [05] = "{ShooterName} IS on a RAMPAGE ( #{Kills} Kills )",
                         [08] = "{ShooterName} IS DOMINATING : ( #{Kills} Kills )",
                         [12] = "{ShooterName} IS AMAZING : ( #{Kills} Kills )",
                         [15] = "{ShooterName} IS UNSTOPPABLE : ( #{Kills} Kills )",
                         [19] = "{ShooterName} IS INSANE : ( #{Kills} Kills )",
-                        [23] = "{ShooterName} IS OVERPOWERED : ( #{Kills} Kills )",
-                        [28] = "{ShooterName} IS GODLIKE : ( #{Kills} Kills )",
-                        [35] = "{ShooterName} IS MORE THAN GODLIKE : ( #{Kills} Kills )",
-                        [40] = "{ShooterName} IS AMD USER : ( #{Kills} Kills )",
-                        [50] = "{ShooterName} IS AMD ENTHUSIAST : ( #{Kills} Kills )",
-                        [60] = "{ShooterName} IS AMD KING : ( #{Kills} Kills )",
-                        [80] = "{ShooterName} IS AMD GOD : ( #{Kills} Kills )",
-                        [90] = "{ShooterName} IS AMD SUPREME RULER : ( #{Kills} Kills )",
-                        [100] = "{ShooterName} is LISA SU : ( #{Kills} Kills )"
+                        [25] = "{ShooterName} IS OVERPOWERED : ( #{Kills} Kills )",
+                        --[28] = "{ShooterName} IS GODLIKE : ( #{Kills} Kills )",
+                        --[35] = "{ShooterName} IS MORE THAN GODLIKE : ( #{Kills} Kills )",
+                        --[40] = "{ShooterName} IS AMD USER : ( #{Kills} Kills )",
+                        --[50] = "{ShooterName} IS AMD ENTHUSIAST : ( #{Kills} Kills )",
+                        --[60] = "{ShooterName} IS AMD KING : ( #{Kills} Kills )",
+                        --[80] = "{ShooterName} IS AMD GOD : ( #{Kills} Kills )",
+                        --[90] = "{ShooterName} IS AMD SUPREME RULER : ( #{Kills} Kills )",
+                        --[100] = "{ShooterName} is LISA SU : ( #{Kills} Kills )"
                     }, ---< KillMessages
 
-                    --- the message list for DEATH streaks
+                    --- the message list for DEATH streaks ({Kills} means deaths here)
                     DeathMessages = {
+                        Status = false, -- disable these for now..
                         [05] = "{TargetName} is on a DEATH STREAK : ( #{Kills} Deaths )",
                         [10] = "{TargetName} is SUICIDAL MASTER : ( #{Kills} Deaths )",
                         [15] = "{TargetName} is INTEL USER : ( #{Kills} Deaths )",
@@ -359,13 +379,13 @@ Server.Config:Create({
 
                     --- the message list for REPEATING kills
                     RepeatMessages = {
-                        [04] = "{ShooterName} is SLAYING {TargetName} (  #{Kills} Kills )",
-                        [08] = "{ShooterName} is DESTROYING {TargetName} (  #{Kills} Kills )",
-                        [12] = "{ShooterName} is DOMINATING {TargetName} (  #{Kills} Kills )",
-                        [14] = "{ShooterName} is ERADICATING {TargetName} (  #{Kills} Kills )",
-                        [18] = "{ShooterName} is SHOWING {TargetName} the AMD WAY (  #{Kills} Kills )",
-                        [22] = "{ShooterName} is FLEXING their AMD on {TargetName} (  #{Kills} Kills )",
-                        [26] = "{ShooterName} is TEACHING the WAY OF AMD to {TargetName} (  #{Kills} Kills )",
+                        [04] = "{ShooterName} is SLAYING {TargetName} ( #{Kills} Kills )",
+                        [08] = "{ShooterName} is DESTROYING {TargetName} ( #{Kills} Kills )",
+                        [12] = "{ShooterName} is DOMINATING {TargetName} ( #{Kills} Kills )",
+                        [14] = "{ShooterName} is ERADICATING {TargetName} ( #{Kills} Kills )",
+                        --[18] = "{ShooterName} is SHOWING {TargetName} the AMD WAY (  #{Kills} Kills )",
+                        --[22] = "{ShooterName} is FLEXING their AMD on {TargetName} (  #{Kills} Kills )",
+                        --[26] = "{ShooterName} is TEACHING the WAY OF AMD to {TargetName} (  #{Kills} Kills )",
                     }, ---< DeathMessages
 
 
@@ -400,7 +420,7 @@ Server.Config:Create({
                         },
 
                         Default = {
-                            { "SMG", { "Relfex" }}
+                            { "SOCOM", { "Relfex" }}
                         }
                     },
 
@@ -460,11 +480,31 @@ Server.Config:Create({
                 },
             }, ---< SpawnEquipment
 
+            --- Capturing Config
+            Capturing = {
+
+                -- Capture Speed Multiplier per player inside a capture zone
+                -- With a value of 0.1, if 10 Players are inside the capture area 200% the speed
+                CaptureSpeedAmplification = 0.125,
+
+                -- The maximum amplification
+                CaptureSpeedAmplificationMax = 0.5, -- 150% max capture speed
+
+            }, ---< Capturing
+
         }, ---< GameConfig
 
         ------------------------------------------
         --- Map Configuration
         MapConfig = {
+
+            -- Some immersive game options
+            Immersion = {
+
+                -- Will automatically open doors upon melee attacks & collisions
+                OpenDoorsOnCollision = true,
+
+            }, ---< Immersion
 
             -- If the server should delete all client-only entities
             -- Disabled for now. I suspect this can cause aspect errors during map change.
@@ -513,6 +553,41 @@ Server.Config:Create({
 
             },
         }, ---< MapConfig
+
+        ------------------------------------------
+        --- Chat Censoring Configuration
+        ChatConfig = {
+
+            -- Enables or disables all features below
+            EnableFiltering = true,
+
+            -- the level of greediness for the word censoring process
+            -- the level defines how many non-matching characters are allowed to be in between each character of the bad words
+            -- example: [1] Fu..CK!  -> Fu..CK
+            --          [2] Fu..CK!  -> ******
+            --          [2] Fu...CK! -> Fu...CK
+            --          [3] Fu...CK! -> *******
+            BadWordMatchGreediness = 1,
+            ShadowWordsMatchGreediness = 1,
+
+            --- A list of bad words which will be censored
+            BadWords = {
+                { Trigger = "Nigga", Asterisk = "*" },
+                { Trigger = "fuck" },
+                { Trigger = "shit" },
+                { Trigger = "gay", AggressionLevel = 0 },
+                { Trigger = "pussy" },
+                { Trigger = "faggot" },
+                { Trigger = "retard" },
+                { Trigger = "haendel" },  -- FIXME: tests
+                { Trigger = "mistersd" },  -- FIXME: tests
+            },
+
+            --- A list of shadow banned words
+            ShadowWords = {
+                { Trigger = "laggy server", AggressionLevel = 3 }
+            },
+        },
 
         ------------------------------------------
         --- Player Name Configuration

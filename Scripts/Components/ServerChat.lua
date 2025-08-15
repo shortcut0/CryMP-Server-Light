@@ -122,6 +122,24 @@ Server:CreateComponent({
                 self.ConsoleLogClasses[aComponent:GetFriendlyName()] = aConsoleLogInfo
             end
             self:Log("Created Default Log Classes for %d Components", table.count(Server.ComponentList))
+
+
+            self.Properties.ChatFilters = {
+
+                Enabled = Server.Config:Get("ChatConfig.EnableFiltering", true, ConfigType_Boolean),
+
+                BadWordMatchGreediness = Server.Config:Get("ChatConfig.BadWordMatchGreediness", 1, ConfigType_Number),
+                BadWordList = Server.Config:Get("ChatConfig.BadWords", {}, ConfigType_Array),
+
+                HiddenWords = Server.Config:Get("ChatConfig.ShadowWords", {}, ConfigType_Array),
+                HiddenWordMatchGreediness = Server.Config:Get("ChatConfig.ShadowWordsMatchGreediness", 1, ConfigType_Number),
+
+                --[[
+                Replacements = {
+                    Status = Server.Config:Get("ChatConfig.Replacements.Status", true ,ConfigType_Boolean),
+                    List = Server.Config:Get("ChatConfig.Replacements.List", {}, ConfigType_Array),
+                }]]
+            }
         end,
 
         PostInitialize = function(self)
@@ -383,6 +401,8 @@ Server:CreateComponent({
             elseif (pTarget == ChatType_ToAll) then
                 return self:SendTextMessageToAll(iType, sMessage, tFormat)
 
+            elseif (type(pTarget) == "number" and pTarget >= ServerAccess_Lowest and pTarget <= ServerAccess_Highest) then
+                pTarget = Server.Utils:GetPlayers({ ByAccess = pTarget })
             end
 
             local aTargetList
@@ -438,13 +458,20 @@ Server:CreateComponent({
 
         LogChatMessage = function(self, aLogInfo)
 
+            if (table.IsRecursive(aLogInfo)) then
+                for _, tLogInfo in pairs(aLogInfo) do
+                    self:LogChatMessage(tLogInfo)
+                end
+                return
+            end
+
             local iType = aLogInfo.Type
             local hSender = aLogInfo.Sender
             local hTarget = aLogInfo.Target
             local sMessage = aLogInfo.Message
 
             local aProperties = self.Properties
-            local aRecipients = Server.Utils.GetPlayers()
+            local aRecipients = aLogInfo.Recipients or Server.Utils.GetPlayers()
 
             local sTag = ""
             if (iType == ChatToTeam) then
@@ -462,17 +489,26 @@ Server:CreateComponent({
             end
 
             for _, hRecipient in pairs(aRecipients) do
-                local sTagLocalized = Server.LocalizationManager:LocalizeForPlayer(hRecipient, sTag, {})
-                local sFinalMessage = ("%s%s%s"):format(aProperties.ConsoleChatMessageSenderColor, hSender:GetName(), sTagLocalized)
-                sFinalMessage = string.lspace(sFinalMessage, aProperties.ConsoleChatOffset - 3, string.COLOR_CODE)
-                sFinalMessage = ("%s : %s%s"):format(sFinalMessage, aProperties.ConsoleChatMessageColor, sMessage)
-                local sMessageLocalized = Server.LocalizationManager:LocalizeForPlayer(hRecipient, sFinalMessage, {})
 
-                self:ConsoleMessage({
-                    Type = ChatType_Console,
-                    Message = sMessageLocalized,
-                    Recipients = { hRecipient },
-                })
+                local bShow = true
+                if (aLogInfo.ShowLog) then
+                    bShow = hRecipient.id == aLogInfo.ShowLog
+                elseif (aLogInfo.HideLog) then
+                    bShow = aLogInfo.HideLog ~= hRecipient.id
+                end
+                if (bShow) then
+                    local sTagLocalized = Server.LocalizationManager:LocalizeForPlayer(hRecipient, sTag, {})
+                    local sFinalMessage = ("%s%s%s"):format(aProperties.ConsoleChatMessageSenderColor, hSender:GetName(), sTagLocalized)
+                    sFinalMessage = string.lspace(sFinalMessage, aProperties.ConsoleChatOffset - 3, string.COLOR_CODE)
+                    sFinalMessage = ("%s : %s%s"):format(sFinalMessage, aProperties.ConsoleChatMessageColor, sMessage)
+                    local sMessageLocalized = Server.LocalizationManager:LocalizeForPlayer(hRecipient, sFinalMessage, {})
+
+                    self:ConsoleMessage({
+                        Type = ChatType_Console,
+                        Message = sMessageLocalized,
+                        Recipients = { hRecipient },
+                    })
+                end
             end
         end,
 
@@ -539,32 +575,127 @@ Server:CreateComponent({
             return table.concat(aTags, ", ")--, aTags
         end,
 
+        GetVariations = function(self, sChar)
+            local map = ({
+                ["e"] = { 3 },
+                ["s"] = { 5 },
+                ["a"] = { 4 },
+                ["o"] = { 0 },
+            })[sChar]
+            if (map) then
+                return table.concat(map,"")
+            end
+            return ""
+        end,
+
+        CreatePattern = function(self, sChar, iMatchDots, bNoBoundary)
+            local pattern = not bNoBoundary and "%f[%w]" or ""
+            for i = 1, #sChar do
+                local c = sChar:sub(i, i)
+                local sVars = self:GetVariations(c)
+                local sDots = string.rep(".?", iMatchDots or 1)
+                local sPlus = "+"
+                local sPlusBracket = "+"
+                local sSpaces = "%s"
+                if (i == #sChar) then
+                    sDots = ""
+                    sPlus = ""
+                    sPlusBracket = ""
+                    sSpaces = ""
+                end
+                pattern = pattern .. string.format("[%s%s%s%s%s]%s%s", c:lower(), c:upper(), sVars, sSpaces, sPlusBracket, sPlus, sDots)
+            end
+            return pattern
+        end,
+
+        CensorMessage = function(self, sMessage)
+            local aForbidden = self.Properties.ChatFilters.BadWordList
+            local iMatchDots = (self.Properties.ChatFilters.BadWordMatchGreediness or 1)
+
+
+            local iBadWordCount = 0
+            local iBadWords = 0
+            for _, tInfo in ipairs(aForbidden) do
+                local sBadWord = tInfo.Trigger
+                local sAsterisk = (tInfo.Asterisk or "*")
+                local sPattern = (tInfo._Pattern_ or self:CreatePattern(sBadWord, (tInfo.AggressionLevel or iMatchDots)))
+                tInfo._Pattern_ = sPattern
+                sMessage, iBadWords = sMessage:gsub(sPattern, function(sMatch)
+                    DebugLog("sPattern=",sPattern,"=",sMatch)
+                    return string.gsub(sMatch, "[^ ]", sAsterisk)
+                end)
+                iBadWordCount = iBadWordCount + iBadWords
+            end
+
+            return sMessage, iBadWordCount
+        end,
+
+        ShouldHideMessage = function(self, sMessage)
+            local aHideList = self.Properties.ChatFilters.HiddenWords
+            local iAggressionLevel = (self.Properties.ChatFilters.HiddenWordMatchGreediness or 1)
+            for _, tInfo in pairs(aHideList) do
+                local sBadWord = tInfo.Trigger
+                local sPatter = (tInfo._Pattern_ or self:CreatePattern(sBadWord, (tInfo.AggressionLevel or iAggressionLevel)))
+                local _, iCount = sMessage:gsub(sPatter, "")
+                if (iCount and iCount > 0) then
+                    return true
+                end
+            end
+            return false
+        end,
+
         FilterMessage = function(self, hSender, hTarget, sMessage, iType, bSentByServer, aInfo)
 
+            local bOk = true
             local bLogMessage = true
-            if (bSentByServer) then
-                bLogMessage = false
-            end
 
             local aLogInfo = {
                 Type    = iType,
                 Sender  = hSender,
                 Target  = hTarget,
-                Message = sMessage
+                Message = sMessage,
             }
 
-            local sChatTag = self:GetChatPrefixTag(iType, hSender)
-            if (sChatTag) then
-                aInfo.NewMessage = ("(%s) %s"):format(sChatTag, aInfo.NewMessage)
-                if (self.Properties.ChatMessageTags.ShowInConsole) then
-                    aLogInfo.Tag = sChatTag
+            if (bSentByServer) then
+                bLogMessage = false
+            elseif (not hSender:HasAccess(ServerAccess_SuperAdmin)) then
+
+                local aFilterConfig = self.Properties.ChatFilters
+                if (LuaUtils.True(aFilterConfig.Enabled, false, true)) then
+                    local sFilteredMessage = sMessage
+                    local iBadWordCount = 0
+
+                    if (not hSender.Data.HasToxicityPass) then
+                        sFilteredMessage, iBadWordCount = self:CensorMessage(sFilteredMessage)
+                        if (sFilteredMessage ~= sMessage) then
+                            aLogInfo.Message = sFilteredMessage
+                            aInfo.NewMessage = sFilteredMessage
+                            sMessage = sFilteredMessage
+                            hSender.Data.SwearWords = (hSender.Data.SwearWords or 0) + iBadWordCount
+                        end
+                    end
+
+
+                    if (self:ShouldHideMessage(sMessage)) then
+                        g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hSender.id, sMessage)
+                        aLogInfo.ShowLog = hSender.id
+                        bOk = false
+                    end
+                end
+
+                local sChatTag = self:GetChatPrefixTag(iType, hSender)
+                if (sChatTag) then
+                    aInfo.NewMessage = ("(%s) %s"):format(sChatTag, aInfo.NewMessage)
+                    if (self.Properties.ChatMessageTags.ShowInConsole) then
+                        aLogInfo.Tag = sChatTag
+                    end
                 end
             end
 
             if (bLogMessage) then
                 self:LogChatMessage(aLogInfo)
             end
-            return true
+            return bOk
         end,
 
         OnChatMessage = function(self, hSenderID, hTargetID, sMessage, iType, iForcedTeam, bSentByServer)
@@ -604,9 +735,7 @@ Server:CreateComponent({
             local sAdminStatus = table.empty(Server.AccessHandler:GetAdmins()) and "$4@str_offline" or "$3@str_online"
             local sCountry = ("(%s) %s"):format(hPlayer:GetCountryCode(), hPlayer:GetCountryName())
 
-            -- TODO
             local sNextMap = ("{Red}%s{Gray} ({Red}%s{Gray})"):format(Server.MapRotation:GetNextMapName(), Server.MapRotation:GetNextMapRules():upper())
-
             local sUsageInfo = string.format("CPU: %d%%, %s", ServerDLL.GetCPUUsage(), Server.Utils:ByteSuffix(ServerDLL.GetMemUsage(), 0))
 
 

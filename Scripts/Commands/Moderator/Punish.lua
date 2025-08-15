@@ -16,7 +16,7 @@ Server.ChatCommands:Add({
         Name = "Kick",
         Access = ServerAccess_Moderator,
         Arguments = {
-            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer },
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, NotSelf = true },
             { Name = "@reason", Desc = "@reason_desc", Default = "@admin_decision", Type = CommandArg_TypeMessage },
         },
         Properties = {

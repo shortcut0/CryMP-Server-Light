@@ -27,6 +27,7 @@ Server:CreateComponent({
 
             -- so we dont do this over and over and over again!
             IsRegistered = false,
+            Cookie = "-1",
 
             SavedGeoData = {},
             ChannelCache = {},
@@ -98,8 +99,8 @@ Server:CreateComponent({
             IsDefault     = true
         },
 
-        Cookie = nil, -- Session ID
-        IsRegistered = false,
+        --Cookie = nil, -- Session ID
+        --IsRegistered = false,
         IsRegistering = false, -- In the process of registering the server
         RegisterFailed = false,
 
@@ -757,7 +758,7 @@ Server:CreateComponent({
                 local sMapName      = Server.MapRotation:GetMapPath()
                 local sMapTitle     = self:GetMapTitle(sMapName)
                 local sMapDownload  = self:GetMapDownloadLink()
-                local iTimeLeft     = (g_pGame:GetRemainingGameTime())
+                local iTimeLeft     = (g_gameRules.game:GetRemainingGameTime())
 
                 -- Player Config
                 local iMaxPlayers   = Server.Utils:GetCVar("sv_maxPlayers")
@@ -881,7 +882,6 @@ Server:CreateComponent({
                     })
                 end
 
-                -- TODO: INCOMING CONNECTIONS !!
                 for _, tConnection in pairs(Server.Network.ActiveConnections) do
                     if (not Server.Utils:GetPlayerByChannel(_) and ServerDLL.IsExistingChannel(_)) then
                         sName    = ("(Connecting) %s"):format(ServerDLL.GetChannelNick(_) or "Nomad")
@@ -1081,6 +1081,8 @@ Server:CreateComponent({
 
             if (self.Timers.PingUpdate.expired_refresh()) then
 
+                self:UpdateNetUsage()
+
                 local iAveragePing = 0
                 local aPlayers = g_gameRules.game:GetPlayers()
                 local iPlayerCount = #(aPlayers or {})
@@ -1117,7 +1119,6 @@ Server:CreateComponent({
                     end
                 end
 
-               self:UpdateNetUsage()
             end
         end,
     }

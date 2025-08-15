@@ -16,7 +16,7 @@ Server.ChatCommands:Add({
         Name = "Ban",
         Access = ServerAccess_Moderator,
         Arguments = {
-            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer },
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, NotSelf = true },
             { Name = "@time",   Desc = "@arg_time_desc",   Required = true, Type = CommandArg_TypeTime, AcceptInvalidTime = true },
             { Name = "@reason", Desc = "@reason_desc", Default = "@admin_decision", Type = CommandArg_TypeMessage },
         },
@@ -34,7 +34,7 @@ Server.ChatCommands:Add({
         Name = "HardBan",
         Access = ServerAccess_Admin,
         Arguments = {
-            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer },
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, NotSelf = true },
             { Name = "@time",   Desc = "@arg_time_desc",   Required = true, Type = CommandArg_TypeTime, AcceptInvalidTime = true },
             { Name = "@reason", Desc = "@reason_desc", Default = "@admin_decision", Type = CommandArg_TypeMessage },
         },

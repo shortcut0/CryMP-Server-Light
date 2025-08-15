@@ -1089,7 +1089,7 @@ Server.LocalizationManager:Add({
                 -- PirateSoftware Has been Banned form the Server (Hes out of mana)
                 -- PirateSoftware Banned shortcut0 for 10d:05h:15m (Working at blizzard sucked)
 
-                Regular = "{Name} Has been Banned from the Server (Expiry: {Time}, {Reason})",
+                Regular = "{Red}{Name}{Gray} Has been {Red}Banned{Gray} from the Server (Expiry: {Time}, {Reason})",
                 Extended = "{Red}{Admin}{Gray} Banned {Red}{Name}{Gray} (Expiry: {Time}, {Red}{Reason}{Gray})"
             }
         }
@@ -1102,8 +1102,8 @@ Server.LocalizationManager:Add({
                 -- PirateSoftware Has been Banned form the Server (Hes out of mana)
                 -- PirateSoftware Banned shortcut0 for 10d:05h:15m (Working at blizzard sucked)
 
-                Regular = "{Name} Was Denied Entry to the Server (Ban Expiry: {Time}, {Reason})",
-                Extended = "{Admin} Has Denied {Name} Entry to the Server (Ban Expiry: {Time}, {Reason})"
+                Regular = "{Red}{Name}{Gray} Was Denied Entry to the Server (Ban Expiry: {Time}, {Reason})",
+                Extended = "{Red}{Admin}{Gray} Has Denied {Red}{Name}{Gray} Entry to the Server (Ban Expiry: {Time}, {Reason})"
             }
         }
     },
@@ -1112,8 +1112,8 @@ Server.LocalizationManager:Add({
         Extended = ServerAccess_Moderator,
         Languages = {
             English = {
-                Regular = "{Name} Has been Unbanned ({UnbanReason})",
-                Extended = "{Admin} Has Unbanned {Name} ({UnbanReason})"
+                Regular  = "{Red}{Name}{Gray} Has been {Green}Unbanned{Gray} ({UnbanReason})",
+                Extended = "{Red}{Admin}{Gray} Has Unbanned {Red}{Name}{Gray} ({UnbanReason})"
             }
         }
     },
@@ -1139,6 +1139,12 @@ Server.LocalizationManager:Add({
         String = "no_maps_foundMatching",
         Languages = {
             English = "No Maps Matching {Filter} found"
+        }
+    },
+    {
+        String = "map_restarting",
+        Languages = {
+            English = "Map Restarting in {Red}{Time}"
         }
     },
     {
@@ -1177,7 +1183,116 @@ Server.LocalizationManager:Add({
             -- Nomad just Advanced to [ PLASTIC III ]
             -- Nomad just Advanced to ~ PLASTIC III ~
             -- Nomad just Advanced to < PLASTIC III >
-            English = "{Name} Just Advanced to League [ {Rank} ]"
+            -- Nomad just Advanced to PLASTIC (III)
+            English = "{Red}{Name}{Gray} Just Advanced to TIER [ {Red}{Rank}{Gray} ]"
+        }
+    },
+    {
+        String = "building_type_alien",
+        Languages = {
+            English = "Alien Energy Site"
+        }
+    },
+    {
+        String = "building_type_prototypeFac",
+        Languages = {
+            English = "Frodotype Factory"
+        }
+    },
+    {
+        String = "building_type_warFac",
+        Languages = {
+            English = "War Factory"
+        }
+    },
+    {
+        String = "building_type_smallFac",
+        Languages = {
+            English = "Arms Factory"
+        }
+    },
+    {
+        String = "building_type_air",
+        Languages = {
+            English = "Aviation Factory"
+        }
+    },
+    {
+        String = "building_type_hq",
+        Languages = {
+            English = "Headquarters"
+        }
+    },
+    {
+        String = "building_type_base",
+        Languages = {
+            English = "Spawn Base"
+        }
+    },
+    {
+        String = "building_type_bunker",
+        Languages = {
+            English = "Spawn Bunker"
+        }
+    },
+    {
+        String = "building_type_navalFac",
+        Languages = {
+            English = "Naval Factory"
+        }
+    },
+    {
+        String = "value",
+        Languages = {
+            English = "Value"
+        }
+    },
+    {
+        String = "cvar_setTo",
+        Languages = {
+            English = "{Red}{Admin}{Gray} Has Changed CVar {Red}{CVar}{Gray} to {Red}{Value}{Gray}"
+        }
+    },
+    {
+        String = "cvar_setTo_chat",
+        Languages = {
+            English = "{Red}{CVar}{Gray} Changed to {Red}{Value}{Gray}"
+        }
+    },
+    {
+        String = "cvar_setRestored",
+        Languages = {
+            English = "{Red}{CVar}{Gray} Restored to {Red}{Value}{Gray}"
+        }
+    },
+    {
+        String = "no_default_value_found",
+        Languages = {
+            English = "No default Value Found"
+        }
+    },
+    {
+        String = "attempt",
+        Languages = {
+            English = "Attempt"
+        }
+    },
+})
+
+
+-- ===================================================================================
+
+Server.LocalizationManager:Add({
+    {
+        String = "clientMod_installingOn",
+        Languages = {
+            English = "Installing Client Mod on {Client}.."
+        }
+    },
+    {
+        String = "clientMod_installedOn",
+        Languages = {
+            English = "Successfully Installed Client Mod on {Client} (Took {Red}{Time}{Gray})"
         }
     },
 })
@@ -1234,6 +1349,12 @@ Server.LocalizationManager:Add({
 -- ===================================================================================
 
 Server.LocalizationManager:Add({
+    {
+        String = "arg_cvar_desc",
+        Languages = {
+            English = "The target CVar for the command"
+        }
+    },
     {
         String = "arg_team_desc",
         Languages = {

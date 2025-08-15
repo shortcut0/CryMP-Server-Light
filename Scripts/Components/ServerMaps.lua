@@ -25,6 +25,8 @@ Server:CreateComponent({
             FirstInitialization = false
         },
 
+        ChatEntity = "Map Rotation >",
+
         Properties = {
 
             MapPathPatterns = {
@@ -519,6 +521,25 @@ Server:CreateComponent({
             return true, hPlayer:LocalizeText("@entitiesListedInConsole", { Class = "@maps", Count = iDisplayedMaps })
         end,
 
+        Command_RestartMap = function(self, hPlayer, iTimer)
+
+            if (iTimer and iTimer > 0) then
+                if (self.MapRestartTimer) then
+                    Script.KillTimer(self.MapRestartTimer)
+                end
+
+                local tFormat = { Time = Date:Format(iTimer) }
+                self:LogEvent({ Message = "@map_restarting", MessageFormat = tFormat })
+                Server.Chat:ChatMessage(self.ChatEntity, ALL_PLAYERS, "@map_restarting", tFormat)
+                self.MapRestartTimer = Script.SetTimer(iTimer * 1000, function()
+                    Server.Utils:ExecuteCommand("sv_restart", hPlayer)
+                end)
+                return
+            end
+
+            Server.Utils:ExecuteCommand("sv_restart", hPlayer)
+        end,
+
         Command_StartMap = function(self, hPlayer, sMap, iTimer)
 
             hPlayer = (hPlayer or Server:GetEntity())
@@ -540,7 +561,8 @@ Server:CreateComponent({
                 Script.KillTimer(self.MapStartTimer)
                 self.MapStartTimer = nil
                 self:LogEvent({ Message = "@map_start_stopped" })
-                return true, "@map_start_stopped"
+                Server.Chat:ChatMessage(self.ChatEntity, ALL_PLAYERS, "@map_start_stopped")
+                return true--, "@map_start_stopped"
             end
 
             local aMapResults = self.MapList:FindMaps(sMap)
@@ -566,7 +588,8 @@ Server:CreateComponent({
 
                 local aFormat = { Next = "",Time = Date:Format(iTimer), Mode = tMap:GetRules():upper(), Map = tMap:GetName() }
                 self:LogEvent({ Message = "@map_start_queued" , MessageFormat = aFormat })
-                return true, hPlayer:LocalizeText("@map_start_queued", aFormat)
+                Server.Chat:ChatMessage(self.ChatEntity, ALL_PLAYERS, "@map_start_queued", aFormat)
+                return true--, hPlayer:LocalizeText()
             end
 
             self:StartMap(tMap:GetPath(), tMap:GetRules(), tMap:GetDefaultTimeLimit())
@@ -586,7 +609,8 @@ Server:CreateComponent({
                 Script.KillTimer(self.NextMapTimer)
                 self.NextMapTimer = nil
                 self:LogEvent({ Message = "@map_start_stopped" })
-                return CommandResp_SuccessQuiet, hPlayer:LocalizeText("@map_start_stopped")
+                Server.Chat:ChatMessage(self.ChatEntity, ALL_PLAYERS, "@map_start_stopped")
+                return true--CommandResp_SuccessQuiet, hPlayer:LocalizeText("@map_start_stopped")
             else
                 iTimer = Date:ParseTime(iTimer) or 0
             end
@@ -603,7 +627,8 @@ Server:CreateComponent({
                 local tMap = self.MapRotation:GetNext()
                 local aFormat = { Next = "@next ", Time = Date:Format(iTimer), Mode = tMap:GetRules():upper(), Map = tMap:GetName() }
                 self:LogEvent({ Message = "@map_start_queued" , MessageFormat = aFormat })
-                return CommandResp_SuccessQuiet, hPlayer:LocalizeText("@map_start_queued", aFormat)
+                Server.Chat:ChatMessage(self.ChatEntity, ALL_PLAYERS, "@map_start_queued", aFormat)
+                return-- CommandResp_SuccessQuiet, hPlayer:LocalizeText("@map_start_queued", aFormat)
             end
 
             self.MapRotation:StartNext()

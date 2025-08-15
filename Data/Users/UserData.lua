@@ -10,21 +10,17 @@
 -- Server Component 
 -- ===================================================================================
 return {
+ ["1073319"] = {
+  ["LastConnect"] = 1755224165,
+  ["FirstBloodScored"] = 0,
+  ["ServerTime"] = 9,
+ },
  ["1073264"] = {
   ["LastConnect"] = 1755135412,
   ["FirstBloodScored"] = 0,
   ["ServerTime"] = 2021,
   ["Rank"] = {
    ["RankXP"] = 25,
-  },
- },
- ["1073297"] = {
-  ["LastConnect"] = 1755135886,
-  ["FirstBloodScored"] = 0,
-  ["ServerTime"] = 73,
-  ["Rank"] = {
-   ["RankXP"] = 0,
-   ["Name"] = "PLASTIC I",
   },
  },
  ["1073295"] = {
@@ -35,8 +31,61 @@ return {
    ["Name"] = "COPPER I",
    ["RankXP"] = 720.750000,
    ["RankStage"] = 1,
-   ["Rank"] = 4,
    ["NextRankXP"] = 800,
+   ["Rank"] = 4,
+  },
+ },
+ ["1073325"] = {
+  ["LastConnect"] = 1755239446,
+  ["FirstBloodScored"] = 0,
+  ["ServerTime"] = 8111,
+  ["Rank"] = {
+   ["RankXP"] = 90,
+   ["RankStage"] = 1,
+   ["Name"] = "PLASTIC I",
+   ["NextRankXP"] = 150,
+  },
+ },
+ ["1073316"] = {
+  ["LastConnect"] = 1755219173,
+  ["SwearWords"] = 16,
+  ["FirstBloodScored"] = 0,
+  ["ServerTime"] = 3511,
+  ["Rank"] = {
+   ["Name"] = "PLASTIC I",
+   ["RankXP"] = 0,
+  },
+ },
+ ["1073313"] = {
+  ["LastConnect"] = 1755199785,
+  ["FirstBloodScored"] = 0,
+  ["ServerTime"] = 50,
+ },
+ ["1073305"] = {
+  ["LastConnect"] = 1755199785,
+  ["FirstBloodScored"] = 0,
+  ["ServerTime"] = 468,
+ },
+ ["1073297"] = {
+  ["LastConnect"] = 1755135886,
+  ["FirstBloodScored"] = 0,
+  ["ServerTime"] = 73,
+  ["Rank"] = {
+   ["RankXP"] = 0,
+   ["Name"] = "PLASTIC I",
+  },
+ },
+ ["1073317"] = {
+  ["SwearWords"] = 10,
+  ["LastConnect"] = 1755222791,
+  ["FirstBloodScored"] = 0,
+  ["ServerTime"] = 4854,
+  ["Rank"] = {
+   ["Name"] = "POTATO I",
+   ["RankXP"] = 330,
+   ["RankStage"] = 1,
+   ["NextRankXP"] = 375,
+   ["Rank"] = 2,
   },
  },
 }

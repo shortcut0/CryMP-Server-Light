@@ -47,7 +47,10 @@ Server:CreateComponent({
                     { StatisticsEvent_OnCommandUsed, { self.AddValue, self, StatisticsValue_ChatCommandsUsed, 1 }},
 
                     -- record WallJump
-                    { StatisticsEvent_OnWallJumped, { self.AddValue, self, StatisticsValue_TotalWallJumps, 1 }}
+                    { StatisticsEvent_OnWallJumped, { self.AddValue, self, StatisticsValue_TotalWallJumps, 1 }},
+
+                    -- data transfer
+                    { StatisticsEvent_ClientDataSent, { self.AddValue, self, StatisticsValue_ClientDataSent, hValue }}
             )
         end,
 

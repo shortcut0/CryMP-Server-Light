@@ -60,8 +60,8 @@ Server.Patcher:HookClass({
 
                 FIRST_BLOOD         = 30,
                 HEADSHOT_BONUS      = 4,
-                BUY_DOOMSDAYMACHINE = 10, -- tac/tac vehicles TODO!!
-                CAPTURE_SPECIAL     = 18, -- proto TODO!!
+                BUY_DOOMSDAYMACHINE = 10, -- tac/tac vehicles done!!
+                CAPTURE_SPECIAL     = 18, -- proto done!!
 
                 KILL                = 5,
                 KILL_RANKDIFF_MULT  = 1.2,
@@ -104,6 +104,7 @@ Server.Patcher:HookClass({
                 self.TaggedExplosives = {}
 
                 self.KillConfig = {
+                    DropEquipment   = Server.Config:Get("GameConfig.KillConfig.DropEquipment", true,  ConfigType_Boolean),
                     SuicideKills    = Server.Config:Get("GameConfig.KillConfig.DeductSuicideKills", 0,  ConfigType_Number),
                     SuicideDeaths   = Server.Config:Get("GameConfig.KillConfig.SuicideAddDeaths", 1,    ConfigType_Number),
                     TeamKill        = Server.Config:Get("GameConfig.KillConfig.DeductTeamKill", 1,      ConfigType_Number),
@@ -126,6 +127,14 @@ Server.Patcher:HookClass({
                     Enabled     = Server.Config:Get("GameConfig.KillConfig.FirstBlood.Enabled", true, ConfigType_Boolean),
                     RewardAmplification  = Server.Config:Get("GameConfig.KillConfig.FirstBlood.Reward.Amplifications", {}, ConfigType_Array),
                     Shooters = {} -- internal data
+                }
+                self.SnipingRewards = {
+                    Enabled = Server.Config:Get("GameConfig.KillConfig.SnipingRewards.Enabled", true, ConfigType_Boolean),
+                    MinimumDistance = Server.Config:Get("GameConfig.KillConfig.SnipingRewards.MinimumDistance", 100, ConfigType_Number),
+                    RewardPP = Server.Config:Get("GameConfig.KillConfig.SnipingRewards.RewardPP", 500, ConfigType_Number),
+                    RewardCP = Server.Config:Get("GameConfig.KillConfig.SnipingRewards.RewardXP", 35, ConfigType_Number),
+                    HeadshotAmplification = Server.Config:Get("GameConfig.KillConfig.SnipingRewards.HeadshotAmplification", 1.25, ConfigType_Number),
+
                 }
 
                 self.AutoSpectateTimer = Server.Config:Get("GameConfig.AutoSpectateTimer", 30, ConfigType_Number)
@@ -155,9 +164,29 @@ Server.Patcher:HookClass({
                     Timeout     = Server.Config:Get("GameConfig.KillConfig.KillAssistance.Timeout", 12.5, ConfigType_Number),
                 }
 
+
+                self.CaptureConfig = {
+                    PlayerCountAmplification = Server.Config:Get("GameConfig.Capturing.CaptureSpeedAmplification", 0, ConfigType_Number),
+                    PlayerCountAmplificationLimit = Server.Config:Get("GameConfig.Capturing.CaptureSpeedAmplificationMax", 0.5, ConfigType_Number),
+                }
+
+                self.HitConfig = {
+                    FriendlyFire = {
+                        Punish = Server.Config:Get("GameConfig.HitConfig.FriendlyFire.Punish", false, ConfigType_Boolean),
+                        KillLimit = Server.Config:Get("GameConfig.HitConfig.FriendlyFire.TeamKillLimit", 10, ConfigType_Number),
+                        TeamKills = {}, -- Internal
+                    }
+                }
+
+                self.Config = {
+                    OpenDoorsOnCollision = Server.Config:Get("GameConfig.Immersion.OpenDoorsOnCollision", true, ConfigType_Boolean),
+                }
+
                 self:CollectPSBuildings()
 
+                Server.Utils:SetCVar("g_friendlyfireRatio", Server.Config:Get("GameConfig.HitConfig.FriendlyFire.Ratio", 0, ConfigType_Number))
                 Server.Utils:SetCVar("mp_killMessages", (self.KillConfig.NewMessages and "0" or "1"))
+
                 ServerDLL.GameRulesInitScriptTables()
                 self:Log("PostInitialize")
             end,
@@ -174,15 +203,15 @@ Server.Patcher:HookClass({
 
                 self.Buildings = {}
                 self.SortedBuildings = {
-                    ["Bunker"] 	= {},
-                    ["Base"]	= {},
-                    ["Alien"]	= {},
-                    ["Hqs"]		= {},
-                    ["Air"]		= {},
-                    ["Small"]	= {},
-                    ["War"]		= {},
-                    ["Boat"] 	= {},
-                    ["Proto"] 	= {}
+                    [BuildingType_Bunker] 	= {},
+                    [BuildingType_Base]	    = {},
+                    [BuildingType_Alien]	= {},
+                    [BuildingType_HQ]		= {},
+                    [BuildingType_Air]		= {},
+                    [BuildingType_Small] 	= {},
+                    [BuildingType_War]		= {},
+                    [BuildingType_Boat]     = {},
+                    [BuildingType_Proto] 	= {}
                 }
 
                 local hBuildings = System.GetEntitiesByClass("Factory")
@@ -191,19 +220,19 @@ Server.Patcher:HookClass({
                     for _, hFactory in pairs(hBuildings) do
                         table.insert(self.Buildings, hFactory)
                         if (hFactory.Properties.buyOptions.bPrototypes == 1) then
-                            sType = "Proto"
+                            sType = BuildingType_Proto
                             sLocale = "@building_type_prototypeFac"
                         elseif (hFactory:GetName():lower():find("air")) then
-                            sType = "Air"
+                            sType = BuildingType_Air
                             sLocale = "@building_type_airFac"
                         elseif (hFactory:GetName():lower():find("naval")) then
-                            sType = "Boat"
+                            sType = BuildingType_Boat
                             sLocale = "@building_type_navalFac"
                         elseif (hFactory:GetName():lower():find("small")) then
-                            sType = "Small"
+                            sType = BuildingType_Small
                             sLocale = "@building_type_smallFac"
                         else
-                            sType = "War"
+                            sType = BuildingType_War
                             sLocale = "@building_type_warFac"
                         end
                         hFactory.LocaleType = sLocale
@@ -219,10 +248,10 @@ Server.Patcher:HookClass({
                     for _, hSpawn in pairs(hBuildings) do
                         table.insert(self.Buildings, hSpawn)
                         if ((hSpawn.Properties.teamName == "tan" or hSpawn.Properties.teamName == "black") and not hSpawn.Properties.bCaptureable) then
-                            sType = "Base"
+                            sType = BuildingType_Base
                             sLocale = "@building_type_base"
                         else
-                            sType = "Bunker"
+                            sType = BuildingType_Bunker
                             sLocale = "@building_type_bunker"
                         end
                         hSpawn.BuildingType = sType
@@ -237,10 +266,10 @@ Server.Patcher:HookClass({
                 if (hBuildings) then
                     for _, hAlienSite in pairs(hBuildings) do
 
-                        hAlienSite.BuildingType = "Alien"
+                        hAlienSite.BuildingType = BuildingType_Alien
                         hAlienSite.LocaleType = "@building_type_alien"
                         table.insert(self.Buildings, hAlienSite)
-                        table.insert(self.SortedBuildings["Alien"], hAlienSite)
+                        table.insert(self.SortedBuildings[BuildingType_Alien], hAlienSite)
                     end
                 end
 
@@ -248,10 +277,10 @@ Server.Patcher:HookClass({
                 hBuildings = System.GetEntitiesByClass("HQ")
                 if (hBuildings) then
                     for _, hHQ in pairs(hBuildings) do
-                        hHQ.BuildingType = "HQ"
+                        hHQ.BuildingType = BuildingType_HQ
                         hHQ.LocaleType = "@building_type_hq"
                         table.insert(self.Buildings, hHQ)
-                        table.insert(self.SortedBuildings["Hqs"], hHQ)
+                        table.insert(self.SortedBuildings[BuildingType_HQ], hHQ)
                     end
                 end
 
@@ -286,11 +315,41 @@ Server.Patcher:HookClass({
         },
         {
             ------------------------------
+            ---    GetStepCaptureSpeed
+            ------------------------------
+            Name = "GetStepCaptureSpeed",
+            Value = function(self, hBuilding, iInsideCount)
+
+                local iCaptureSpeed = 1
+                -- Amplify the speed based on the players inside
+                iCaptureSpeed = (iCaptureSpeed * (1 + math.min((math.max(0, iInsideCount-1) * self.CaptureConfig.PlayerCountAmplification), self.CaptureConfig.PlayerCountAmplificationLimit)))
+
+               -- DebugLog("hello?",iInsideCount,iCaptureSpeed)
+                return iCaptureSpeed
+            end,
+        },
+        {
+            ------------------------------
+            ---    GetStepUncaptureSpeed
+            ------------------------------
+            Name = "GetStepUncaptureSpeed",
+            Value = function(self, hBuilding, iInsideCount)
+
+                local iCaptureSpeed = 1
+                -- Amplify the speed based on the players inside
+                iCaptureSpeed = (iCaptureSpeed * (1 + math.min((math.max(0, iInsideCount-1) * self.CaptureConfig.PlayerCountAmplification), self.CaptureConfig.PlayerCountAmplificationLimit)))
+
+               -- DebugLog("UN hello?",iInsideCount,iCaptureSpeed)
+                return iCaptureSpeed
+            end,
+        },
+        {
+            ------------------------------
             ---        GetKills
             ------------------------------
             Name = "GetKills",
             Value = function(self, hPlayerId)
-                return (g_pGame:GetSynchedEntityValue(hPlayerId, self.SCORE_KILLS_KEY) or 1)
+                return (g_gameRules.game:GetSynchedEntityValue(hPlayerId, self.SCORE_KILLS_KEY) or 1)
             end,
         },
         {
@@ -299,7 +358,7 @@ Server.Patcher:HookClass({
             ------------------------------
             Name = "GetDeaths",
             Value = function(self, hPlayerId)
-                return (g_pGame:GetSynchedEntityValue(hPlayerId, self.SCORE_DEATHS_KEY) or 1)
+                return (g_gameRules.game:GetSynchedEntityValue(hPlayerId, self.SCORE_DEATHS_KEY) or 1)
             end,
         },
         {
@@ -308,7 +367,7 @@ Server.Patcher:HookClass({
             ------------------------------
             Name = "SetDeaths",
             Value = function(self, hPlayerId, iDeaths)
-                return (g_pGame:SetSynchedEntityValue(hPlayerId, self.SCORE_DEATHS_KEY, iDeaths))
+                return (g_gameRules.game:SetSynchedEntityValue(hPlayerId, self.SCORE_DEATHS_KEY, iDeaths))
             end,
         },
         {
@@ -317,7 +376,7 @@ Server.Patcher:HookClass({
             ------------------------------
             Name = "SetKills",
             Value = function(self, hPlayerId, iKills)
-                return (g_pGame:SetSynchedEntityValue(hPlayerId, self.SCORE_KILLS_KEY, iKills))
+                return (g_gameRules.game:SetSynchedEntityValue(hPlayerId, self.SCORE_KILLS_KEY, iKills))
             end,
         },
         {
@@ -329,7 +388,7 @@ Server.Patcher:HookClass({
                 if (self.IS_IA) then
                     return 1
                 end
-                return (g_pGame:GetSynchedEntityValue(hPlayerId, self.RANK_KEY) or 1)
+                return (g_gameRules.game:GetSynchedEntityValue(hPlayerId, self.RANK_KEY) or 1)
             end,
         },
         {
@@ -341,7 +400,7 @@ Server.Patcher:HookClass({
                 if (self.IS_IA) then
                     return
                 end
-                return (g_pGame:SetSynchedEntityValue(hPlayerId, self.RANK_KEY, iRank))
+                return (g_gameRules.game:SetSynchedEntityValue(hPlayerId, self.RANK_KEY, iRank))
             end,
         },
         {
@@ -353,7 +412,7 @@ Server.Patcher:HookClass({
                 if (self.IS_IA) then
                     return 0
                 end
-                return (g_pGame:GetSynchedEntityValue(hPlayerId, self.PP_AMOUNT_KEY) or 1)
+                return (g_gameRules.game:GetSynchedEntityValue(hPlayerId, self.PP_AMOUNT_KEY) or 1)
             end,
         },
         {
@@ -365,7 +424,7 @@ Server.Patcher:HookClass({
                 if (self.IS_IA) then
                     return 0
                 end
-                return (g_pGame:SetSynchedEntityValue(hPlayerId, self.PP_AMOUNT_KEY, iPP))
+                return (g_gameRules.game:SetSynchedEntityValue(hPlayerId, self.PP_AMOUNT_KEY, iPP))
             end,
         },
         {
@@ -436,20 +495,29 @@ Server.Patcher:HookClass({
 
                 local bSilent = false
                 if (sMessage) then
-                    bSilent = false
+                    bSilent = true
                     if (type(iPPCount) == "table") then
                         sMessage = hPlayer:LocalizeText(("%s ( %s%d PP, %s%d XP )"):format(sMessage, (iPPCount[1] >= 0 and "+" or ""), iPPCount[1], (iPPCount[2] >= 0 and "+" or "-"), iPPCount[2]), { tFormat })
                     else
                         sMessage = hPlayer:LocalizeText(("%s ( %s%d PP )"):format(sMessage, (iPPCount >= 0 and "+" or ""), iPPCount), { tFormat })
                     end
-                    DebugLog("msg=",sMessage)
+
+                    local sCryFormat = ""
+                    if (tCryFormat) then
+                        sCryFormat = ([[,"%s"]]):format(table.concat(tCryFormat, [[", "]]))
+                    end
+                    Server.ClientMod:ExecuteCode({
+                        Code = ([[HUD.BattleLogEvent(eBLE_Currency,"%s"%s)]]):format(sMessage, sCryFormat),
+                        Clients = hPlayer
+                    })
+                    --DebugLog("msg=",sMessage)
                 end
 
                 if (type(iPPCount) == "table") then
-                    self:AwardPPCount(hPlayer.id, iPPCount[1], nil)
+                    self:AwardPPCount(hPlayer.id, iPPCount[1], nil, bSilent)
                     self:AwardCPCount(hPlayer.id, iPPCount[2], nil)
                 else
-                    self:AwardPPCount(hPlayer.id, iPPCount, nil)
+                    self:AwardPPCount(hPlayer.id, iPPCount, nil, bSilent)
                 end
             end
         },
@@ -527,14 +595,7 @@ Server.Patcher:HookClass({
                             end
                         end
 
-                        self.SnipingRewards = {
-                            Enabled = Server.Config:Get("GameConfig.KillConfig.SnipingRewards.Enabled", true, ConfigType_Boolean),
-                            MinimumDistance = Server.Config:Get("GameConfig.KillConfig.SnipingRewards.MinimumDistance", 100, ConfigType_Number),
-                            RewardPP = Server.Config:Get("GameConfig.KillConfig.SnipingRewards.RewardPP", 500, ConfigType_Number),
-                            RewardCP = Server.Config:Get("GameConfig.KillConfig.SnipingRewards.RewardCP", 35, ConfigType_Number),
-                            HeadshotAmplification = Server.Config:Get("GameConfig.KillConfig.SnipingRewards.HeadshotAmplification", 1.25, ConfigType_Number),
 
-                        }
 
                         -- check sniper kill
                         local aSniperRewards = self.SnipingRewards
@@ -772,7 +833,7 @@ Server.Patcher:HookClass({
                     local iDeathStreak  = hTarget.Streaks:AddDeath()
                     local sDeathMessage = aDeathMessages[iDeathStreak]
 
-                    if (sDeathMessage) then
+                    if (sDeathMessage and aDeathMessages.Status ~= false) then
                         aFormat["Kills"] = iDeathStreak
                         Message(Server.Logger:FormatTags(sDeathMessage, aFormat))
                         bMsg = true
@@ -791,12 +852,12 @@ Server.Patcher:HookClass({
                     local iRSStreak    = hShooter.Streaks:AddRS(hTarget.id)
                     local sRSMessage   = aRSMessages[iRSStreak]
 
-                    if (sRSMessage) then
+                    if (sRSMessage and aRSMessages.Status ~= false) then
                         aFormat["Kills"] = iRSStreak
                         Message(Server.Logger:FormatTags(sRSMessage, aFormat))
                         bMsg = true
 
-                    elseif (sKillMessage) then
+                    elseif (sKillMessage and aKillMessages.Status ~= false) then
                         aFormat["Kills"] = iKillStreak
                         Message(Server.Logger:FormatTags(sKillMessage, aFormat))
                         bMsg = true
@@ -982,7 +1043,20 @@ Server.Patcher:HookClass({
             Name = "OnTeamKill",
             Value = function(self, hPlayerId)
 
-                -- TODO: Custom Handler
+                local hPlayer = Server.Utils:GetEntity(hPlayerId)
+                if (not hPlayer) then
+                    return
+                end
+
+                local aTk = self.Properties.HitConfig.FriendlyFire
+                if (not aTk.Punish) then
+                    return
+                end
+
+                aTk.TeamKills[hPlayerId] = (aTk.TeamKills[hPlayerId] + 1)
+                if (aTk.TeamKills[hPlayerId] > aTk.TeamKillLimit) then
+                    Server.Punisher:KickPlayer(Server:GetEntity(), hPlayer, "Team Kill Limit")
+                end
                 --[[
                 if(System.GetCVar("g_tk_punish")==0) then
                     return;
@@ -1055,6 +1129,21 @@ Server.Patcher:HookClass({
         },
         {
             ------------------------------
+            ---      OnBeforePlayerKilled
+            ------------------------------
+            Name = "OnBeforePlayerKilled",
+            Value = function(self, hTarget, tKillHit)
+                if (hTarget and hTarget.IsPlayer and self.KillConfig.DropEquipment) then
+                    for _, hItem in pairs(hTarget:GetInventory() or {}) do
+                        if (hItem.weapon) then
+                            hTarget.actor:DropItem(hItem.id)
+                        end
+                    end
+                end
+            end
+        },
+        {
+            ------------------------------
             ---      OnPlayerKilled
             ------------------------------
             Name = "Server.OnPlayerKilled",
@@ -1063,6 +1152,8 @@ Server.Patcher:HookClass({
                 local hTarget = tKillHit.target
                 hTarget.death_time = _time
                 hTarget.death_pos = hTarget:GetWorldPos(hTarget.death_pos)
+
+                self:OnBeforePlayerKilled(hTarget, tKillHit)
 
                 self.game:KillPlayer(tKillHit.targetId, true, true, tKillHit.shooterId, tKillHit.weaponId, tKillHit.damage, tKillHit.materialId, tKillHit.typeId, tKillHit.dir)
                 self:ProcessScores(tKillHit)
@@ -1433,6 +1524,42 @@ Server.Patcher:HookClass({
         },
         {
             ------------------------------
+            ---Server.RequestSpectatorTarget
+            ------------------------------
+            Name = "Server.RequestSpectatorTarget",
+            Value = function(self, hPlayerId, iChange)
+
+                local hPlayer = Server.Utils:GetEntity(hPlayerId)
+                if (not hPlayer or not hPlayer.actor) then
+                    return
+                end
+
+                -- Something else blocked it!
+                if (Server.Events.Callbacks:RequestSpectatorTarget(hPlayer, iChange) == false) then
+                    return
+                end
+
+                local iTeam = self.game:GetTeam(hPlayerId)
+                local iMode = hPlayer.actor:GetSpectatorMode()
+                if (self.IS_PS) then
+                    if (not hPlayer:IsDead() and iTeam ~= 0 and iMode ~= 3) then
+                        return
+                    end
+                end
+
+                local hTargetId = self.game:GetNextSpectatorTarget(hPlayerId, iChange)
+                if (hTargetId) then
+                    if (hTargetId ~= 0) then
+                        self.game:ChangeSpectatorMode(hPlayerId, 3, hTargetId)
+                    elseif (self.game:GetTeam(hPlayerId) == 0) then
+                        self.game:ChangeSpectatorMode(hPlayerId, 1, NULL_ENTITY)	-- noone to spectate, so revert to free look mode
+                    end
+                end
+
+            end
+        },
+        {
+            ------------------------------
             ---  UpdateReviveQueue
             ------------------------------
             Name = "UpdateReviveQueue",
@@ -1498,7 +1625,10 @@ Server.Patcher:HookClass({
                                         if (currentpp < iMinPP) then
                                             local iAward = iMinPP - currentpp
                                             if (iAward > 0) then
-                                                self:PrestigeEvent(player.id, iMinPP, "%1 @spawn_prestige", {}, {rank.name})
+                                                -- message will be drowned by equipment otherwise.
+                                                Script.SetTimer(100, function()
+                                                    self:PrestigeEvent(player.id, iMinPP, "%1 @spawn_prestige", {}, {rank.name})
+                                                end)
                                             end
                                         end
                                     end
@@ -1527,7 +1657,7 @@ Server.Patcher:HookClass({
                     local vTeam=self.game:GetTeam(target.id);
                     local sTeam=self.game:GetTeam(aHitInfo.shooterId);
 
-                    if (true or (vTeam~=0) and (vTeam~=sTeam)) then
+                    if ((vTeam~=0) and (vTeam~=sTeam)) then
                         local pp=self.ppList.VEHICLE_KILL_MIN;
                         local cp=self.cpList.VEHICLE_KILL_MIN;
 
@@ -1729,7 +1859,13 @@ Server.Patcher:HookClass({
                                     sName = hBuilding.Properties.szName
                                 end
                                 DebugLog(table.tostring(hBuilding.properties or {}))
-                                self:PrestigeEvent(hPlayer, { iValue, self.cpList.CAPTURE}, (sName and "%1" or (hBuilding.LocaleType or "@unknown")) .. " @captured", { sName })
+
+                                local iXP = self.cpList.CAPTURE
+                                if (hBuilding.BuildingType == BuildingType_Proto) then
+                                    iXP = self.cpList.CAPTURE_SPECIAL
+                                    DebugLog("pro")
+                                end
+                                self:PrestigeEvent(hPlayer, { iValue, self.cpList.CAPTURE}, (sName and "%1" or (hBuilding.LocaleType or "@unknown")) .. " @captured", {}, { sName })
                             end
                         end
                     end
@@ -2103,7 +2239,7 @@ Server.Patcher:HookClass({
                             if (iPrice) then
 
                                 local iSellPrice = math.floor(math.max(0, iPrice * (iSellMultiplier)) + 0.5)
-                                self:PrestigeEvent(hPlayerID, iSellPrice, (aDef.name and "%1" or ("@item " .. hCurrent.class)) .. " @sold", {aDef.name})
+                                self:PrestigeEvent(hPlayerID, iSellPrice, (aDef.name and "%1" or ("@item " .. hCurrent.class)) .. " @sold", {}, {aDef.name})
 
                                 hPlayer.actor:SelectItemByNameRemote("Fists")
                                 System.RemoveEntity(hCurrent.id)
@@ -2254,10 +2390,10 @@ Server.Patcher:HookClass({
                                     local sName = aDef.name
                                     local sFmt = "%1 "
                                     if (string.empty(sName)) then
-                                        sFmt = ""
+                                        sFmt = "@ammo"
                                         sName = ""
                                     end
-                                    self:PrestigeEvent(hPlayerID, -iPrice, sFmt .. "@ammo @bought", sName)
+                                    self:PrestigeEvent(hPlayerID, -iPrice, sFmt .. " @bought", {}, { sName })
                                 else
                                     aReviveQueue.ammo_price = (aReviveQueue.ammo_price + iPrice)
                                 end
@@ -2341,7 +2477,7 @@ Server.Patcher:HookClass({
                         if (bAlive and aServerProperties.NoItemLimit ~= true) then
                             if (aDef.category == "@mp_catEquipment") then
                                 if (iKitCount > iKitLimit) then
-                                    g_pGame:SendTextMessage(TextMessageError, "@mp_CannotCarryMoreKit", TextMessageToClient, hPlayerID)
+                                    g_gameRules.game:SendTextMessage(TextMessageError, "@mp_CannotCarryMoreKit", TextMessageToClient, hPlayerID)
                                 end
                             else
                                 if (aDef.class) then
@@ -2360,7 +2496,7 @@ Server.Patcher:HookClass({
                 local flags     = 0
                 local level     = 0
                 local aZones    = self.inBuyZone[hPlayerID]
-                local iTeam     = g_pGame:GetTeam(hPlayerID)
+                local iTeam     = g_gameRules.game:GetTeam(hPlayerID)
                 local aFactory
 
                 for zoneId in pairs(aZones) do
@@ -2453,7 +2589,7 @@ Server.Patcher:HookClass({
                         Server.PlayerEquipment:OnItemBought(hPlayer, hItem, aDef, iPrice, aFactory)
                         self:AwardItemInvestmentPrestige(hPlayer, aDef, iPrice, aFactory)
 
-                        self:PrestigeEvent(hPlayerID, -iPrice, "@item " .. (aDef.name and "%1" or (hItem.class)) .. " @bought", aDef.name)
+                        self:PrestigeEvent(hPlayerID, -iPrice, "@item " .. (aDef.name and "%1" or (hItem.class)) .. " @bought", {}, { aDef.name })
                         if (iEnergy and iEnergy > 0) then
                             self:SetTeamPower(iTeam, self:GetTeamPower(iTeam) - iEnergy)
                         end
@@ -2640,6 +2776,13 @@ Server.Patcher:HookClass({
                     local iPrice, iEnergy = self:GetPrice(sItem)
                     if (hFactory:Buy(hPlayerID, sItem, aServerProperties)) then
 
+                        -- special XP for buying doomsday items (tac tank, tac gun, etc)
+                        local iXPBonus = self.cpList.BUYVEHICLE
+                        local bIsSpecial = aDef.doomsday
+                        if (bIsSpecial) then
+                            iXPBonus = self.cpList.BUY_DOOMSDAYMACHINE
+                        end
+
                         self:PrestigeEvent(hPlayerID, { -iPrice, self.cpList.BUYVEHICLE }, "@vehicle %1 @bought", {}, {aDef.name})
                         if (iEnergy and iEnergy > 0) then
                             local iTeam = self.game:GetTeam(hPlayerID)
@@ -2658,11 +2801,457 @@ Server.Patcher:HookClass({
         },
         {
             ------------------------------
-            ---  UpdateUnclaimedVehicle
+            ---  EMPTY
             ------------------------------
             Name = "EMPTY",
             Value = function(self, iFrameTime)
             end,
+        },
+        {
+            ------------------------------
+            ---       OnCollision
+            ------------------------------
+            Name = "OnCollision",
+            Value = function(self, entity, hit)
+
+                local collider = hit.target;
+                local colliderMass = hit.target_mass; -- beware, collider can be null (e.g. entity-less rigid entities)
+                local contactVelocitySq;
+                local contactMass;
+
+                local hTarget = hit.target
+                if (entity and hTarget) then
+                    if (entity.vehicle and hTarget.class == "Door") then
+                        if (hTarget.action ~= DOOR_OPEN and self.Config.OpenDoorsOnCollision) then
+                            Server.Utils:SpawnEffect("explosions.Deck_sparks.VTOL_explosion", hit.pos, hit.normal, 0.1)
+                            hTarget:Open(entity, DOOR_OPEN, true)
+                        end
+                    end
+                end
+
+                -- check if frozen
+                if (self.game:IsFrozen(entity.id)) then
+                    if ((not entity.CanShatter) or (tonumber(entity:CanShatter())~=0)) then
+                        local energy = self:GetCollisionEnergy(entity, hit);
+
+                        local minEnergy = 1000;
+
+                        if (energy >= minEnergy) then
+                            if (not collider) then
+                                collider=entity;
+                            end
+
+                            local colHit = self.collisionHit;
+                            colHit.pos = hit.pos;
+                            colHit.dir = hit.dir or hit.normal;
+                            colHit.radius = 0;
+                            colHit.partId = -1;
+                            colHit.target = entity;
+                            colHit.targetId = entity.id;
+                            colHit.weapon = collider;
+                            colHit.weaponId = collider.id
+                            colHit.shooter = collider;
+                            colHit.shooterId = collider.id
+                            colHit.materialId = 0;
+                            colHit.damage = 0;
+                            colHit.typeId = g_collisionHitTypeId;
+                            colHit.type = "collision";
+
+                            if (collider.vehicle and collider.GetDriverId) then
+                                local driverId = collider:GetDriverId();
+                                if (driverId) then
+                                    colHit.shooterId = driverId;
+                                    colHit.shooter=System.GetEntity(colHit.shooterId);
+                                end
+                            end
+
+                            self:ShatterEntity(entity.id, colHit);
+                        end
+
+                        return;
+                    end
+                end
+
+                if (not (entity.Server and entity.Server.OnHit)) then
+                    return;
+                end
+
+                if (entity.IsDead and entity:IsDead()) then
+                    return;
+                end
+
+                local minVelocity;
+
+                -- collision with another entity
+                if (collider or colliderMass>0) then
+                    FastDifferenceVectors(self.tempVec, hit.velocity, hit.target_velocity);
+                    contactVelocitySq = vecLenSq(self.tempVec);
+                    contactMass = colliderMass;
+                    minVelocity = self:GetCollisionMinVelocity(entity, collider, hit);
+                else	-- collision with world
+                    contactVelocitySq = vecLenSq(hit.velocity);
+                    contactMass = entity:GetMass();
+                    minVelocity = 7.5;
+                end
+
+                -- marcok: avoid fp exceptions, not nice but I don't want to mess up any damage calculations below at this stage
+                if (contactVelocitySq < 0.01) then
+                    contactVelocitySq = 0.01;
+                end
+
+                local damage = 0;
+
+                -- make sure we're colliding with something worthy
+                if (contactMass > 0.01) then
+                    local minVelocitySq = minVelocity*minVelocity;
+                    local bigObject = false;
+                    --this should handle falling trees/rocks (vehicles are more heavy usually)
+                    if(contactMass > 200.0 and contactMass < 10000 and contactVelocitySq > 2.25) then
+                        if(hit.target_velocity and vecLenSq(hit.target_velocity) > (contactVelocitySq * 0.3)) then
+                            bigObject = true;
+                            --vehicles and doors shouldn't be 'bigObject'-ified
+                            if(collider and (collider.vehicle or collider.advancedDoor)) then
+                                bigObject = false;
+                            end
+                        end
+                    end
+
+                    local collideBarbWire = false;
+                    if(hit.materialId == g_barbWireMaterial and entity and entity.actor) then
+                        collideBarbWire = true;
+                    end
+
+                    --Log("velo : %f, mass : %f", contactVelocitySq, contactMass);
+                    if (contactVelocitySq >= minVelocitySq or bigObject or collideBarbWire) then
+                        -- tell AIs about collision
+                        if(AI and entity and entity.AI and not entity.AI.Colliding) then
+                            g_SignalData.id = hit.target_id;
+                            g_SignalData.fValue = contactVelocitySq;
+                            AI.Signal(SIGNALFILTER_SENDER,1,"OnCollision",entity.id,g_SignalData);
+                            entity.AI.Colliding = true;
+                            entity:SetTimer(COLLISION_TIMER,4000);
+                        end
+                        --
+
+                        -- marcok: Uncomment this stuff when you need it
+                        --local debugColl = self.game:DebugCollisionDamage();
+
+                        --if (debugColl>0) then
+                        -- Log("------------------------- collision -------------------------");
+                        --end
+
+                        local contactVelocity = math.sqrt(contactVelocitySq)-minVelocity;
+                        if (contactVelocity < 0.0) then
+                            contactVelocitySq = minVelocitySq;
+                            contactVelocity = 0.0;
+                        end
+
+                        -- damage
+                        if(entity.vehicle) then
+                            if(not self:IsMultiplayer()) then
+                                damage = 0.0005*self:GetCollisionEnergy(entity, hit); -- vehicles get less damage SINGLEPLAYER ONLY.
+                            else
+                                damage = 0.0002*self:GetCollisionEnergy(entity, hit);	-- keeping the original values for MP.
+                            end
+                        else
+                            damage = 0.0025*self:GetCollisionEnergy(entity, hit);
+                        end
+
+                        -- apply damage multipliers
+                        damage = damage * self:GetCollisionDamageMult(entity, collider, hit);
+
+                        if(collideBarbWire and entity.id == g_localActorId) then
+                            damage = damage * (contactMass * 0.15) * (30.0 / contactVelocitySq);
+                        end
+
+                        if(bigObject) then
+                            if (damage > 0.5) then
+                                damage = damage * (contactMass / 10.0) * (10.0 / contactVelocitySq);
+                                if(entity.id ~= g_localActorId) then
+                                    damage = damage * 3;
+                                end
+                            else
+                                return;
+                            end
+                        end
+
+                        -- subtract collision damage threshold, if available
+                        if (entity.GetCollisionDamageThreshold) then
+                            local old = damage;
+                            damage = __max(0, damage - entity:GetCollisionDamageThreshold());
+                        end
+
+                        if (entity.actor) then
+                            if(entity.actor:IsPlayer()) then
+                                if(hit.target_velocity and vecLen(hit.target_velocity) == 0) then --limit damage from running agains static objects
+                                    damage = damage * 0.2;
+                                end
+                            end
+
+                            if(collider and collider.class=="AdvancedDoor")then
+                                if(collider:GetState()=="Opened")then
+                                    entity:KnockedOutByDoor(hit,contactMass,contactVelocity);
+                                end
+                            end;
+
+                            if (collider and not collider.actor) then
+                                local contactVelocityCollider = __max(0, vecLen(hit.target_velocity)-minVelocity);
+                                local killVelocity = (entity.collisionKillVelocity or 20.0);
+
+                                if(contactVelocity > killVelocity and contactVelocityCollider > killVelocity and colliderMass > 50 and not entity.actor:IsPlayer()) then
+                                    local bNoDeath = entity.Properties.Damage.bNoDeath;
+                                    local bFall = bNoDeath and bNoDeath~=0;
+
+                                    -- don't allow killing friendly AIs by collisions
+                                    if(not AI.Hostile(entity.id, g_localActorId, false)) then
+                                        return;
+                                    end
+
+
+                                    --if (debugColl~=0) then
+                                    --  Log("%s for <%s>, collider <%s>, contactVel %.1f, contactVelCollider %.1f, colliderMass %.1f", bFall and "FALL" or "KILL", entity:GetName(), collider:GetName(), contactVelocity, contactVelocityCollider, colliderMass);
+                                    --end
+
+                                    if(bFall) then
+                                        entity.actor:Fall(hit.pos);
+                                    else
+                                        entity:Kill(true, NULL_ENTITY, NULL_ENTITY);
+                                    end
+                                else
+                                    if(g_localActorId and AI.Hostile(entity.id, g_localActorId, false)) then
+                                        if(not entity.isAlien and contactVelocity > 5.0 and contactMass > 10.0 and not entity.actor:IsPlayer()) then
+                                            if(damage < 50) then
+                                                damage = 50;
+                                                entity.actor:Fall(hit.pos);
+                                            end
+                                        else
+                                            if(not entity.isAlien and contactMass > 2.0 and contactVelocity > 15.0 and not entity.actor:IsPlayer()) then
+                                                if(damage < 50) then
+                                                    damage = 50;
+                                                    entity.actor:Fall(hit.pos);
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+
+
+                        if (damage >= 0.5) then
+                            if (not collider) then collider = entity; end;
+
+                            --prevent deadly collision damage (old system somehow failed)
+                            if(entity.actor and not self:IsMultiplayer() and not AI.Hostile(entity.id, g_localActorId, false)) then
+                                if(entity.id ~= g_localActorId) then
+                                    if(entity.actor:GetHealth() <= damage) then
+                                        entity.actor:Fall(hit.pos);
+                                        return;
+                                    end
+                                end
+                            end
+
+                            local curtime = System.GetCurrTime();
+                            if (entity.lastCollDamagerId and entity.lastCollDamagerId==collider.id and
+                                    entity.lastCollDamageTime+0.3>curtime and damage<entity.lastCollDamage*2) then
+                                return
+                            end
+                            entity.lastCollDamagerId = collider.id;
+                            entity.lastCollDamageTime = curtime;
+                            entity.lastCollDamage = damage;
+
+                            --if (debugColl>0) then
+                            --  Log("[SinglePlayer] <%s>: sending coll damage %.1f", entity:GetName(), damage);
+                            --end
+
+                            local colHit = self.collisionHit;
+                            colHit.pos = hit.pos;
+                            colHit.dir = hit.dir or hit.normal;
+                            colHit.radius = 0;
+                            colHit.partId = -1;
+                            colHit.target = entity;
+                            colHit.targetId = entity.id;
+                            colHit.weapon = collider;
+                            colHit.weaponId = collider.id
+                            colHit.shooter = collider;
+                            colHit.shooterId = collider.id
+                            colHit.materialId = 0;
+                            colHit.damage = damage;
+                            colHit.typeId = g_collisionHitTypeId;
+                            colHit.type = "collision";
+                            colHit.impulse=hit.impulse;
+
+                            if (collider.vehicle and collider.GetDriverId) then
+                                local driverId = collider:GetDriverId();
+                                if (driverId) then
+                                    colHit.shooterId = driverId;
+                                    colHit.shooter=System.GetEntity(colHit.shooterId);
+                                end
+                            end
+
+                            local deadly=false;
+
+                            if (entity.Server.OnHit(entity, colHit)) then
+                                -- special case for actors
+                                -- if more special cases come up, lets move this into the entity
+                                if (entity.actor and self.ProcessDeath) then
+                                    self:ProcessDeath(colHit);
+                                elseif (entity.vehicle and self.ProcessVehicleDeath) then
+                                    self:ProcessVehicleDeath(colHit);
+                                end
+
+                                deadly=true;
+                            end
+
+                            local debugHits = self.game:DebugHits();
+
+                            if (debugHits>0) then
+                                self:LogHit(colHit, debugHits>1, deadly);
+                            end
+                        end
+                    end
+                end
+            end
+        },
+        {
+            ------------------------------
+            ---   protoList
+            ------------------------------
+            Name = "protoList",
+            Value = {
+                { id="moac",				name="@mp_eAlienWeapon", 			price=300, 		class="AlienMount", 			level=50,	uniqueId=11,	category="@mp_catWeapons", loadout=1 },
+                { id="moar",				name="@mp_eAlienMOAR", 				price=100, 		class="MOARAttach", 			level=50,	uniqueId=12,	category="@mp_catWeapons", loadout=1 },
+
+                { id="minigun",				name="@mp_eMinigun",				price=250, 		class="Hurricane", 		doomsday=1,		level=50,	uniqueId=13,	category="@mp_catWeapons", loadout=1 },
+                { id="tacgun",				name="@mp_eTACLauncher", 			price=500, 		class="TACGun", 		doomsday=1,		level=100,	energy=5, uniqueId=14,	category="@mp_catWeapons", md=true, loadout=1 },
+
+                { id="usmoac4wd",			name="@mp_eMOACVehicle",			price=300, 		class="US_ltv", 				level=50, 	modification="MOAC", 				vehicle=true, buildtime=20,	category="@mp_catVehicles", loadout=0 },
+                { id="usmoar4wd",			name="@mp_eMOARVehicle",			price=350,		class="US_ltv", 				level=50,	modification="MOAR", 				vehicle=true, buildtime=20,	category="@mp_catVehicles", loadout=0 },
+
+                { id="ussingtank",			name="@mp_eSingTank",				price=800, 		class="US_tank",		doomsday=1, 		level=100, 	energy=10, modification="Singularity",	vehicle=true, md=true, buildtime=60,	category="@mp_catVehicles", loadout=0 },
+                { id="ustactank",			name="@mp_eTACTank",				price=750,		class="US_tank", 		doomsday=1,		level=100, 	energy=10, modification="TACCannon",		vehicle=true, md=true, buildtime=60,	category="@mp_catVehicles", loadout=0 },
+            },
+        },
+        {
+            ------------------------------
+            ---   vehicleList
+            ------------------------------
+            Name = "vehicleList",
+            Value = {
+                { id="light4wd",				name="@mp_eLightVehicle", 			price=0,		class="US_ltv",					modification="Unarmed", 		buildtime=5,		category="@mp_catVehicles", loadout=0 },
+                { id="us4wd",					name="@mp_eHeavyVehicle", 			price=50,		class="US_ltv",					modification="MP", 		buildtime=5,					category="@mp_catVehicles", loadout=0 },
+                { id="usgauss4wd",		        name="@mp_eGaussVehicle",			price=200,		class="US_ltv", 				modification="Gauss", buildtime=10,					category="@mp_catVehicles", loadout=0 },
+
+                { id="nktruck",				    name="@mp_eTruck",					price=0,		class="Asian_truck", 			modification="Hardtop_MP", buildtime=5,			category="@mp_catVehicles", loadout=0 },
+
+                { id="ussupplytruck",		    name="@mp_eSupplyTruck",			price=300,		class="Asian_truck",			modification="spawntruck",	teamlimit=3, abandon=0, spawngroup=true,	buyzoneradius=6, servicezoneradius=16,	buyzoneflags=bor(bor(8 or PowerStruggle.BUY_AMMO, 1 or PowerStruggle.BUY_WEAPON), 4 or PowerStruggle.BUY_EQUIPMENT),			buildtime=25,		category="@mp_catVehicles", loadout=0		},
+
+                { id="usboat",					name="@mp_eSmallBoat", 				price=0,		class="US_smallboat", 			modification="MP", buildtime=5,				category="@mp_catVehicles", loadout=0 },
+                { id="nkboat",					name="@mp_ePatrolBoat", 			price=100,		class="Asian_patrolboat", 		modification="MP", buildtime=5,				category="@mp_catVehicles", loadout=0 },
+                { id="nkgaussboat",		        name="@mp_eGaussPatrolBoat", 		price=200,		class="Asian_patrolboat", 		modification="Gauss", buildtime=10,		category="@mp_catVehicles", loadout=0 },
+                { id="ushovercraft",	    	name="@mp_eHovercraft", 			price=100,		class="US_hovercraft",			modification="MP", buildtime=20,			category="@mp_catVehicles", loadout=0 },
+                { id="nkaaa",					name="@mp_eAAVehicle",			    price=200,		class="Asian_aaa", 				modification="MP",	buildtime=20,			category="@mp_catVehicles", loadout=0 },
+
+                { id="usapc",					name="@mp_eICV",					price=350,		class="US_apc", 				buildtime=20,		category="@mp_catVehicles", loadout=0 },
+                { id="nkapc",					name="@mp_eAPC",					price=450,		class="Asian_apc", 				buildtime=20,	["special" or jeep]=true,	category="@mp_catVehicles", loadout=0 },
+
+                { id="nktank",					name="@mp_eLightTank", 				price=400,		class="Asian_tank",				buildtime=30,		category="@mp_catVehicles", loadout=0 },
+                { id="ustank",					name="@mp_eBattleTank",				price=450,		class="US_tank", 				modification="GaussRifle", 	buildtime=40,		category="@mp_catVehicles", loadout=0 },
+                { id="usgausstank",		        name="@mp_eGaussTank",				price=600,		class="US_tank", 				modification="FullGauss", 	buildtime=60,		category="@mp_catVehicles", loadout=0 },
+
+                { id="nkhelicopter",		    name="@mp_eHelicopter", 			price=400,		class="Asian_helicopter",		modification="MP",	buildtime=30,		category="@mp_catVehicles", loadout=0 },
+                { id="usvtol",					name="@mp_eVTOL", 					price=600,		class="US_vtol", 				modification="MP",	buildtime=30,		category="@mp_catVehicles", loadout=0 },
+            },
+        },
+        {
+            ------------------------------
+            ---   ammoList
+            ------------------------------
+            Name = "ammoList",
+            Value = {
+                { id="",							name="@mp_eAutoBuy",				price=0,												category="@mp_catAmmo", loadout=1 },
+                { id="bullet",						name="@mp_eBullet", 				price=5,			amount=30,				category="@mp_catAmmo", loadout=1 },
+                { id="fybullet",					name="@mp_eFYBullet", 				price=5,			amount=30,				category="@mp_catAmmo", loadout=1 },
+                { id="shotgunshell",				name="@mp_eShotgunShell",		    price=5,			amount=8,					category="@mp_catAmmo", loadout=1 },
+                { id="smgbullet",					name="@mp_eSMGBullet",				price=5,			amount=40,				category="@mp_catAmmo", loadout=1 },
+                { id="lightbullet",					name="@mp_eLightBullet",			price=5,			amount=40,				category="@mp_catAmmo", loadout=1 },
+
+                { id="sniperbullet",				name="@mp_eSniperBullet",			price=10,			amount=10,				category="@mp_catAmmo", loadout=1 },
+                { id="scargrenade",					name="@mp_eRifleGrenade",			price=20,			amount=1,					category="@mp_catAmmo", loadout=1 },
+                { id="gaussbullet",					name="@mp_eGaussSlug",				price=50,			amount=5, 				category="@mp_catAmmo", loadout=1 },
+
+                { id="incendiarybullet",																	price=50,			amount=30,		invisible=true,		category="@mp_catAmmo", loadout=1 },
+
+                { id="hurricanebullet",			    name="@mp_eMinigunBullet",		    price=50,			amount=500,				category="@mp_catAmmo", loadout=1 },
+
+                { id="claymoreexplosive",																    price=25,			amount=1,			invisible=true,		category="@mp_catAmmo", loadout=1 },
+                { id="avexplosive",																			price=25,			amount=1,			invisible=true,		category="@mp_catAmmo", loadout=1 },
+                { id="c4explosive",																			price=50,		    amount=1,			invisible=true,		category="@mp_catAmmo", loadout=1 },
+
+                { id="Tank_singularityprojectile",name="@mp_eSingularityShell",			price=200,		amount=1,					category="@mp_catAmmo", loadout=0 },
+
+                { id="towmissile",			name="@mp_eAPCMissile",			price=50,			amount=2,					category="@mp_catAmmo", loadout=0 },
+                { id="dumbaamissile",		name="@mp_eAAAMissile",			price=50,			amount=4,					category="@mp_catAmmo", loadout=0 },
+                { id="tank125",				name="@mp_eTankShells",			price=100,		amount=10,				category="@mp_catAmmo", loadout=0 },
+                { id="helicoptermissile",	name="@mp_eHelicopterMissile",	price=100,		amount=7,					category="@mp_catAmmo", loadout=0 },
+
+                { id="tank30",				name="@mp_eAPCCannon",			price=100,		amount=100,				category="@mp_catAmmo", loadout=0 },
+                { id="tankaa",				name="@mp_eAAACannon",			price=100,		amount=250,				category="@mp_catAmmo", loadout=0 },
+                { id="a2ahomingmissile",	name="@mp_eVTOLMissile",		price=100,		amount=6,					category="@mp_catAmmo", loadout=0 },
+                { id="gausstankbullet",		name="@mp_eGaussTankSlug",		price=100,		amount=10,				category="@mp_catAmmo", loadout=0 },
+
+                { id="tacgunprojectile",    name="@mp_eTACGrenade",			price=200,		amount=1,	ammo=true, 			level=100,		category="@mp_catAmmo", loadout=1 },
+                { id="tacprojectile",		name="@mp_eTACTankShell",	    price=200,		amount=1,	ammo=true, 			level=100,		category="@mp_catAmmo" },
+
+                { id="iamag",				name="@mp_eIncendiaryBullet",	price=50, 			class="FY71IncendiaryAmmo",			ammo=false, equip=true, 	buyammo="incendiarybullet", category="@mp_catAddons", loadout=1 },
+                { id="psilent",				name="@mp_ePSilencer",			price=10, 			class="SOCOMSilencer",			uniqueId=121, ammo=false, equip=true,		category="@mp_catAddons", loadout=1 },
+                { id="plam",				name="@mp_ePLAM",				price=25, 			class="LAM",				uniqueId=122, ammo=false, equip=true,		category="@mp_catAddons", loadout=1 },
+                { id="silent",				name="@mp_eRSilencer",			price=10, 			class="Silencer", 				uniqueId=123, ammo=false, equip=true,		category="@mp_catAddons", loadout=1 },
+                { id="lam",					name="@mp_eRLAM",				price=25, 			class="LAMRifle",						uniqueId=124, ammo=false, equip=true,		category="@mp_catAddons", loadout=1 },
+                { id="reflex",				name="@mp_eReflex",				price=25,				class="Reflex", 					uniqueId=125, ammo=false, equip=true,		category="@mp_catAddons", loadout=1 },
+                { id="ascope",				name="@mp_eAScope",				price=50, 			class="AssaultScope", 			uniqueId=126, ammo=false, equip=true,		category="@mp_catAddons", loadout=1 },
+                { id="scope",				name="@mp_eSScope",				price=100, 			class="SniperScope", 			uniqueId=127, ammo=false, equip=true,		category="@mp_catAddons", loadout=1 },
+                { id="gl",					name="@mp_eGL",					price=50, 			class="GrenadeLauncher",		uniqueId=128, ammo=false, equip=true,		category="@mp_catAddons", loadout=1 },
+            },
+        },
+        {
+            ------------------------------
+            ---   equipList
+            ------------------------------
+            Name = "equipList",
+            Value = {
+                { id="binocs",			name="@mp_eBinoculars",							price=50,			class="Binoculars", 			uniqueId=101,		category="@mp_catEquipment", loadout=1 },
+                { id="nsivion",			name="@mp_eNightvision", 						price=10, 			class="NightVision", 			uniqueId=102,		category="@mp_catEquipment", loadout=1 },
+                { id="pchute",			name="@mp_eParachute",							price=25,			class="Parachute",				uniqueId=103,		category="@mp_catEquipment", loadout=1 },
+                { id="lockkit",			name="@mp_eLockpick",							price=25, 			class="LockpickKit",			uniqueId=110,		category="@mp_catEquipment", loadout=1 },
+                { id="repairkit",		name="@mp_eRepair",								price=50, 			class="RepairKit", 				uniqueId=110,		category="@mp_catEquipment", loadout=1 },
+                { id="radarkit",		name="@mp_eRadar",								price=50, 			class="RadarKit", 				uniqueId=110,		category="@mp_catEquipment", loadout=1 },
+            },
+        },
+        {
+            ------------------------------
+            ---   weaponList
+            ------------------------------
+            Name = "weaponList",
+            Value = {
+                { id="flashbang",           name="@mp_eFlashbang",			price=10, 			amount=1, ammo=true, weapon=false, category="@mp_catExplosives", loadout=1},
+                { id="smokegrenade",        name="@mp_eSmokeGrenade",		price=10, 			amount=1, ammo=true, weapon=false, category="@mp_catExplosives", loadout=1 },
+                { id="explosivegrenade",	name="@mp_eFragGrenade",		price=25, 			amount=1, ammo=true, weapon=false, category="@mp_catExplosives", loadout=1 },
+                { id="empgrenade",			name="@mp_eEMPGrenade",		    price=50,			amount=1, ammo=true, weapon=false, category="@mp_catExplosives", loadout=1 },
+
+                { id="pistol",              name="@mp_ePistol", 			price=50, 			class="SOCOM",				                                category="@mp_catWeapons"},
+                { id="claymore",			name="@mp_eClaymore",			price=25,			class="Claymore",			buyammo="claymoreexplosive",	category="@mp_catExplosives", loadout=1 },
+                { id="avmine",				name="@mp_eMine",				price=25,			class="AVMine",				buyammo="avexplosive",			category="@mp_catExplosives", loadout=1 },
+                { id="c4",					name="@mp_eExplosive", 			price=50, 			class="C4", 				buyammo="c4explosive",			category="@mp_catExplosives", loadout=1 },
+
+                { id="shotgun",				name="@mp_eShotgun", 			price=50, 			class="Shotgun", 			uniqueId=4,		category="@mp_catWeapons", loadout=1 },
+                { id="smg",					name="@mp_eSMG", 				price=75, 			class="SMG", 				uniqueId=5,		category="@mp_catWeapons", loadout=1 },
+                { id="fy71",		    	name="@mp_eFY71", 				price=125, 			class="FY71", 				uniqueId=6,		category="@mp_catWeapons", loadout=1 },
+                { id="macs",			    name="@mp_eSCAR", 				price=150, 			class="SCAR", 				uniqueId=7,		category="@mp_catWeapons", loadout=1 },
+                { id="rpg",					name="@mp_eML", 				price=200, 			class="LAW", 				uniqueId=8,		category="@mp_catExplosives", loadout=1 },
+                { id="dsg1",				name="@mp_eSniper"	,			price=200, 			class="DSG1", 				uniqueId=9,		category="@mp_catWeapons", loadout=1 },
+                { id="gauss",				name="@mp_eGauss", 				price=600, 			class="GaussRifle",			uniqueId=10,	category="@mp_catWeapons", loadout=1 },
+            },
         },
     }
 })
