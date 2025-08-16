@@ -175,6 +175,14 @@ Server.Config:Create({
         --- Game Configuration
         GameConfig = {
 
+            -- Some immersive game options
+            Immersion = {
+
+                -- Will automatically open doors upon melee attacks & collisions
+                OpenDoorsOnCollision = true,
+
+            }, ---< Immersion
+
             --- Gun Turret Configuration
             Buying = {
 
@@ -340,6 +348,9 @@ Server.Config:Create({
                 --- Kill Streaks
                 KillStreaks = {
 
+                    -- Will only display messages in IA Games
+                    InstantActionOnly = true,
+
                     --- formats are:
                     --- {ShooterName} = name of the shooter
                     --- {TargetName} = name of the target
@@ -407,7 +418,7 @@ Server.Config:Create({
                             -- Only available to members of this rank, else Default will be equipped
                             RankRequired = GameRank_SGT,
                             Equip = {
-                                { "FY71", { "Reflex" } }
+                                { "FY71", { "Reflex" }, AmmoCount = 31 }
                             }
                         },
                         -- For AMERICUUH Team Members
@@ -415,7 +426,7 @@ Server.Config:Create({
                             -- Only available to members of this rank, else Default will be equipped
                             RankRequired = GameRank_SGT,
                             Equip = {
-                                { "SCAR", {} }
+                                { "SCAR", {}, AmmoCount = 31 }
                             }
                         },
 
@@ -431,7 +442,7 @@ Server.Config:Create({
                             -- Only available to members of this rank, else Default will be equipped
                             RankRequired = GameRank_CPL,
                             Equip = {
-                                { "FY71", { "LAMRifle", "Reflex" } }
+                                { "FY71", { "LAMRifle", "Reflex" }, AmmoCount = 60 }
                             }
                         },
                         -- For AMERICUUH Team Members
@@ -439,7 +450,7 @@ Server.Config:Create({
                             -- Only available to members of this rank, else Default will be equipped
                             RankRequired = GameRank_CPL,
                             Equip = {
-                                { "SCAR", { "Reflex", } }
+                                { "SCAR", { "Reflex", }, AmmoCount = 60 }
                             }
                         },
 
@@ -462,13 +473,13 @@ Server.Config:Create({
 
                     -- The equipment for regular players
                     Regular = {
-                        { "FY71", { "LAMRifle", "Reflex" } }
+                        { "FY71", { "LAMRifle", "Reflex" }, AmmoCount = 90 }
                     },
 
                     -- The equipment for VIP members
                     Premium = {
-                        { "SMG",  { "LAMRifle", "Silencer", "Reflex" }},
-                        { "FY71", { "LAMRifle", "Silencer", "Reflex" }}
+                        { "SMG",  { "LAMRifle", "Silencer", "Reflex" }, AmmoCount = 90},
+                        { "FY71", { "LAMRifle", "Silencer", "Reflex" }, AmmoCount = 90}
                     },
                     AdditionalEquip = {
                         'Binoculars'
@@ -498,17 +509,10 @@ Server.Config:Create({
         --- Map Configuration
         MapConfig = {
 
-            -- Some immersive game options
-            Immersion = {
-
-                -- Will automatically open doors upon melee attacks & collisions
-                OpenDoorsOnCollision = true,
-
-            }, ---< Immersion
-
             -- If the server should delete all client-only entities
             -- Disabled for now. I suspect this can cause aspect errors during map change.
-            DeleteClientEntities = false,
+            -- Edit: aspect errors were caused a bug inside the exe.
+            DeleteClientEntities = true,
 
             -- A list of forbidden maps
             ForbiddenMaps = {

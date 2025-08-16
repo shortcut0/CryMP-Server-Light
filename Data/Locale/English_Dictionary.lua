@@ -946,6 +946,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "spawning_as",
+        Languages = {
+            English = "Spawning As"
+        }
+    },
+    {
         String = "x_entities_scanned",
         Languages = {
             English = "{Count} Entities Scanned"
@@ -1277,12 +1283,36 @@ Server.LocalizationManager:Add({
             English = "Attempt"
         }
     },
+    {
+        String = "commands",
+        Languages = {
+            English = "Commands"
+        }
+    },
+    {
+        String = "player",
+        Languages = {
+            English = "Player"
+        }
+    },
 })
 
 
 -- ===================================================================================
 
 Server.LocalizationManager:Add({
+    {
+        String = "clientMod_synched",
+        Languages = {
+            English = "Synched {Red}{Items}{Gray} Items on the Client"
+        }
+    },
+    {
+        String = "clientMod_disabled",
+        Languages = {
+            English = "Client-Mod is Disabled"
+        }
+    },
     {
         String = "clientMod_installingOn",
         Languages = {

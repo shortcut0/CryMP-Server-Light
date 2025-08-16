@@ -63,6 +63,22 @@ Server.ChatCommands:Add({
     },
 
     -- ================================================================
+    -- !TimeLimit <Time>
+    {
+        Name = "TimeLimit",
+        Access = ServerAccess_Moderator,
+        Arguments = {
+            { Name = "@arg_time", Desc = "@arg_time_desc", Type = CommandArg_TypeTime, Required = true }
+        },
+        Properties = {
+            This = "Server.MapRotation"
+        },
+        Function = function(self, hPlayer, iDuration)
+            return self:Command_SetTimeLimit(hPlayer, iDuration)
+        end
+    },
+
+    -- ================================================================
     -- !RENAME <Target> <Name, ...>
     {
         Name = "rename",

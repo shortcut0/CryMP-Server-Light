@@ -14,6 +14,9 @@ Server:CreateComponent({
 
         Properties = {
 
+            EntityUpdateRates = {
+            },
+
             -- Enables replacing of dangerous RMI Flags. Without this, 'Haxors' can easily crash the server by flooding requests
             FixDangerousRMIFlags = true
         },
@@ -29,6 +32,17 @@ Server:CreateComponent({
         },
 
         Initialize = function(self)
+
+
+            self.EntityUpdateRates = {
+                AutoTurret        = (1 / 15),
+                AutoTurretAA      = (1 / 15),
+                Player            = (1 / 40),
+                GUI               = (1 / 20),
+                BasicEntity       = (1/ 30),
+                DestroyableObject = (1 / 30),
+            }
+
             self:LogEvent({
                 Message = "@patcher_initialized",
                 MessageFormat = { Classes = table.size(self.ActiveHooks), Functions = self.TotalHookCount }
@@ -47,6 +61,7 @@ Server:CreateComponent({
         end,
 
         PostInitialize = function(self)
+
         end,
 
         SnapshotEnvironment = function(self, sId)
@@ -65,6 +80,14 @@ Server:CreateComponent({
                 end
             end
             return tChanges
+        end,
+
+        OnEntitySpawned = function(self, hEntity)
+            local sClass = hEntity.class
+            local iUpdateRate = (self.Properties.EntityUpdateRates[sClass])
+            if (iUpdateRate) then
+                ServerDLL.SetEntityScriptUpdateRate(hEntity.id, iUpdateRate)
+            end
         end,
 
         OnLoadingScript = function(self, sPath)

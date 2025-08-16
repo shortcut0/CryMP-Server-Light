@@ -89,8 +89,6 @@ ChatType_Info    = TextMessageInfo
 ChatType_Server  = TextMessageServer
 
 ChatEntity_Server = -1000
-ChatEntity_Template = "<Template DO NOT USE>" -- This will be the literal name of the entity!
-ChatEntity_Info = "iNFO"
 
 ----------------------------
 ---       GAME VARS      ---

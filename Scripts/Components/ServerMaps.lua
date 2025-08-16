@@ -25,7 +25,7 @@ Server:CreateComponent({
             FirstInitialization = false
         },
 
-        ChatEntity = "Map Rotation >",
+        ChatEntity = "Map Rotation",
 
         Properties = {
 
@@ -39,7 +39,9 @@ Server:CreateComponent({
                 Other = ONE_HOUR,
                 PowerStruggle = ONE_HOUR,
                 InstantAction = ONE_HOUR
-            }
+            },
+
+            MaximumTimeLimit = ONE_DAY,
 
         },
 
@@ -379,10 +381,12 @@ Server:CreateComponent({
             end
 
             if (self.MapRotation:IsEmpty()) then
+                self:Log("Rotation is Empty, Restarting Current Map")
                 self.MapRotation:Restart()
                 return false -- We will handle it here
             end
 
+            self:Log("Starting Next Map")
             self.MapRotation:StartNext()
             return false -- We will handle it here
         end,
@@ -415,6 +419,11 @@ Server:CreateComponent({
             return table.copy((aMiniMaps or {})[1] or {})
         end,
 
+        SetTimeLimit = function(self, sDuration)
+            local iMinutes = math.max(0, math.min((self.Properties.MaximumTimeLimit / 60), Date:ParseTime(sDuration) / 60))
+            Server.Utils:SetCVar("g_timelimit", iMinutes)
+            g_gameRules.game:ResetGameTime()
+        end,
 
         ListMapsToConsole = function(self, hPlayer, sFilter, aMaps)
 
@@ -422,7 +431,6 @@ Server:CreateComponent({
             local aList = aMaps
             if (not aList) then
                 aList = self.MapList:GetAll()
-                DebugLog("sss",#aList)
                 if (table.countRec(aList) == 0) then
                     return false, hPlayer:LocalizeText("@no_maps_found")
                 end
@@ -519,6 +527,19 @@ Server:CreateComponent({
             Server.Chat:ConsoleMessage(hPlayer, "     $9" .. hPlayer:LocalizeText("@map_list_info1"))
             Server.Chat:ConsoleMessage(hPlayer, "$9================================================================================================================")
             return true, hPlayer:LocalizeText("@entitiesListedInConsole", { Class = "@maps", Count = iDisplayedMaps })
+        end,
+
+        Command_SetTimeLimit = function(self, hAdmin, sDuration)
+
+            local iTime = math.max(0, math.min(self.Properties.MaximumTimeLimit, Date:ParseTime(sDuration)))
+            local tFormat = { Time = sDuration, Admin = hAdmin:GetName() }
+            Server.Chat:ChatMessage(self.ChatEntity, ALL_PLAYERS, "@map_timeLimit_changed", tFormat)
+            self:LogEvent({
+                Message = "@map_timeLimit_changed",
+                MessageFormat = tFormat
+            })
+
+            self:SetTimeLimit(iTime)
         end,
 
         Command_RestartMap = function(self, hPlayer, iTimer)

@@ -235,6 +235,9 @@ end
 Server.GetEntity = function(self)
 
     self:CheckServerEntity()
+    if (not self.ServerEntity or not self.ServerEntity.id) then
+        return
+    end
     return self.ServerEntity
 end
 
@@ -1155,7 +1158,7 @@ Server.FileLoader = {
             local iCurrentLineLength = 0
             local sCommentLines = ""
             for _, sWord in pairs(string.split(sComment, " ")) do
-                if ((iCurrentLineLength + #sWord) > 80) then
+                if ((iCurrentLineLength + #sWord) > 60) then
                     iCurrentLineLength = 0
                     sCommentLines = sCommentLines .. "\n-- "
                 end

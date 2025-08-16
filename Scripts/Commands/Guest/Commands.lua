@@ -23,7 +23,7 @@ Server.ChatCommands:Add({
     },
 
     Function = function(self, hPlayer, sClass)
-        self:ListCommands(hPlayer, self.CommandMap, sClass)
-        return true
+
+        return self:ListCommands(hPlayer, self.CommandMap, sClass)
     end
 })

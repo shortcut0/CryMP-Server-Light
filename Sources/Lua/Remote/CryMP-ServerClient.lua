@@ -21,14 +21,19 @@ CryMP_Client = {
     Requests={
         ClientInstalled=10,
     },
+
+    -- Voices
+    PATCHED_VOICES = {},
+    INCREASE_VOICE_VOLUMES=1,
 }
 
 CryMP_Client.VERSION="0.0"
-CryMP_Client.DEBUG=System.GetCVar("cl_sensitivity")==45.69
+CryMP_Client.DEBUG=tostring(System.GetCVar("cl_hud"))=="999"
 
 local TS_Spec,TS_Chat="spec","chat"
-local g_laId=g_localActorId
-local g_la=g_localActor
+ g_laId=g_localActorId
+ g_la=g_localActor
+ g_game=g_gameRules.game
 
 -- ===================================================================================
 
@@ -46,6 +51,55 @@ CryMP_Client.TS = function(self,t,n)
     else
         g_game:SendChatMessage(ChatToTarget,g_laId,g_laId,n)
     end
+end
+
+CryMP_Client.GP = function(self,chan)
+    return g_game:GetPlayerByChannelId(chan)
+end
+
+CryMP_Client.PSE = function(self,eId,se)
+
+    self:DLog("eid="..tostring(eId))
+    self:DLog("laid="..tostring(g_laId))
+    local p=eId~=nil and System.GetEntity(eId)
+    if(type(eId)=="number")then p=self:GP(eId)end
+    if(not p)then
+        return
+    end
+
+
+    -- gracias a fapp
+    local s = bor(bor(SOUND_EVENT, SOUND_VOICE),SOUND_DEFAULT_3D);
+    local v = SOUND_SEMANTIC_PLAYER_FOLEY;
+    if (self.INCREASE_VOICE_VOLUMES and not self.PATCHED_VOICES[se] and CPPAPI.GetLanguage and CPPAPI.AddLocalizedLabel and se:sub(1, 3) ~= "mp_") then
+        local language = CPPAPI.GetLanguage()
+        local tbl = {
+            languages = {},
+            english_text = se,
+            sound_volume = 0.8,
+            sound_event = "",
+            sound_radio_ratio = 0,
+            sound_radio_background = 0,
+            sound_radio_squelch = 0,
+            sound_ducking = 0,
+            --keep_existing = true,
+            use_subtitle = false,
+        }
+        tbl.languages[language:lower()] = {
+            sound_volume = 0.8,
+            sound_radio_ratio = 0.0,
+            sound_radio_background = 0,
+            sound_radio_squelch = 0,
+            sound_event = "",
+            --localized_text = "30 seconds until mission termination.",
+        }
+        local ok = CPPAPI.AddLocalizedLabel(se, tbl);
+        if (ok) then self.PATCHED_VOICES[se] = true else end
+    end
+    local sndFlags = bor(bor(SOUND_EVENT, SOUND_VOICE), SOUND_DEFAULT_3D);
+    p.lastPainSound = p:PlaySoundEvent(se, g_Vectors.v000, g_Vectors.v010, sndFlags, SOUND_SEMANTIC_PLAYER_FOLEY);
+    p.lastPainTime = _time;
+    return p.lastPainSound;
 end
 
 -- ===================================================================================
@@ -118,6 +172,18 @@ CryMP_Client.DLog = function(this, s, ...)
     System.LogAlways(string.format(s, unpack({...})))
 end
 
+function GetVersion()
+    local version = CRYMP_CLIENT or 0;
+    if (CRYMP_CLIENT_STRING and #CRYMP_CLIENT_STRING > 3) then
+        version = version + 1;
+        local custom = "dirty";
+        if (CRYMP_CLIENT_STRING:sub(#CRYMP_CLIENT_STRING-#custom+1, #CRYMP_CLIENT_STRING) == custom) then
+            version = version + 1;
+        end
+    end
+    return version;
+end
+
 if (not System.GetEntityByName("ClientUpdater")) then
     local entity = GetVersion()>=20 and System.SpawnEntity({
         class = "Updater",
@@ -136,18 +202,6 @@ if (not System.GetEntityByName("ClientUpdater")) then
             end)
         end
     end
-end
-
-function GetVersion()
-    local version = CRYMP_CLIENT or 0;
-    if (CRYMP_CLIENT_STRING and #CRYMP_CLIENT_STRING > 3) then
-        version = version + 1;
-        local custom = "dirty";
-        if (CRYMP_CLIENT_STRING:sub(#CRYMP_CLIENT_STRING-#custom+1, #CRYMP_CLIENT_STRING) == custom) then
-            version = version + 1;
-        end
-    end
-    return version;
 end
 
 -- ===================================================================================

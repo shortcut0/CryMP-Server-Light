@@ -87,7 +87,7 @@ Server:CreateComponent({
             ContinentName = "Lingshan Island",
             ContinentCode = "LI",
             CountryName   = "Crysis ville",
-            CountryCode   = "CS",
+            CountryCode   = "CV",
             RegionName    = "Onslaught",
             City          = "Unnamed Village at the Lake",
             District      = "School District",
@@ -305,12 +305,6 @@ Server:CreateComponent({
             self.ActiveQueries[iChannel]     = nil
             self.FailedQueries[iChannel]     = nil
 
-            -- next frame
-            Script.SetTimer(1, function()
-                if (Server.Utils:GetPlayerCount() == 0) then
-                    Server:OnServerEmptied()
-                end
-            end)
         end,
 
         OnClientConnected = function(self, iChannel, hClient)
@@ -329,6 +323,13 @@ Server:CreateComponent({
             if (not hClient:WasIntentionallyDisconnected()) then
                 self:SendMessage(hClient, "Disconnected", { Cause = iCause, Description = (sDescription or "Undefined") })
             end
+
+            -- next frame
+            Script.SetTimer(100, function()
+                if (Server.Utils:GetPlayerCount() == 0) then
+                    Server:OnServerEmptied()
+                end
+            end)
         end,
 
         SendMessage = function(self, hPlayer, sMessage, aInfo)

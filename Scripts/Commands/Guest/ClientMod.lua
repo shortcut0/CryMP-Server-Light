@@ -13,13 +13,13 @@ Server.ChatCommands:Add({
     Access = ServerAccess_Lowest,
     Arguments = {
         { Name = "id", Required = true, Type = CommandArg_TypeNumber },
-        { Name = "error", Required = true },
+        { Name = "error", Required = true, Type = CommandArg_TypeMessage },
     },
     Properties = {
         Hidden = true,
         IsQuiet = true
     },
     Function = function(self, hId, sError)
-        Server.ClientMod:OnError(self, hId, sError)
+        Server.ClientMod:OnRemoteError(self, hId, sError)
     end
 })

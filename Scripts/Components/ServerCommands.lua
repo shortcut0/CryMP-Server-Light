@@ -19,11 +19,18 @@ Server:CreateComponent({
 
         Properties = {
 
+            -- send a sound feedback when executing commands
+            SendSoundFeedback = true,
+
             CommandPrefixList = {
                 ".",
                 "!",
                 "/",
             }
+        },
+
+        ChatEntities = {
+            Info = "iNFO",
         },
 
         CollectedCommands = {},
@@ -271,6 +278,15 @@ Server:CreateComponent({
         SendMessage = function(self, hPlayer, tMessage, tFormat, iMessageType)
 
             local sCommandUpper = string.lower(tFormat.Name)
+            local tCommand = self.CommandMap[sCommandUpper:lower()]
+            if (tCommand) then
+                -- Devs don't need to see this either, just bloats console
+                local bShowMessage = false -- hPlayer:HasAccess(ServerAccess_Developer)
+                if (tCommand:IsQuiet() and not bShowMessage) then
+                    return
+                end
+            end
+
             local sPlayerName = hPlayer:GetName()
             local aLogRecipients = Server.Utils:GetPlayers({ NotById = hPlayer.id, ByAccess = hPlayer:GetAccess(Server.AccessHandler:GetAdminLevel()) })
             local aChatLogRecipients = table.copy(aLogRecipients)
@@ -371,6 +387,14 @@ Server:CreateComponent({
                     sChat_Msg = "@str_failed (" .. sMessage .. ")"
                 end
 
+                local sErrorFeedback = "Sounds/interface:menu:buy_error"
+                if (self.Properties.SendSoundFeedback) then
+                    if (g_gameRules.IS_PS) then
+                        g_gameRules.onClient:ClBuyError(hPlayer:GetChannel(), "nnn")
+                    else
+                        Server.ClientMod:ExecuteCode({ Code = "CryMP_Client:PSE(g_laId,'" .. sErrorFeedback .. "')", Clients = hPlayer })
+                    end
+                end
             end
 
             -- Don't log invalid command attempts to admins!
@@ -409,7 +433,7 @@ Server:CreateComponent({
 
             -- Players:
             if (string.emptyN(sChat_Msg)) then
-                Server.Chat:ChatMessage(ChatEntity_Info, hPlayer, ("< !%s > %s"):format(sCommandUpper, sChat_Msg), tFormat)
+                Server.Chat:ChatMessage(self.ChatEntities.Info, hPlayer, ("< !%s > %s"):format(sCommandUpper, sChat_Msg), tFormat)
             end
             if (string.emptyN(sConsole_Msg)) then
                 -- So, we only do the normal log if the user used the "say" console command
@@ -555,7 +579,7 @@ Server:CreateComponent({
             local sArgLine
             for _, aArg in pairs(hArgs) do
 
-                sArgType = self:ConvertArgumentType(aArg.Type or CommandArg_TypeString, false, true)
+                sArgType = self:ConvertArgumentType(aArg.Type or CommandArg_TypeString, "Locale")
 
                 sBracketColor = CRY_COLOR_GRAY
                 if (aArg.Required) then
@@ -598,6 +622,27 @@ Server:CreateComponent({
             }
         end,
 
+        CollectAndColorArguments = function(self, tCommandArgs, tUserArgs)
+
+            local sArgs = ""
+            local iUserArgs = #tUserArgs
+            local iCommandArgs = #tCommandArgs
+
+            if (iUserArgs == 0) then
+                return
+            end
+
+            --"<{Green}S{Gray}: {Green}Nomad{Gray}> <{Blue}N{Gray}: {Blue}669{Gray}>, <{Orange}P{Gray}: {Orange}Nomad{Gray}>, <{Yellow}Msg{Gray}: {Yellow}out of mana..{Gray}>, <{Red}?{Gray}: {Red}third!{Gray}>")
+            for _, sUserArg in pairs(tUserArgs) do
+                local tCmdArg = (tCommandArgs[_] or { Type = -1 })
+                local iArgType = (tCmdArg.Type or -1)
+                local tArgInfo = self:ConvertArgumentType(iArgType)
+                --sArgs = sArgs .. (sArgs ~= "" and ", " or "") .. ("<%s%s{Gray}: %s%s{Gray}>"):format(tArgInfo.Color, tArgInfo.Locale, tArgInfo.Color, sUserArg)
+                sArgs = sArgs .. (sArgs ~= "" and ", " or "") .. ("%s%s{Gray}:%s%s{Gray}"):format(tArgInfo.Color, tArgInfo[(tCmdArg.Type ~= -1 and "Locale" or "Short")], tArgInfo.Color, sUserArg)
+            end
+            return sArgs
+        end,
+
         ProcessCommand = function(self, hPlayer, aCommand, tArgs, iType)
 
             Server.Statistics:Event(StatisticsEvent_OnCommandUsed)
@@ -614,7 +659,9 @@ Server:CreateComponent({
             local iPlayerAccess = hPlayer:GetAccess()
             local bInsufficientAccess = (iPlayerAccess < iCommandAccess)
 
+            local tUserArgs = table.copy(tArgs)
             local function SendMessage(tMessage, tFormat)
+                tFormat.__Arguments__ = self:CollectAndColorArguments(aCommandArgs, tUserArgs)
                 self:SendMessage(hPlayer, tMessage, tFormat, iType)
             end
 
@@ -1018,6 +1065,10 @@ Server:CreateComponent({
             local bOk = aResponse[2]
             local sReply = aResponse[3]
 
+            -- Sound Response!
+            local bSoundFeedback = self.Properties.SendSoundFeedback
+            local sFeedback      = "sounds/interface:hud:pda_update"
+
             if (bOk == false) then
                 if (sReply) then
                     SendMessage({
@@ -1026,6 +1077,7 @@ Server:CreateComponent({
                 else
                     SendMessage(self.Responses.Failed, { Name = sCommand })
                 end
+
                 return
             elseif (bOk == nil) then
                 SendMessage(self.Responses.NoFeedback, { Name = sCommand })
@@ -1050,6 +1102,13 @@ Server:CreateComponent({
                 end
             end
 
+            if (bSoundFeedback) then
+                if (g_gameRules.IS_PS) then
+                    g_gameRules.onClient:ClBuyOk(hPlayer:GetChannel(), "nnn")
+                else
+                    Server.ClientMod:ExecuteCode({ Code = "CryMP_Client:PSE(g_laId,'" .. sFeedback .. "')", Clients = hPlayer })
+                end
+            end
 
             aCommand:SetCoolDown(hPlayer.id)
             if (bProcessPayment) then
@@ -1057,56 +1116,75 @@ Server:CreateComponent({
             end
         end,
 
-        ConvertArgumentType = function(self, iType, bShort, bLocalized)
+        ConvertArgumentType = function(self, iType, sKey)
             local aTypeList = {
                 [-1] = {
                     Long = "Unknown-Type",
                     Short = "?",
                     Locale = "@arg_unknown",
+                    Color = CRY_COLOR_RED,
                 },
                 [CommandArg_TypeBoolean] = {
                     Long = "Boolean",
                     Short = "B",
                     Locale = "@arg_boolean",
+                    Color = CRY_COLOR_BLUE,
                 },
                 [CommandArg_TypeNumber] = {
                     Long = "Number",
                     Short = "N",
                     Locale = "@arg_number",
+                    Color = CRY_COLOR_ORANGE,
                 },
                 [CommandArg_TypeTime] = {
                     Long = "Time",
                     Short = "T",
                     Locale = "@arg_time",
+                    Color = CRY_COLOR_ORANGE,
                 },
                 [CommandArg_TypeString] = {
                     Long = "String",
                     Short = "S",
                     Locale = "@arg_string",
+                    Color = CRY_COLOR_WHITE,
                 },
                 [CommandArg_TypeAccess] = {
                     Long = "Access",
                     Short = "A",
                     Locale = "@arg_access",
+                    Color = CRY_COLOR_YELLOW,
                 },
                 [CommandArg_TypePlayer] = {
                     Long = "Player",
                     Short = "P",
-                    Locale = "@arg_player",
+                    Locale = "@player",
+                    Color = CRY_COLOR_GREEN
                 },
                 [CommandArg_TypeMessage] = {
                     Long = "Message",
                     Short = "C",
                     Locale = "@arg_message",
+                    Color = CRY_COLOR_WHITE,
                 },
                 [CommandArg_TypeCVar] = {
                     Long = "CVar",
                     Short = "V",
                     Locale = "@arg_cvar",
+                    Color = CRY_COLOR_WHITE,
+                },
+                [CommandArg_TypeTeam] = {
+                    Long = "Team",
+                    Short = "T",
+                    Locale = "@team",
+                    Color = CRY_COLOR_WHITE,
                 },
             }
 
-            return (aTypeList[iType] or aTypeList[-1])[(bShort and "Short" or (bLocalized and "Locale") or "Long")]
+            local tInfo = (aTypeList[iType] or aTypeList[-1])
+            if (sKey) then
+                return tInfo[sKey]
+            end
+            return tInfo
         end,
 
         SortCommands = function(self, aList)
@@ -1151,6 +1229,7 @@ Server:CreateComponent({
             local sRank, sRankColor
             local sCmdColor
 
+            local iTotalDisplayed = 0
             local iDisplayed = 0
             local iCmdCount = 0
             local sCmdLine  = ""
@@ -1191,6 +1270,7 @@ Server:CreateComponent({
 
                             sCmdLine = (sCmdLine .. string.rspace(CRY_COLOR_WHITE .. "!$9" .. sCmdColor .. sCmdName .. "", iCommandWidth, string.COLOR_CODE))
                             iCmdCount = (iCmdCount + 1)
+                            iTotalDisplayed = iTotalDisplayed + 1
                             if (iCmdCount % iItemsPerLine == 0) then
                                 Server.Chat:ConsoleMessage(hPlayer, CRY_COLOR_GRAY .. sCmdLine)
                                 iDisplayed = iDisplayed + 1
@@ -1214,6 +1294,8 @@ Server:CreateComponent({
             Server.Chat:ConsoleMessage(hPlayer, " ")
             Server.Chat:ConsoleMessage(hPlayer, "      " .. sHelpLine1)
             Server.Chat:ConsoleMessage(hPlayer, "      " .. hPlayer:LocalizeText("@commandList_help_2"))
+
+            return true, hPlayer:LocalizeText("@entitiesListedInConsole", { Class = "@commands", Count = iTotalDisplayed })
         end,
     }
 })

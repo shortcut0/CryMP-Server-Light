@@ -47,59 +47,24 @@ Server.Patcher:HookClass({
 
                 self.LogClass = "GameRules"
                 Server:CreateComponentFunctions(self, self.LogClass, self.LogClass)
-            end,
-        },
-        {
-            ------------------------------
-            ---   cpList
-            ------------------------------
-            Name = "cpList",
-            Value = {
-
-                IA_XP_MULT          = 1.35, -- multiplier in IA games
-
-                FIRST_BLOOD         = 30,
-                HEADSHOT_BONUS      = 4,
-                BUY_DOOMSDAYMACHINE = 10, -- tac/tac vehicles done!!
-                CAPTURE_SPECIAL     = 18, -- proto done!!
-
-                KILL                = 5,
-                KILL_RANKDIFF_MULT  = 1.2,
-                TURRETKILL          = 12,
-                REPAIR              = 3,
-                LOCKPICK            = 3,
-                CAPTURE             = 15,
-                BUYVEHICLE          = 7,
-
-                TAG_ENEMY           = 1,	--TODO once design is confirmed
-
-                VEHICLE_KILL_MIN    = 5,
-                VEHICLE_KILL_MULT   = 0.02,
-
-                --ATTACKING FACILITY (Killing inside hostile facility)
-                --DEFENDING FACILITY (Killing inside owned facility)
-                --DESTROYING ENEMY TURRETS
-                --REPAIRING TURRET
-                --DAMAGING ENEMY HQ
-                --DESTROYING ENEMY HQ
-                --KILLING TAC WEAPON BEARER
-            }
-        },
-        {
-            ------------------------------
-            ---      PostInitialize
-            ------------------------------
-            Name = "PostInitialize",
-            Value = function(self)
 
                 self.IS_PS    = (self.class == GameMode_PS)
                 self.IS_IA    = (self.class == GameMode_IA)
                 self.IS_TIA   = (self.class == GameMode_TIA)
 
+                self:InitializeConfig() -- FIXME
+            end,
+        },
+        {
+            ------------------------------
+            ---   InitializeConfig
+            ------------------------------
+            Name = "InitializeConfig",
+            Value = function(self)
                 self.SkipPreGame = Server.Config:Get("GameConfig.SkipPreGames", false, ConfigType_Boolean)
-                if (self.SkipPreGame and self:GetState() ~= "InGame") then
-                    self:GotoState("InGame")
-                end
+                --if (self.SkipPreGame and self:GetState() ~= "InGame") then
+                --    self:GotoState("InGame")
+                --end
 
                 self.TaggedExplosives = {}
 
@@ -114,6 +79,7 @@ Server.Patcher:HookClass({
                 }
 
                 self.StreakMessages = {
+                    InstantActionOnly = Server.Config:Get("GameConfig.KillConfig.KillStreaks.InstantActionOnly", true, ConfigType_Boolean),
                     Deaths  = Server.Config:Get("GameConfig.KillConfig.KillStreaks.DeathMessages", {}, ConfigType_Array),
                     Kills   = Server.Config:Get("GameConfig.KillConfig.KillStreaks.KillMessages", {}, ConfigType_Array),
                     Repeats = Server.Config:Get("GameConfig.KillConfig.KillStreaks.RepeatMessages", {}, ConfigType_Array),
@@ -182,7 +148,54 @@ Server.Patcher:HookClass({
                     OpenDoorsOnCollision = Server.Config:Get("GameConfig.Immersion.OpenDoorsOnCollision", true, ConfigType_Boolean),
                 }
 
+                self:Log("Initialized with Config")
+            end,
+        },
+        {
+            ------------------------------
+            ---   cpList
+            ------------------------------
+            Name = "cpList",
+            Value = {
+
+                IA_XP_MULT          = 1.35, -- multiplier in IA games
+
+                FIRST_BLOOD         = 30,
+                HEADSHOT_BONUS      = 4,
+                BUY_DOOMSDAYMACHINE = 10, -- tac/tac vehicles done!!
+                CAPTURE_SPECIAL     = 18, -- proto done!!
+
+                KILL                = 5,
+                KILL_RANKDIFF_MULT  = 1.2,
+                TURRETKILL          = 12,
+                REPAIR              = 3,
+                LOCKPICK            = 3,
+                CAPTURE             = 15,
+                BUYVEHICLE          = 7,
+
+                TAG_ENEMY           = 1,	--TODO once design is confirmed
+
+                VEHICLE_KILL_MIN    = 5,
+                VEHICLE_KILL_MULT   = 0.02,
+
+                --ATTACKING FACILITY (Killing inside hostile facility)
+                --DEFENDING FACILITY (Killing inside owned facility)
+                --DESTROYING ENEMY TURRETS
+                --REPAIRING TURRET
+                --DAMAGING ENEMY HQ
+                --DESTROYING ENEMY HQ
+                --KILLING TAC WEAPON BEARER
+            }
+        },
+        {
+            ------------------------------
+            ---      PostInitialize
+            ------------------------------
+            Name = "PostInitialize",
+            Value = function(self)
+
                 self:CollectPSBuildings()
+                self:InitializeConfig() -- FIXME
 
                 Server.Utils:SetCVar("g_friendlyfireRatio", Server.Config:Get("GameConfig.HitConfig.FriendlyFire.Ratio", 0, ConfigType_Number))
                 Server.Utils:SetCVar("mp_killMessages", (self.KillConfig.NewMessages and "0" or "1"))
@@ -300,8 +313,42 @@ Server.Patcher:HookClass({
             Value = function(self)
                 Server:OnGameRulesSpawn(self)
                 self:Initialize_CryMP()
+
                 self:InitHitMaterials()
                 self:InitHitTypes()
+            end,
+        },
+        {
+            ------------------------------
+            ---        Reset
+            ------------------------------
+            Name = "Reset",
+            Value = function(self, forcePregame)
+
+                if (self.IS_PS) then
+                    self.inBuyZone={}
+                    self.inServiceZone={}
+                    self.unclaimedVehicle={}
+                    self.reviveQueue={}
+
+                    self:ResetMinimap()
+                    self:ResetPower()
+
+                    self.game:ResetReviveCycleTime()
+                end
+
+                self:ResetTime()
+
+                -- done!! Disabled until Aspect RMI disco has been hunted down
+                local bForceInGame = (self.SkipPreGame == true)
+                local bInGame = ((self:PlayerCountOk() and (not forcePregame)) or (self.forceInGame))
+                if (bForceInGame or bInGame) then
+                    self:GotoState("InGame")
+                else
+                    self:GotoState("PreGame")
+                end
+                self.forceInGame=nil
+                self.works={}
             end,
         },
         {
@@ -798,7 +845,8 @@ Server.Patcher:HookClass({
                     self:SendKillMessage_CryMP(aHitInfo, bExcludeShooter)
                 end
 
-                if (self.StreakMessages.Enabled) then
+                DebugLog(self.StreakMessages.InstantActionOnly)
+                if (self.StreakMessages.Enabled and (self.IS_IA or not self.StreakMessages.InstantActionOnly)) then
                     self:SendKillStreakMessage_CryMP(hTarget, hShooter, aHitInfo)
                 end
                 --end
@@ -978,7 +1026,7 @@ Server.Patcher:HookClass({
                     if (not hShooter.actor) then
                         sShooterName = hShooter.class
                     end
-                    local sMessage = Server.Logger:FormatTags(table.Random(aMessages):format(hShooter:GetName(), hTarget:GetName()), {
+                    local sMessage = Server.Logger:FormatTags(table.Random(aMessages):format(sShooterName, hTarget:GetName()), {
                         TargetName  = hTarget:GetName(),
                         ShooterName = sShooterName,
                     })
@@ -1627,7 +1675,8 @@ Server.Patcher:HookClass({
                                             if (iAward > 0) then
                                                 -- message will be drowned by equipment otherwise.
                                                 Script.SetTimer(100, function()
-                                                    self:PrestigeEvent(player.id, iMinPP, "%1 @spawn_prestige", {}, {rank.name})
+                                                    --self:PrestigeEvent(player.id, iMinPP, "%1 - @spawn_prestige", {}, {rank.desc})
+                                                    self:PrestigeEvent(player.id, iMinPP, "@spawning_as %1", {}, {rank.desc})
                                                 end)
                                             end
                                         end
@@ -1858,12 +1907,10 @@ Server.Patcher:HookClass({
                                 if (string.emptyN(hBuilding.Properties.szName)) then
                                     sName = hBuilding.Properties.szName
                                 end
-                                DebugLog(table.tostring(hBuilding.properties or {}))
 
                                 local iXP = self.cpList.CAPTURE
                                 if (hBuilding.BuildingType == BuildingType_Proto) then
                                     iXP = self.cpList.CAPTURE_SPECIAL
-                                    DebugLog("pro")
                                 end
                                 self:PrestigeEvent(hPlayer, { iValue, self.cpList.CAPTURE}, (sName and "%1" or (hBuilding.LocaleType or "@unknown")) .. " @captured", {}, { sName })
                             end
@@ -2116,19 +2163,21 @@ Server.Patcher:HookClass({
                     if (iScanned > 0) then
                         local iHostile = hShooter.TagAward.Hostiles
                         if (iHostile > 0) then
-                            local aNearby = Server.Utils:GetPlayers({ NotById = hShooter.id, InRage = iScanDistance, FromPos = hShooter:GetPos(), ByTeam = hShooter:GetTeam() })
+                            local aNearby = Server.Utils:GetPlayers({ NotById = nil, InRage = iScanDistance, FromPos = hShooter:GetPos(), ByTeam = hShooter:GetTeam() })
                             for _, hNearby in pairs(aNearby) do
-                                -- TODO
+                                -- done
                                 -- sounds/interface:multiplayer_interface:mp_tac_alarm_suit
                                 -- "@hostiles_on_radar", { Count = iHostile }
-                                DebugLog("hostiles scanned")
+                                --DebugLog("hostiles scanned")
+                                Server.ClientMod:ExecuteCode({ Client = hNearby, Code = ([[CryMP_Client:PSE(g_laId,"sounds/interface:multiplayer_interface:mp_tac_alarm_suit")HUD.BattleLogEvent(eBLE_Warning,"%s")]]):format(hNearby:LocalizeText("@hostiles_on_radar", { Count = iHostile }))})
                             end
                         end
                         self:PrestigeEvent(hShooter.id, { hShooter.TagAward.PP, hShooter.TagAward.CP }, "@x_entities_scanned", { Count = hShooter.TagAward.Num })
                     else
-                        -- TODO
+                        -- don!!
                         -- "@no_entities_scanned"
-                        DebugLog("none scanned")
+                        --DebugLog("none scanned")
+                        Server.ClientMod:ExecuteCode({ Client = hShooter, Code = ([[HUD.BattleLogEvent(eBLE_Warning,"%s")]]):format(hShooter:LocalizeText("@no_entities_scanned"))})
                     end
                 end
 
@@ -2589,7 +2638,7 @@ Server.Patcher:HookClass({
                         Server.PlayerEquipment:OnItemBought(hPlayer, hItem, aDef, iPrice, aFactory)
                         self:AwardItemInvestmentPrestige(hPlayer, aDef, iPrice, aFactory)
 
-                        self:PrestigeEvent(hPlayerID, -iPrice, "@item " .. (aDef.name and "%1" or (hItem.class)) .. " @bought", {}, { aDef.name })
+                        self:PrestigeEvent(hPlayerID, -iPrice, "" .. (aDef.name and "%1" or ("@item "..hItem.class)) .. " @bought", {}, { aDef.name })
                         if (iEnergy and iEnergy > 0) then
                             self:SetTeamPower(iTeam, self:GetTeamPower(iTeam) - iEnergy)
                         end

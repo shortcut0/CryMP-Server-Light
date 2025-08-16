@@ -36,6 +36,7 @@ Server:CreateComponent({
             ConsoleChatMessageSenderColor  = CRY_COLOR_WHITE,   -- Nomad : Hi!
 
             ChatMessageTags = {
+                ShowPlayerRank = true,
                 ShowInConsole = false,
                 Status = true,
                 And = {
@@ -106,7 +107,7 @@ Server:CreateComponent({
         ChannelsWelcomed = {},
 
         Protected = {
-            ChatEntities = {},
+            SpawnedChatEntities = {},
         },
 
         Initialize = function(self)
@@ -144,11 +145,24 @@ Server:CreateComponent({
 
         PostInitialize = function(self)
 
-            for sKey, sName in pairs(_G) do
-                if (type(sKey) == "string" and string.match(sKey, "ChatEntity_%w") and type(sName) == "string") then
-                --    self:GetChatEntity(sName)
+            local iPreCached = 0
+            for _, aComponentInfo in pairs(Server.ComponentList) do
+                local aComponent = Server[aComponentInfo.Name]
+
+                -- Browse through the potential list
+                local aChatEntities = table.ToTable(aComponent.ChatEntities)
+
+                -- And insert the main entity, if present
+                if (aComponent.ChatEntity) then
+                    table.insert(aChatEntities, aComponent.ChatEntity)
+                end
+                for _, sEntity in pairs(aChatEntities) do
+                    self:GetChatEntity(sEntity) -- GetEntity will spawn them if they are no present or are invalid
+                    iPreCached = iPreCached + 1
                 end
             end
+
+            self:Log("Precached %d Chat-Entities", iPreCached)
         end,
 
         OnReset = function(self)
@@ -219,6 +233,9 @@ Server:CreateComponent({
 
         SpawnChatEntity = function(self, sName)
 
+            -- done??: hunt for NetAspect disco cause
+            --do return end
+
             local sNameLower = sName:lower()
             local hEntity = System.SpawnEntity({
                 name = sName,
@@ -233,19 +250,19 @@ Server:CreateComponent({
             end
 
             hEntity.IS_CHAT_ENTITY = true
-            self.ChatEntities[sNameLower] = hEntity
+            self.SpawnedChatEntities[sNameLower] = hEntity
             self:Log("Spawned new Chat Entity with Name '%s' (Id: '%s')", sName, sNameLower)
             return hEntity
         end,
 
         DeleteAllChatEntities = function(self)
-            --self.ChatEntities = {}
+            --self.SpawnedChatEntities = {}
         end,
 
         GetChatEntity = function(self, sName)
 
             local sNameLower = sName:lower()
-            local hEntity = self.ChatEntities[sNameLower]
+            local hEntity = self.SpawnedChatEntities[sNameLower]
             if (not hEntity or (hEntity:GetName() ~= sName or not hEntity.IS_CHAT_ENTITY)) then
                 return self:SpawnChatEntity(sName)
             end
@@ -256,9 +273,15 @@ Server:CreateComponent({
 
         ChatMessage = function(self, pSender, pTarget, sMessage, tFormat)
 
-            local hSender = (not IsString(pSender) and Server.Utils:GetEntity(pSender))
+            local hSender
             if (pSender == ChatEntity_Server) then
                 hSender = Server:GetEntity()
+                if (not hSender) then
+                    self:LogFatal("Server Entity does NOT EXIST")
+                    return
+                end
+            else
+                hSender = (not IsString(pSender) and Server.Utils:GetEntity(pSender))
             end
 
             if (not Server.Utils:IsEntity(hSender)) then
@@ -563,7 +586,8 @@ Server:CreateComponent({
 
             CheckTagList(tAnd)
             CheckTagList(tOr, true)
-            if (#aTags == 0) then
+
+            if (#aTags == 0 and self.Properties.ChatMessageTags.ShowPlayerRank) then
                 if (Server.PlayerRanks:IsEnabled()) then
                     aTags = { ("%s"):format(Server.PlayerRanks:GetRankName(hPlayer)) }
                 else
@@ -682,13 +706,13 @@ Server:CreateComponent({
                         bOk = false
                     end
                 end
+            end
 
-                local sChatTag = self:GetChatPrefixTag(iType, hSender)
-                if (sChatTag) then
-                    aInfo.NewMessage = ("(%s) %s"):format(sChatTag, aInfo.NewMessage)
-                    if (self.Properties.ChatMessageTags.ShowInConsole) then
-                        aLogInfo.Tag = sChatTag
-                    end
+            local sChatTag = self:GetChatPrefixTag(iType, hSender)
+            if (sChatTag) then
+                aInfo.NewMessage = ("(%s): %s"):format(sChatTag, aInfo.NewMessage)
+                if (self.Properties.ChatMessageTags.ShowInConsole) then
+                    aLogInfo.Tag = sChatTag
                 end
             end
 

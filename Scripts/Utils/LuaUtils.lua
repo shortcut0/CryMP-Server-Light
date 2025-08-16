@@ -55,3 +55,9 @@ end
 LuaUtils.False = function(statement, greedy_check, ignore_nil)
     return not LuaUtils.True(statement, greedy_check, ignore_nil)
 end
+
+LuaUtils.TraceSource = function(nSkip)
+    local sTb = debug.traceback("", 2 + (nSkip or 0)) -- skip this function
+    local sMostRecent = sTb:match("stack traceback:\n([^\n]*)")
+    return (sMostRecent or "Unknown.Lua:0")
+end

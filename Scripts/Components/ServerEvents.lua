@@ -151,7 +151,7 @@ Server:CreateComponent({
                 if (bItem) then
                 end
 
-                --Server.Patcher:OnClassSpawned(hEntity)
+                Server.Patcher:OnEntitySpawned(hEntity)
             end,
             OnVehicleSpawn          = function() end,
             OnLoadingScript          = function(self, sFileName)

@@ -148,6 +148,11 @@ Server:CreateComponent({
                     else
                         self:AttachOnWeapon(hPlayer, hWeapon, aInfo[2])
                     end
+
+                    local iAmmoLimit = aInfo.AmmoCount
+                    if (iAmmoLimit) then
+                        hPlayer.actor:SetInventoryAmmo(hWeapon.weapon:GetAmmoType() or "", iAmmoLimit)
+                    end
                 end
             end
 
@@ -186,6 +191,31 @@ Server:CreateComponent({
                     end
                 end
             end
+        end,
+
+        RefillAmmo = function(self, hPlayer, hWeaponID)
+
+            local hWeapon = (Server.Utils:GetEntity(hWeaponID) or hPlayer.inventory:GetCurrentItem())
+            if (hWeapon and hWeapon.weapon) then
+
+                local ammoType = hWeapon.weapon:GetAmmoType()
+                if (ammoType) then
+
+                    local iCapacity = hPlayer.inventory:GetAmmoCapacity(ammoType)
+                    if (iCapacity) then
+
+                        local iRefilled 		= (iCapacity - hPlayer.inventory:GetAmmoCount(ammoType))
+                        local iItemRefilled 	= (hWeapon.weapon:GetClipSize()+1 - hWeapon.weapon:GetAmmoCount())
+
+                        hWeapon.weapon:SetAmmoCount(nil, hWeapon.weapon:GetClipSize()+1)
+                        hPlayer.actor:SetInventoryAmmo(ammoType, iCapacity)
+                        hPlayer.inventory:SetAmmoCount(ammoType, iCapacity)
+
+                        return iRefilled, iItemRefilled
+                    end
+                end
+            end
+            return
         end,
 
         OnWeaponFired = function(self, hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
