@@ -289,7 +289,7 @@ Server.LocalizationManager:Add({
             -- PirateSoftware Disconnected (15h: 31m: 10s, Disconnected)
             English = {
                 Regular = "{Red}{Name}{Gray} Disconnected ({Red}{Time}{Gray}, {Red}{ShortReason}{Gray})",
-                Extended = "{Red}{Name}{Gray} Disconnected from Channel {Red}{Channel}{Red} ({Red}{Time}{Gray}, {Red}{ShortReason}{Gray})",
+                Extended = "{Red}{Name}{Gray} Disconnected from Channel {Red}{Channel}{Gray} ({Red}{Time}{Gray}, {Red}{ShortReason}{Gray})",
             },
         },
     },
@@ -1293,6 +1293,12 @@ Server.LocalizationManager:Add({
         String = "player",
         Languages = {
             English = "Player"
+        }
+    },
+    {
+        String = "defended_our_factory",
+        Languages = {
+            English = "{Name} Defended Our {Type}!"
         }
     },
 })

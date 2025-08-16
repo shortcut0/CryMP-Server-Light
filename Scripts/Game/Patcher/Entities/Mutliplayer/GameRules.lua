@@ -680,8 +680,15 @@ Server.Patcher:HookClass({
                 local iPP, sType, tFormat = self:CalcKillPP(aHitInfo)
                 local hPlayerID = hPlayer.id
 
-                sType = sType or "@enemy @eliminated"
 
+
+                --local bDefenseKill, sDefended = self:CheckDefenseKill(aHitInfo)
+                --if (bDefenseKill) then
+                --    sType = (sDefended or sType)
+                --    iPP = (iPP * self.ppList.DEFENDING_MULTIPLIER)
+                --end
+
+                sType = sType or "@enemy @eliminated"
                 if (iPP ~= 0) then
                     self:PrestigeEvent(hPlayer, iPP, sType, tFormat)
                 end
@@ -1171,6 +1178,18 @@ Server.Patcher:HookClass({
                     if (shooter and shooter.actor and shooter.actor:IsPlayer()) then
                         self:AwardKillPP(tHitInfo)
                         self:AwardKillCP(tHitInfo)
+
+                        local bDefense, sType = self:CheckDefenseKill(tHitInfo)
+                        if (bDefense) then
+                            for _, hPlayer in pairs(Server.Utils:GetPlayers({ NotById = hShooter.id, ByTeam = shooter:GetTeam() })) do
+                                Server.ClientMod:ExecuteCode({
+                                    Client = hPlayer,
+                                    Code = ([[HUD.BattleLogEvent(eBLE_Information,"%s")]]):format(hPlayer:LocalizeText("@defended_our_factory", { Name = shooter:GetName(), Type = sType }))
+                                })
+                            end
+                            DebugLog("mdfkn Defense")
+                            -- FIXME TODO
+                        end
                     end
                 end
             end
