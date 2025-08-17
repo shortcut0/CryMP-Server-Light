@@ -26,8 +26,11 @@ Server:CreateComponent({
         },
 
         UpdateCounter = function(self, hId, iAdd)
+
+            hId = hId or "Generic"
             local iCounter = (self.Counters[hId] or 0) + (iAdd or 1)
             self.Counters[hId] = iCounter
+
             return iCounter
         end,
 
@@ -340,6 +343,35 @@ Server:CreateComponent({
                 return System.GetEntityByName(hId)
             end
             return
+        end,
+
+        GetVehicleClasses = function(self)
+            return ServerDLL.GetVehicleClasses()
+        end,
+
+        SpawnEntity = function(self, tParams)
+
+            tParams = (tParams or {})
+
+            -- Is it capital P or not!!
+            -- edit: yes
+            if (tParams.properties == nil) then
+                tParams.properties = {}
+            end
+
+            tParams.properties.IsServerSpawned = true
+            tParams.IsServerSpawned = true
+
+            local hEntity = System.SpawnEntity(tParams)
+            if (not hEntity) then
+                self:LogError("Failed to Spawn Entity of Class '%s'", tParams.class or "<Null>")
+            else
+                local sEffect = tParams.SpawnEffect
+                if (sEffect) then
+                    self:SpawnEffect(sEffect, hEntity:GetPos())
+                end
+            end
+            return hEntity
         end,
 
         SpawnEffect = function(self, sEffect, vPos, vDir, iScale)

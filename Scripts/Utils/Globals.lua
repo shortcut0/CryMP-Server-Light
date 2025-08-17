@@ -120,6 +120,11 @@ KillType_Bot       = 4
 KillType_BotDeath  = 5
 
 ----------------------------
+
+XPEvent_ChatMessage = 1
+XPEvent_CommandUsed = 2
+
+----------------------------
 ---     SERVER LOCALE    ---
 Language_None       = "None"
 Language_English    = "English"
@@ -231,6 +236,13 @@ BuildingType_Small = "Small"
 BuildingType_War = "War"
 BuildingType_Boat = "Boat"
 BuildingType_Proto = "Proto"
+
+----------------------------
+
+GlobalKeys = {
+    VehicleLocked = 10,
+    VehicleReserved = 11
+}
 
 ----------------------------
 PRIORITY_NONE = 1

@@ -181,6 +181,9 @@ Server.Config:Create({
                 -- Will automatically open doors upon melee attacks & collisions
                 OpenDoorsOnCollision = true,
 
+                -- Will enable the extended end game radio in instant action games
+                ExtendedInstantActionEndGame = true,
+
             }, ---< Immersion
 
             --- Gun Turret Configuration
@@ -534,7 +537,7 @@ Server.Config:Create({
                     Other = ONE_HOUR,
 
                     -- PS & IA
-                    PowerStruggle = ONE_HOUR,
+                    PowerStruggle = THREE_HOURS,
                     InstantAction = ONE_MINUTE * 30,
                 }, ---< DefaultTimeLimits
 

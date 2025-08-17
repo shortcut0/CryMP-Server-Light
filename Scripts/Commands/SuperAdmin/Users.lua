@@ -11,10 +11,10 @@
 Server.ChatCommands:Add({
 
     -- ================================================================
-    -- !Ban <Player> <Duration> <Reason>
+    -- !HardBan <Player> <Duration> <Reason>
     {
-        Name = "Ban",
-        Access = ServerAccess_Admin,
+        Name = "HardBan",
+        Access = ServerAccess_SuperAdmin,
         Arguments = {
             { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, NotSelf = true },
             { Name = "@time",   Desc = "@arg_time_desc",   Required = true, Type = CommandArg_TypeTime, AcceptInvalidTime = true },
@@ -24,24 +24,25 @@ Server.ChatCommands:Add({
             This = "Server.Punisher"
         },
         Function = function(self, hPlayer, hTarget, sDuration, sReason)
-            return self:Command_BanPlayer(hPlayer, hTarget, sDuration, sReason)
+            return self:Command_BanPlayer(hPlayer, hTarget, sDuration, sReason, true)
         end
     },
 
     -- ================================================================
-    -- !KickChannel <ChannelId> <Reason>
+    -- !UniqueUsers <Filter>
     {
-        Name = "KickChannel",
-        Access = ServerAccess_Admin,
+        Name = "UniqueUsers",
+        Access = ServerAccess_SuperAdmin,
         Arguments = {
-            { Name = "@channel", Desc = "@arg_channel_desc", Required = true, Type = CommandArg_TypeNumber },
-            { Name = "@reason", Desc = "@reason_desc", Default = "@admin_decision", Type = CommandArg_TypeMessage },
+            { Name = "@filter", Desc = "@arg_filter_desc", Type = CommandArg_TypeMessage }
         },
         Properties = {
-            This = "Server.Punisher"
+            This = "Server.AccessHandler"
         },
-        Function = function(self, hPlayer, iChannel, sReason)
-            return self:Command_KickChannel(hPlayer, iChannel, sReason)
+        Function = function(self, hPlayer, sFilter)
+            return self:Command_UniqueListUsers(hPlayer, sFilter)
         end
     },
 })
+
+--Command_UniqueListUsers

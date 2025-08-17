@@ -15,7 +15,7 @@ Server.ChatCommands:Add({
     Description = "command_commands",
 
     Arguments = {
-        { Name = "@arg_filter", Desc = "@arg_filter_desc" },
+        { Name = "@filter", Desc = "@arg_filter_desc" },
     },
 
     Properties = {

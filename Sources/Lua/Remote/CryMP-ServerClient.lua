@@ -58,19 +58,21 @@ CryMP_Client.GP = function(self,chan)
 end
 
 CryMP_Client.PSE = function(self,eId,se)
+    local s = bor(bor(SOUND_EVENT, SOUND_VOICE),SOUND_DEFAULT_3D);
+    local v = SOUND_SEMANTIC_PLAYER_FOLEY;
 
     self:DLog("eid="..tostring(eId))
     self:DLog("laid="..tostring(g_laId))
     local p=eId~=nil and System.GetEntity(eId)
     if(type(eId)=="number")then p=self:GP(eId)end
     if(not p)then
+        self:DLog("no flags & SOUND_SEMANTIC_SOUNDSPOT on local")
+        g_la:PlaySoundEvent(se, g_Vectors.v000, g_Vectors.v010, s, SOUND_SEMANTIC_SOUNDSPOT); --
         return
     end
 
 
     -- gracias a fapp
-    local s = bor(bor(SOUND_EVENT, SOUND_VOICE),SOUND_DEFAULT_3D);
-    local v = SOUND_SEMANTIC_PLAYER_FOLEY;
     if (self.INCREASE_VOICE_VOLUMES and not self.PATCHED_VOICES[se] and CPPAPI.GetLanguage and CPPAPI.AddLocalizedLabel and se:sub(1, 3) ~= "mp_") then
         local language = CPPAPI.GetLanguage()
         local tbl = {

@@ -66,7 +66,7 @@ Server.LocalizationManager:Add({
     {
         String = "commandHelp_Chat",
         Languages = {
-            English = "[ {Name} ] Info sent to Console"
+            English = "Info sent to Console"
         }
     },
     {
@@ -423,7 +423,7 @@ Server.LocalizationManager:Add({
     {
         String = "str_command",
         Languages = {
-            English = "Command{Name}"
+            English = "Command"
         }
     },
     {
@@ -562,6 +562,12 @@ Server.LocalizationManager:Add({
         String = "noClassToDisplay",
         Languages = {
             English = "No {Class} to Display Available"
+        }
+    },
+    {
+        String = "noClassMatchingFilter",
+        Languages = {
+            English = "No {Class} Matching Filter '{Filter}' Available"
         }
     },
     {
@@ -982,6 +988,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "Filter",
+        Languages = {
+            English = "Filter"
+        }
+    },
+    {
         String = "unclaimed_vehicle_countdown",
         Languages = {
             English = "Unclaimed Vehicle will be Removed in ({Time}) Seconds"
@@ -1154,6 +1166,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "map_timeLimit_changed",
+        Languages = {
+            English = "Changed Time Limit to {Red}{Time}"
+        }
+    },
+    {
         String = "map_list_info1",
         Languages = {
             English = "Note: {Yellow}YELLOW{Gray} Maps have {Red}NO{Gray} Download-Link | {Red}RED{Gray} Maps are {Red}FORBIDDEN"
@@ -1301,6 +1319,120 @@ Server.LocalizationManager:Add({
             English = "{Name} Defended Our {Type}!"
         }
     },
+    {
+        String = "unique_users",
+        Languages = {
+            English = "Unique Users"
+        }
+    },
+    {
+        String = "user__count",
+        Languages = {
+            English = "USER:COUNT"
+        }
+    },
+    {
+        String = "registry_date",
+        Languages = {
+            English = "Registry Date"
+        }
+    },
+    {
+        String = "No",
+        Languages = {
+            English = "No"
+        }
+    },
+    {
+        String = "Entries",
+        Languages = {
+            English = "Entries"
+        }
+    },
+    {
+        String = "Online",
+        Languages = {
+            English = "Online"
+        }
+    },
+    {
+        String = "Yes",
+        Languages = {
+            English = "Yes"
+        }
+    },
+    {
+        String = "gameEnd_countDown",
+        Languages = {
+            English = "Game OVER in ( {Seconds} ) - SECONDS"
+        }
+    },
+})
+
+
+-- ===================================================================================
+
+Server.LocalizationManager:Add({
+    {
+        String = "v_unlocked_u",
+        Languages = {
+            English = "VEHICLE:UNLOCKED"
+        }
+    },
+    {
+        String = "v_locked_u",
+        Languages = {
+            English = "VEHICLE:LOCKED"
+        }
+    },
+    {
+        String = "vehicle_isNot_locked",
+        Languages = {
+            English = "Vehicle is not Locked"
+        }
+    },
+    {
+        String = "vehicle_yield_tip",
+        Languages = {
+            English = "Yield Access to this Vehicle using !Yield"
+        }
+    },
+    {
+        String = "here_is_your_taxi",
+        Languages = {
+            English = "Farquaad's TAXI:SERViCE - Enjoy your Ride"
+        }
+    },
+    {
+        String = "vehicle_hasNoOwner",
+        Languages = {
+            English = "Vehicle has No Owner"
+        }
+    },
+    {
+        String = "vehicle_ownerNotEntered",
+        Languages = {
+            English = "The Owner has not Unlocked this Vehicle yet!"
+        }
+    },
+    {
+        String = "cannot_enter_vehicle",
+        Languages = {
+            English = "Cannot enter Vehicle{Reason}"
+        }
+    },
+    {
+        String = "cannot_enter_driverSeat",
+        Languages = {
+            English = "Cannot enter Driver Seat{Reason}"
+        }
+    },
+    {
+        String = "not_your_vehicle",
+        Languages = {
+            English = "Not your Vehicle"
+        }
+    },
 })
 
 
@@ -1392,6 +1524,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "arg_filter_desc",
+        Languages = {
+            English = "The desired filter to apply to the results or action"
+        }
+    },
+    {
         String = "arg_team_desc",
         Languages = {
             English = "The name or id of the team you wish to switch the target entity to"
@@ -1443,18 +1581,6 @@ Server.LocalizationManager:Add({
         String = "arg_target_desc",
         Languages = {
             English = "The target player for your devious action"
-        }
-    },
-    {
-        String = "arg_filter",
-        Languages = {
-            English = "Filter"
-        }
-    },
-    {
-        String = "arg_filter_desc",
-        Languages = {
-            English = "The desired Filter to Apply"
         }
     },
     {

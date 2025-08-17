@@ -19,8 +19,8 @@ return {
   ["City"] = "Santiago",
   ["RegionName"] = "Santiago Metropolitan",
   ["Organisation"] = "Starlink Chile SpA",
-  ["ISP"] = "SpaceX Starlink",
   ["District"] = "",
+  ["ISP"] = "SpaceX Starlink",
   ["ContinentCode"] = "SA",
  },
 }

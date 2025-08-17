@@ -532,7 +532,7 @@ Server:CreateComponent({
         Command_SetTimeLimit = function(self, hAdmin, sDuration)
 
             local iTime = math.max(0, math.min(self.Properties.MaximumTimeLimit, Date:ParseTime(sDuration)))
-            local tFormat = { Time = sDuration, Admin = hAdmin:GetName() }
+            local tFormat = { Time = Date:Colorize(Date:Format(iTime, DateFormat_Cramped)), Admin = hAdmin:GetName() }
             Server.Chat:ChatMessage(self.ChatEntity, ALL_PLAYERS, "@map_timeLimit_changed", tFormat)
             self:LogEvent({
                 Message = "@map_timeLimit_changed",

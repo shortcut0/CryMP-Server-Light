@@ -237,7 +237,7 @@ Server:CreateComponent({
             --do return end
 
             local sNameLower = sName:lower()
-            local hEntity = System.SpawnEntity({
+            local hEntity = Server.Utils:SpawnEntity({
                 name = sName,
                 class = (self.Properties.ChatEntityClass or "Reflex"),
                 position = Vector.NewVec(0, 0, 0),
@@ -739,6 +739,10 @@ Server:CreateComponent({
                     elseif (not self:FilterMessage(hSender, hTarget, sMessage, iType, bSentByServer, aInfo)) then
                         aInfo.Ok = false
 
+                    end
+
+                    if (aInfo.Ok) then
+                        Server.PlayerRanks:XPEvent(hSender, XPEvent_ChatMessage)
                     end
                 end
 

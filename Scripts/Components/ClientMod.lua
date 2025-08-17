@@ -67,7 +67,7 @@ Server:CreateComponent({
 
         TestQueue = function(self)
 
-            local hEntity = System.SpawnEntity({
+            local hEntity = Server.Utils:SpawnEntity({
                 class = "RadarKit",
                 position = Vector.Empty(),
                 orientation = Vector.Up(),

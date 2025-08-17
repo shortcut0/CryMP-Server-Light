@@ -256,7 +256,7 @@ end
 Server.SpawnServerEntity = function(self)
 
     local sName = self.Properties.ServerEntityName
-    local hEntity = System.SpawnEntity({
+    local hEntity = self.Utils:SpawnEntity({
         class = "Reflex",
         name = sName,
         position = vector.make(0, 0, 0),
@@ -1178,6 +1178,9 @@ Server.FileLoader = {
             "-- ===================================================================================\n" ..
 	        sData
         end
+
+        -- This saves the file in a second thread, so even on huge data, the main thread won't get lagged out
+        -- It's also asynchronous, so always the latest data is written to the file
         ServerDLL.SaveFile(sFile, sData)
         return true, string.len(sData)
     end,

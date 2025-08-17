@@ -157,6 +157,9 @@ Server:CreateComponent({
                 IsValidating = false,
                 ValidationFailed = false,
 
+                GodModeLevel = 0,
+                SupermanLevel = 0,
+
                 Language = {
                     Preferred = Language_None,
                     Detected = Language_None
@@ -238,6 +241,8 @@ Server:CreateComponent({
                 end
                 return hRetTemp
             end
+            hActor.HasGodMode = function(this, n) return this.Info.GodModeLevel >= (n or 1) end
+            hActor.IsSuperman = function(this, n) return this.Info.SupermanLevel >= (n or 1) end
 
             hActor.GetUniqueID = function(this) return this.Info.UniqueId  end
             hActor.GetUniqueName = function(this) return this.Info.UniqueName  end
@@ -310,7 +315,7 @@ Server:CreateComponent({
             hActor.LeaveVehicle    = function(this)
                 local hVehicle = this:GetVehicle()
                 if (not hVehicle) then return end
-                hVehicle.vehicle:ExitVehicle(this.id, true)
+                hVehicle.vehicle:ExitVehicle(this.id, false)
             end
             hActor.IsInVehicle     = function(this) return this:GetVehicleId() ~= nil end -- NOT synched
             hActor.GetVehicle      = function(this) return Server.Utils:GetEntity(this:GetVehicleId()) end -- NOT synched

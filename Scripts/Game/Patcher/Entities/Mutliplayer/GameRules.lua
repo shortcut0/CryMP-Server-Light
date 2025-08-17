@@ -67,6 +67,9 @@ Server.Patcher:HookClass({
                 --end
 
                 self.TaggedExplosives = {}
+                self.TimedActions = {}
+                self:ResetActions()
+                self:ResetTimedActions()
 
                 self.KillConfig = {
                     DropEquipment   = Server.Config:Get("GameConfig.KillConfig.DropEquipment", true,  ConfigType_Boolean),
@@ -146,6 +149,7 @@ Server.Patcher:HookClass({
 
                 self.Config = {
                     OpenDoorsOnCollision = Server.Config:Get("GameConfig.Immersion.OpenDoorsOnCollision", true, ConfigType_Boolean),
+                    InstantActionEndGameCountdown = Server.Config:Get("GameConfig.Immersion.ExtendedInstantActionEndGame", true, ConfigType_Boolean),
                 }
 
                 self:Log("Initialized with Config")
@@ -357,7 +361,270 @@ Server.Patcher:HookClass({
             ------------------------------
             Name = "UpdatePings",
             Value = function(self, iFrameTime)
+                if (not Server:IsInitialized()) then
+                    return
+                end
                 Server.Network:UpdateGamePings(iFrameTime)
+            end,
+        },
+        {
+            ------------------------------
+            ---        UpdatePings
+            ------------------------------
+            Name = "CheckTimedAction",
+            Value = function(self, hId, iSeconds, pFunction)
+
+                local hTimer = self.TimedActions[hId]
+                if (not hTimer) then
+                    self.TimedActions[hId] = TimerNew(iSeconds)
+                    hTimer = self.TimedActions[hId]
+                end
+
+                if (hTimer.Expired_Refresh(iSeconds)) then
+                    pFunction()
+                end
+            end
+        },
+        {
+            ------------------------------
+            ---        CheckAction
+            ------------------------------
+            Name = "CheckAction",
+            Value = function(self, hId, pFunction)
+
+                if (self.CompletedActions[hId]) then
+                    return
+                end
+
+                pFunction()
+                self.CompletedActions[hId] = true
+            end
+        },
+        {
+            ------------------------------
+            ---        ResetAction
+            ------------------------------
+            Name = "ResetAction",
+            Value = function(self, hId)
+                self.CompletedActions[hId] = nil
+            end
+        },
+        {
+            ------------------------------
+            ---        ResetActions
+            ------------------------------
+            Name = "ResetActions",
+            Value = function(self, hId)
+                self.CompletedActions = {}
+            end
+        },
+        {
+            ------------------------------
+            ---        ResetTimedActions
+            ------------------------------
+            Name = "ResetTimedActions",
+            Value = function(self, hId)
+                self.TimedActions = {}
+            end
+        },
+        {
+            ------------------------------
+            --- CheckTimeLimit_InstantAction
+            ------------------------------
+            Name = "CheckTimeLimit_InstantAction",
+            Value = function(self)
+
+                ---------
+                local sGameState = self:GetState()
+                local iTimeLeft  = self.game:GetRemainingGameTime()
+                local bIsLimited = self.game:IsTimeLimited()
+
+                if (bIsLimited and (sGameState == "InGame")) then
+                    if (iTimeLeft <= 0) then
+                        self:EndGameWithWinner_InstantAction()
+
+                    elseif (self.Config.InstantActionEndGameCountdown) then
+                        local aRadioTimers = {
+                            [120] = "mp_american/us_commander_2_minute_warming_01",
+                            [60 ] = "mp_american/us_commander_1_minute_warming_01",
+                            [30 ] = "mp_american/us_commander_30_second_warming_01",
+                            [5  ] = "mp_american/us_commander_final_countdown_01",
+                        }
+
+                        self:CheckTimedAction("GameEndRadio", 1, function(this)
+                            local iLeft  = math.floor(iTimeLeft)
+                            local sSound = aRadioTimers[iLeft]
+                            if (sSound) then
+                                Server.Chat:TextMessage(ChatType_Info, ALL_PLAYERS, "@gameEnd_countDown", { Seconds = iLeft })
+                                Server.ClientMod:ExecuteCode({
+                                    Code = ([[CryMP_Client:PSE(nil,'%s')]]):format(sSound),
+                                    Clients = ALL_PLAYERS
+                                })
+                            end
+
+                            if (iTimeLeft <= 30) then
+                                Server.Chat:TextMessage(ChatType_Center, ALL_PLAYERS, "@gameEnd_countDown", { Seconds = iLeft })
+                            end
+                        end)
+                    end
+                end
+            end
+        },
+        {
+            ------------------------------
+            --- CheckTimeLimit_PowerStruggle
+            ------------------------------
+            Name = "CheckTimeLimit_PowerStruggle",
+            Value = function(self)
+                local sGameState = self:GetState()
+                local iTimeLeft  = self.game:GetRemainingGameTime()
+                local bIsLimited = self.game:IsTimeLimited()
+
+                if (bIsLimited and iTimeLeft <= 0) then
+                    if (sGameState ~= "InGame") then
+                        return
+                    end
+
+                    self:EndGameWithWinner_PowerStruggle()
+                elseif (bIsLimited) then
+
+                    if (iTimeLeft <= FIVE_MINUTES) then
+
+                    elseif (iTimeLeft <= FIFTEEN_MINUTES) then
+                        self:CheckAction("MapEndsSoon", function()
+                            Server.Chat:ChatMessage(Server.MapRotation.ChatEntity, ALL_PLAYERS, "@map_ends_soon")
+                        end)
+                    end
+                end
+            end
+        },
+        {
+            ------------------------------
+            ---  EndGameWithWinner_InstantAction
+            ------------------------------
+            Name = "EndGameWithWinner_InstantAction",
+            Value = function(self)
+                local iMaxScore = nil
+                local iMinDeath = nil
+                local iMaxID    = nil
+                local iMinID    = nil
+                local bDraw     = false
+
+                local aPlayers = self.game:GetPlayers(true)
+
+                if (aPlayers) then
+                    for _, hPlayer in pairs(aPlayers) do
+                        local iScore = self:GetPlayerScore(hPlayer.id)
+                        if (not iMaxScore) then
+                            iMaxScore = iScore
+                        end
+
+                        if (iScore >= iMaxScore) then
+                            if ((iMaxID ~= nil) and (iMaxScore == iScore)) then
+                                bDraw = true
+                            else
+                                bDraw     = false
+                                iMaxID    = hPlayer.id
+                                iMaxScore = iScore
+                            end
+                        end
+                    end
+
+                    -- if there's a draw, check for lowest number of deaths
+                    if (bDraw) then
+
+                        iMinID    = nil
+                        iMinDeath = nil
+
+                        for _, hPlayer in pairs(aPlayers) do
+
+                            local iScore = self:GetPlayerScore(hPlayer.id)
+                            if (iScore == iMaxScore) then
+                                local iDeaths = self:GetPlayerDeaths(hPlayer.id)
+                                if (not iMinDeath) then
+                                    iMinDeath = iDeaths
+                                end
+
+                                if (iDeaths <= iMinDeath) then
+                                    if ((iMinID ~= nil) and (iMinDeath == iDeaths)) then
+                                        bDraw = true
+                                    else
+                                        bDraw     = false
+                                        iMinID    = hPlayer.id
+                                        iMinDeath = iDeaths
+                                    end
+                                end
+                            end
+                        end
+
+                        if (not bDraw) then
+                            iMaxID = iMinID
+                        end
+                    end
+                end
+
+                if (not bDraw) then
+                    self:OnGameEnd(iMaxID, 2)
+                else
+                    self:OnGameEnd(nil, 2)
+                end
+            end
+        },
+        {
+            ------------------------------
+            ---  EndGameWithWinner_PowerStruggle
+            ------------------------------
+            Name = "EndGameWithWinner_PowerStruggle",
+            Value = function(self)
+                local bDraw      = true
+                local iMaxHP     = nil
+                local iMaxTeamID = nil
+
+                for _, iTeamID in pairs(self.teamId) do
+                    local iHP = 0
+                    for __, iHQId in pairs(self.hqs) do
+                        if (self.game:GetTeam(iHQId) == iTeamID) then
+                            local hHQ = System.GetEntity(iHQId)
+                            if (hHQ) then
+                                iHP = (iHP + math.max(0, hHQ:GetHealth()))
+                            end
+                        end
+                    end
+
+                    if (not iMaxHP) then
+                        iMaxHP = iHP
+                        iMaxTeamID = iTeamID
+                    else
+                        if (iHP > iMaxHP or iHP < iMaxHP) then
+                            if (iHP > iMaxHP) then
+                                iMaxHP = iHP
+                                iMaxTeamID = iTeamID
+                            end
+                            bDraw = false
+                        end
+                    end
+                end
+
+                if (not bDraw) then
+                    self:OnGameEnd(iMaxTeamID, 2)
+                else
+                    self:OnGameEnd(nil, 2)
+                end
+            end
+        },
+        {
+            ------------------------------
+            ---    CheckTimeLimit
+            ------------------------------
+            Name = "CheckTimeLimit",
+            Value = function(self)
+
+                local fCheck = self["CheckTimeLimit_" .. (self.class)]
+                if (fCheck == nil) then
+                    error("no 'CheckTimeLimit' handler for " .. self.class .. " found")
+                end
+
+                fCheck(self)
             end,
         },
         {
@@ -1292,6 +1559,170 @@ Server.Patcher:HookClass({
         },
         {
             ------------------------------
+            ---   ProcessVehicleDamage
+            ------------------------------
+            Name = "ProcessVehicleDamage",
+            Value = function(self, tHit)
+
+            end
+        },
+        {
+            ------------------------------
+            ---   OnLeaveVehicleSeat
+            ------------------------------
+            Name = "OnLeaveVehicleSeat",
+            Value = function(self, vehicle, seat, entityId, exiting)
+
+                local hEntity = Server.Utils:GetEntity(entityId)
+                if (exiting) then
+
+                    hEntity.TempData.CurrentSeatId = nil
+
+                    local empty=true
+                    for i,seat in pairs(vehicle.Seats) do
+                        local passengerId = seat:GetPassengerId();
+                        if (passengerId and passengerId~=NULL_ENTITY and passengerId~=entityId) then
+                            empty=false
+                            break
+                        end
+                    end
+
+                    if (empty) then
+                        --self.game:SetTeam(0, vehicle.id);
+                        vehicle.lastOwnerId=entityId;
+                        local player=System.GetEntity(entityId)
+                        if (player) then
+                            player.lastVehicleId=vehicle.id
+                        end
+                    end
+
+                    if(entityId==vehicle.vehicle:GetOwnerId()) then
+                        vehicle.vehicle:SetOwnerId(NULL_ENTITY)
+                    end
+                end
+            end
+        },
+        {
+            ------------------------------
+            ---   OnEnterVehicleSeat
+            ------------------------------
+            Name = "OnEnterVehicleSeat",
+            Value = function(self, vehicle, seat, entityId)
+
+                local player = System.GetEntity(entityId)
+                if (not player) then
+                    return
+                end
+
+                local iLast = player.TempData.CurrentSeatId
+                if (not Server.VehicleSystem:CanEnterSeat(player, vehicle, seat)) then
+
+                else
+
+                end
+
+                self.game:SetTeam(self.game:GetTeam(entityId), vehicle.id)
+                if (player) then
+                    self:AbandonPlayerVehicle(player.id, vehicle.id)
+                end
+
+                if (self.IS_PS) then
+
+                    if (entityId == vehicle.vehicle:GetOwnerId()) then
+                        vehicle.vehicle:SetOwnerId(NULL_ENTITY)
+
+                        -- this is the owner entering the vehicle
+                        if (vehicle.vehicle:GetMovementType() == "air") then
+                            if (player) then
+                                if (player.inventory:GetCountOfClass("Parachute")==0) then
+                                    ItemSystem.GiveItem("Parachute", entityId, false)
+                                end
+                            end
+                        end
+                    end
+
+                    vehicle.vehicle:KillAbandonTimer()
+
+                    if (self.unclaimedVehicle[vehicle.id]) then
+                        self.unclaimedVehicle[vehicle.id] = nil
+                    end
+                end
+
+                Server.VehicleSystem:OnEnterVehicle(player, vehicle, seat)
+            end
+        },
+        {
+            ------------------------------
+            ---   Server.OnVehicleBuilt
+            ------------------------------
+            Name = "Server.OnVehicleBuilt",
+            Value = function(self, building, vehicleName, vehicleId, ownerId, teamId, gateId)
+
+                local hVehicle = Server.Utils:GetEntity(vehicleId)
+                local hOwner = Server.Utils:GetEntity(ownerId)
+
+                local def=self:GetItemDef(vehicleName);
+                if (def and def.md) then
+                    self:SendMDAlert(teamId, vehicleName, ownerId);
+
+                    Script.SetTimer(1000, function()
+                        self.allClients:ClEndGameNear(vehicleId);
+                    end);
+
+                    self.game:AddMinimapEntity(vehicleId, 2, 0);
+                end
+
+                if (self.objectives) then
+                    for i,v in pairs(self.objectives) do
+                        if (v.OnVehicleBuilt) then
+                            v:OnVehicleBuilt(vehicleId, vehicleName, teamId);
+                        end
+                    end
+                end
+
+                Server.VehicleSystem:OnVehicleBuild(hVehicle, hOwner, def)
+                self:SetUnclaimedVehicle(vehicleId, ownerId, teamId, vehicleName, building.id, gateId);
+            end
+        },
+        {
+            ------------------------------
+            ---   CanEnterVehicle
+            ------------------------------
+            Name = "CanEnterVehicle",
+            Value = function(self, hVehicle, hUserId)
+
+                local hPlayer = Server.Utils:GetEntity(hUserId)
+                if (not hPlayer) then
+                    return
+                end
+
+                if (hPlayer.IsPlayer and hPlayer:HasGodMode(2)) then
+                    return true
+                end
+
+                if (not Server.VehicleSystem:CanEnterVehicle(hPlayer, hVehicle)) then
+                    return false
+                end
+
+                if (self.IS_PS) then
+                    if (hVehicle.vehicle:GetOwnerId() == hUserId) then
+                        return true
+                    end
+
+                    local iVehicleTeam = self.game:GetTeam(hVehicle.id)
+                    local iPlayerTeam = self.game:GetTeam(hUserId)
+
+                    if (iPlayerTeam == iVehicleTeam or iVehicleTeam == 0) then
+                        return hVehicle.vehicle:GetOwnerId() == nil
+
+                    elseif (iPlayerTeam ~= iVehicleTeam) then
+                        return false
+                    end
+                end
+            end
+        },
+        {
+            ------------------------------
             ---   ProcessActorDamage
             ------------------------------
             Name = "ProcessActorDamage",
@@ -2188,7 +2619,7 @@ Server.Patcher:HookClass({
                                 -- sounds/interface:multiplayer_interface:mp_tac_alarm_suit
                                 -- "@hostiles_on_radar", { Count = iHostile }
                                 --DebugLog("hostiles scanned")
-                                Server.ClientMod:ExecuteCode({ Client = hNearby, Code = ([[CryMP_Client:PSE(g_laId,"sounds/interface:multiplayer_interface:mp_tac_alarm_suit")HUD.BattleLogEvent(eBLE_Warning,"%s")]]):format(hNearby:LocalizeText("@hostiles_on_radar", { Count = iHostile }))})
+                                Server.ClientMod:ExecuteCode({ Client = hNearby, Code = ([[CryMP_Client:PSE(nil,"sounds/interface:multiplayer_interface:mp_tac_alarm_suit")HUD.BattleLogEvent(eBLE_Warning,"%s")]]):format(hNearby:LocalizeText("@hostiles_on_radar", { Count = iHostile }))})
                             end
                         end
                         self:PrestigeEvent(hShooter.id, { hShooter.TagAward.PP, hShooter.TagAward.CP }, "@x_entities_scanned", { Count = hShooter.TagAward.Num })

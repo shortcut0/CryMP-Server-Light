@@ -72,25 +72,21 @@ Server:CreateComponent({
             },
 
             RegisteredUsers = {
+                --[[
                 {
                     Name = "shortcut0",
                     AccessLevel = 9,
                     NameProtected = true,
-                    ProfileID = "1073103"
-                },
-                {
-                    Name = "shortcut0",
-                    AccessLevel = 9,
-                    NameProtected = true,
-                    ProfileID = "127.0.0.1"
-                },
-                {
-                    Name = "protected_name",
-                    AccessLevel = 9,
-                    NameProtected = true,
-                    ProfileID = "1"
-                },
-            }
+                    ProfileID = "1073103" -- someone keep this thing static please
+                }
+                ]]
+            },
+
+            -- The offset for ip-profiles
+            IPProfileOffset = 10000,
+
+            -- The offset for unique user ids
+            UniqueIDOffset = 100000,
         },
 
         EarlyInitialize = function(self)
@@ -122,13 +118,22 @@ Server:CreateComponent({
             self:AssignUniqueID(hPlayer, self:GetUniqueID(hPlayer))
         end,
 
+        GetPlayerByUniqueID = function(self, hId)
+            for _, hPlayer in pairs(Server.Utils:GetPlayers()) do
+                if (hPlayer:GetUniqueID() == hId) then
+                    return hPlayer
+                end
+            end
+        end,
+
         AssignUniqueID = function(self, hPlayer, hId)
             hPlayer.Info.UniqueId = hId
             hPlayer.Info.UniqueName = self:GetUniqueName(hId)
             self:Log("Resolved Unique ID for User '%s' ID: %s, Name: %s", hPlayer:GetName(), hId, hPlayer.Info.UniqueName)
 
             -- Check for Hard Bans here
-            if (Server.Punisher:CheckPlayerForBan(hPlayer, true, true)) then
+            local bCheckHardBan = true
+            if (Server.Punisher:CheckPlayerForBan(hPlayer, true, bCheckHardBan)) then
                 return
             end
         end,
@@ -181,9 +186,10 @@ Server:CreateComponent({
 
             self.UniqueUserIDs.Next = (self.UniqueUserIDs.Next + 1)
             table.insert(self.UniqueUserIDs.Profiles, {
-                UniqueName = hPlayer:GetName(),
-                UniqueId = ("p%05d"):format(self.UniqueUserIDs.Next),
-                Identifiers = table.copy(aIdentifiers),
+                RegisterDate = Date:GetTimestamp(),
+                UniqueName   = hPlayer:GetName(),
+                UniqueId     = ("u%05d"):format(self.Properties.UniqueIDOffset + self.UniqueUserIDs.Next),
+                Identifiers  = table.copy(aIdentifiers),
             })
 
             return self.UniqueUserIDs.Profiles[#self.UniqueUserIDs.Profiles].UniqueId
@@ -359,7 +365,7 @@ Server:CreateComponent({
             local iIPDecimal = string.ip2dec(sIPAddress)
             local sIPProfile = self.IPProfiles[iIPDecimal]
             if (sIPProfile == nil) then
-                sIPProfile = ("ip%d"):format(self.IPProfiles["Next"] or 1)
+                sIPProfile = ("ip%d"):format(self.Properties.IPProfileOffset + (self.IPProfiles["Next"] or 1))
                 self.IPProfiles["Next"] = (self.IPProfiles["Next"] or 0) + 1
                 self.IPProfiles[iIPDecimal] = sIPProfile
                 self:Log("Inserted new IP-Profile %s on Index %d", sIPProfile, self.IPProfiles["Next"])
@@ -631,6 +637,94 @@ Server:CreateComponent({
             --      Host |
             --        IP |
 
+        end,
+
+        Command_UniqueListUsers = function(self, hPlayer, sFilter)
+
+            --[[
+            #============================================================================================# ???
+            #=== [           Name          |    Online    |    ID   | Entries |   Register Date     ] ===#
+            [             Shortcut0            Yes (#31)    u108858   8           1y 30d 12h Ago         ]
+            [             Shortcut1               No        u108859   31          30d 12h Ago            ]
+            [             Shortcut2            Yes (#556)   u108860   3           12h Ago                ]
+            [             Shortcut3            Yes (#556)   u108861   813         Today                  ]
+
+            #====[ USER:COUNT (04) ]=====================================================================#
+            ]]
+
+            local aProfiles = self.UniqueUserIDs.Profiles
+            local iProfiles = #aProfiles
+            if (iProfiles == 0) then
+                return false, hPlayer:LocalizeText("@noClassToDisplay", { Class = "@unique_users" })
+            end
+
+            local iConsoleWidth = Server.Chat:GetConsoleWidth()
+            local iBoxWidth = iConsoleWidth - 4
+            local iNameWidth = 38
+            local iOnlineWidth = 12
+            local iIDWidth = 7
+            local iEntriesWidth = 7
+            local iDateWidth = 29
+
+            local tHeaders = {
+                Name    = string.mspace(hPlayer:LocalizeText("@arg_name"), iNameWidth, nil, string.COLOR_CODE),
+                Online  = string.mspace(hPlayer:LocalizeText("@online"), iOnlineWidth, nil, string.COLOR_CODE),
+                ID      = string.mspace(hPlayer:LocalizeText("ID"), iIDWidth, nil, string.COLOR_CODE),
+                Entries = string.mspace(hPlayer:LocalizeText("@entries"), iEntriesWidth, nil, string.COLOR_CODE),
+                Date    = string.rspace(hPlayer:LocalizeText("@registry_date"), iDateWidth, string.COLOR_CODE),
+            }
+
+            local aLines = {
+                ("=%s="):format(("="):rep(iBoxWidth - 2)),
+                ("[ %s | %s | %s | %s | %s ]"):format(tHeaders.Name, tHeaders.Online, tHeaders.ID, tHeaders.Entries, tHeaders.Date)
+            }
+
+            local iTimestamp = Date:GetTimestamp()
+            local sFilterLower = (sFilter or ""):lower()
+            for _, tProfile in pairs(aProfiles) do
+
+                local sUniqueName = tProfile.UniqueName
+                local bAddToList = true
+                if (string.emptyN(sFilter)) then
+                    local iStart, iEnd = string.find(sUniqueName:lower(), sFilterLower)
+                    if (iStart and iEnd) then
+                        sUniqueName = sUniqueName:sub(1, iStart - 1) .. CRY_COLOR_YELLOW .. sUniqueName:sub(iStart, iEnd) .. CRY_COLOR_WHITE .. sUniqueName:sub(iEnd + 1)
+                    else
+                        bAddToList = false
+                    end
+                end
+
+                if (bAddToList) then
+                    local sOnlineStatus = CRY_COLOR_RED .. "@No"
+                    local hOnline = self:GetPlayerByUniqueID(tProfile.UniqueId)
+                    if (hOnline) then
+                        sOnlineStatus = CRY_COLOR_GREEN .. ("@Yes $9(#$4%d$9)"):format(hOnline:GetChannel())
+                    end
+                    local tLine = {
+                        Name    = string.mspace(sUniqueName, iNameWidth, nil, string.COLOR_CODE),
+                        Online  = string.mspace(hPlayer:LocalizeText(sOnlineStatus), iOnlineWidth, nil, string.COLOR_CODE),
+                        ID      = string.mspace(tProfile.UniqueId, iIDWidth, nil, string.COLOR_CODE),
+                        Entries = string.rspace("#" .. #tProfile.Identifiers, iEntriesWidth, string.COLOR_CODE),
+                        Date    = string.rspace(hPlayer:LocalizeText(Date:Colorize(Date:Format(iTimestamp - tProfile.RegisterDate), CRY_COLOR_BLUE)  .. " @ago"), iDateWidth, string.COLOR_CODE),
+                    }
+                    local sLine =
+                    ("[ $1%s$9 | %s$9 | $4%s$9 | $8%s$9 | %s$9 ]"):format(tLine.Name, tLine.Online, tLine.ID, tLine.Entries, tLine.Date)
+                    table.insert(aLines, sLine)
+                end
+            end
+
+            if (#aLines == 2) then
+                return false, hPlayer:LocalizeText("@noClassMatchingFilter", { Class = "@entries", Filter = sFilter })
+            end
+
+            table.insert(aLines, ("=%s="):format(("="):rep(iBoxWidth - 2)))
+
+            for _, sLine in pairs(aLines) do
+                Server.Chat:ConsoleMessage(hPlayer, string.mspace(CRY_COLOR_GRAY .. sLine, iConsoleWidth, nil, string.COLOR_CODE))
+                --Server.Chat:ConsoleMessage(hPlayer, CRY_COLOR_GRAY .. sLine)
+            end
+
+            return true, hPlayer:LocalizeText("@entitiesListedInConsole", { Count = (#aLines - 3), Class = "@unique_users"})
         end,
 
     }

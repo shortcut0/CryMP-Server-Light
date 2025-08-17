@@ -78,6 +78,7 @@ timer.new = function(expiry)
 	hNew.Diff = hNew.diff
 	hNew.Refresh = hNew.refresh
 	hNew.Expired = hNew.expired
+	hNew.Expired_Refresh = hNew.expired_refresh
 	hNew.GetExpiry = hNew.getexpiry
 	hNew.SetExpiry = hNew.setexpiry
 	return hNew

@@ -206,7 +206,7 @@ Server:CreateComponent({
             end
 
             hPlayer:SetProfileReceived(true)
-            if (hPlayer.Info.IsValidating) then
+            if (hPlayer.Info.IsValidating or hPlayer:IsValidated()) then
                 return true
             end
 
@@ -236,7 +236,6 @@ Server:CreateComponent({
             local sIPAddress = ServerDLL.GetChannelIP(iChannel)
             local sNickname = ServerDLL.GetChannelNick(iChannel)
 
-            sIPAddress = "148.222.205.147"
             local aGeoInfo, bIsInvalidIP = self:GetGeoInfo(sIPAddress, iChannel)
 
             local sCountryName = aGeoInfo.CountryName
@@ -282,6 +281,7 @@ Server:CreateComponent({
         end,
 
         ParseDisconnectReason = function(self, sDescription)
+            -- TODO
             local sShort = "Disconnected"
             return sShort, sDescription
         end,
@@ -314,6 +314,7 @@ Server:CreateComponent({
                 return
             end
 
+            -- Push for an update to reflect new Players
             if (self.Timers.Update:GetExpiry() > 3) then
                 self.Timers.Update:SetExpiry(3)
             end
@@ -324,7 +325,7 @@ Server:CreateComponent({
                 self:SendMessage(hClient, "Disconnected", { Cause = iCause, Description = (sDescription or "Undefined") })
             end
 
-            -- next frame
+            -- Do this a little later so we wont lag the Script
             Script.SetTimer(100, function()
                 if (Server.Utils:GetPlayerCount() == 0) then
                     Server:OnServerEmptied()

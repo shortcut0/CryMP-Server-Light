@@ -67,7 +67,9 @@ Server.ChatCommands:Add({
                             if (hVictim:GetVehicle()) then
                                 hVictim:LeaveVehicle()
                             end
-                            hVictim:SvMoveTo(vPos)
+                            Script.SetTimer(10, function()
+                                hVictim:SvMoveTo(vPos)
+                            end)
                         end
                         Server.Utils:SpawnEffect(Effect_LightExplosion, vPos)
                         Server.Chat:ChatMessage(ChatEntity_Server, hVictim, "@you_were_broughtTo", { To = self:GetName() })
@@ -86,7 +88,12 @@ Server.ChatCommands:Add({
             if (hTarget:IsDead()) then
                 Server.Utils:RevivePlayer(hTarget, vPos)
             else
-                hTarget:SvMoveTo(vPos)
+                if (hTarget.actor:GetLinkedVehicleId()) then
+                    hTarget:LeaveVehicle()
+                end
+                Script.SetTimer(10, function()
+                    hTarget:SvMoveTo(vPos)
+                end)
             end
             if (bIntoVehicle) then
                 local hVehicle = self:GetVehicle()
@@ -125,7 +132,7 @@ Server.ChatCommands:Add({
                 local hVehicle = hTarget:GetVehicle()
                 local aFreeSeat = hTarget:GetFreeVehicleSeat()
                 if (aFreeSeat) then
-                    hVehicle.vehicle:EnterVehicle(self.id, aFreeSeat.id, false)
+                    hVehicle.vehicle:EnterVehicle(self.id, aFreeSeat, false)
                 end
             end
             Server.Utils:SpawnEffect(Effect_LightExplosion, vPos)

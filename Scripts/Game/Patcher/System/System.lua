@@ -13,6 +13,13 @@ Server.Patcher:HookClass({
     HookNow = true,
     Body = {
         {
+            Name = "SpawnEntity",
+            Backup = true,
+            Value = function(tParams, ...)
+                return System.SpawnEntity_Backup(tParams, ...)
+            end,
+        },
+        {
             Name = "Log",
             Backup = true,
             Value = function(sMsg, ...)

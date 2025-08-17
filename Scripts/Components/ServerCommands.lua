@@ -203,7 +203,7 @@ Server:CreateComponent({
                 IsBroken    = function(this) return this.m_IsBroken end,
                 Break       = function(this, bMode) this.m_IsBroken = bMode end,
                 IsQuiet     = function(this) return this.Properties.IsQuiet  end,
-                SetCoolDown = function(this, sId, iTimer) iTimer = iTimer or (this.Properties.CoolDown or 0) if (not this.CoolDowns[sId]) then this.CoolDowns[sId] = TimerNew(iTimer) end this.CoolDowns[sId].refresh() end,
+                SetCoolDown = function(this, sId, iTimer) iTimer = iTimer or (this.Properties.CoolDown or 0) if (not this.CoolDowns[sId]) then this.CoolDowns[sId] = TimerNew(iTimer)this.CoolDowns[sId].expire() else this.CoolDowns[sId].refresh() end end,
                 GetCoolDown = function(this, sId, iTimer) if (not this.CoolDowns[sId]) then this:SetCoolDown(sId, iTimer) end return this.CoolDowns[sId].expired(), this.CoolDowns[sId].getexpiry() end,
                 GetGameRules= function(this, sComp) local sRules = this.Properties.GameRules if (sComp) then return sComp == sRules end return sRules  end
             }
@@ -392,7 +392,7 @@ Server:CreateComponent({
                     if (g_gameRules.IS_PS) then
                         g_gameRules.onClient:ClBuyError(hPlayer:GetChannel(), "nnn")
                     else
-                        Server.ClientMod:ExecuteCode({ Code = "CryMP_Client:PSE(g_laId,'" .. sErrorFeedback .. "')", Clients = hPlayer })
+                        Server.ClientMod:ExecuteCode({ Code = "CryMP_Client:PSE(nil,'" .. sErrorFeedback .. "')", Clients = hPlayer })
                     end
                 end
             end
@@ -604,7 +604,7 @@ Server:CreateComponent({
             Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. "[ " .. string.mspace(sInfoHelp .. CRY_COLOR_GRAY, iBoxWidth - 4, nil, string.COLOR_CODE) .. " ]")
             Server.Chat:ConsoleMessage(hPlayer, sSpace .. CRY_COLOR_GRAY .. string.rspace("", iBoxWidth, string.COLOR_CODE, "="))
 
-            Server.Chat:ChatMessage(ChatEntity_Server, hPlayer, hPlayer:LocalizeText("@commandHelp_Chat", { Name = string.lower(sName) }))
+            Server.Chat:ChatMessage(ChatEntity_Server, hPlayer, hPlayer:LocalizeText("< !" .. sName:lower() .. " > @commandHelp_Chat"))--, { Name = string.lower(sName) }))
 
             local x = {
                 "== [ Commands ] ===================================================================================",
@@ -655,7 +655,7 @@ Server:CreateComponent({
 
             local bIsAdmin = hPlayer:IsAdministrator()
             local bIsDeveloper = hPlayer:IsDeveloper()
-            local bInTestMode = (hPlayer:IsInTestMode() or hPlayer:IsServerOwner())
+            local bInTestMode = (hPlayer:IsInTestMode())-- or hPlayer:IsServerOwner())
             local iPlayerAccess = hPlayer:GetAccess()
             local bInsufficientAccess = (iPlayerAccess < iCommandAccess)
 
@@ -700,13 +700,13 @@ Server:CreateComponent({
             local sGameRules  = tProperties.GameRules
             local bInVehicle  = tProperties.Vehicle
             local bInDoors    = tProperties.InDoors
-            local bDead       = tProperties.Alive
+            local bAlive      = tProperties.Alive
             local bSpectating = tProperties.Spectating
             local iPrice      = tProperties.Price
 
             local bPlayerInVehicle  = hPlayer:IsInVehicle()
             local bPlayerInDoors    = hPlayer:IsInDoors()
-            local bPlayerDead       = hPlayer:IsDead()
+            local bPlayerAlive      = hPlayer:IsAlive()
             local bPlayerSpectating = hPlayer:IsSpectating()
             local iPlayerPrestige   = hPlayer:GetPrestige()
 
@@ -736,9 +736,9 @@ Server:CreateComponent({
                     end
                 end
 
-                if (bDead ~= nil) then
-                    if (bDead ~= bPlayerDead) then
-                        SendMessage((bDead and self.Responses.Dead or self.Responses.NotDead ), { Name = sCommand })
+                if (bAlive ~= nil) then
+                    if (bAlive ~= bPlayerAlive) then
+                        SendMessage((not bAlive and self.Responses.Dead or self.Responses.NotDead ), { Name = sCommand })
                         return
                     end
                 end
@@ -757,7 +757,7 @@ Server:CreateComponent({
                     end
                 end
 
-                if (sGameRules == GameMode_PS) then
+                if (g_gameRules.class == GameMode_PS) then
                     if (iPrice ~= nil) then
                         if (iPrice > iPlayerPrestige) then
                             SendMessage(self.Responses.InsufficientPrestige, { Name = sCommand })
@@ -1106,14 +1106,18 @@ Server:CreateComponent({
                 if (g_gameRules.IS_PS) then
                     g_gameRules.onClient:ClBuyOk(hPlayer:GetChannel(), "nnn")
                 else
-                    Server.ClientMod:ExecuteCode({ Code = "CryMP_Client:PSE(g_laId,'" .. sFeedback .. "')", Clients = hPlayer })
+                    Server.ClientMod:ExecuteCode({ Code = "CryMP_Client:PSE(nil,'" .. sFeedback .. "')", Clients = hPlayer })
                 end
             end
 
             aCommand:SetCoolDown(hPlayer.id)
             if (bProcessPayment) then
-                hPlayer:AddPrestige(-iPrice, ("@str_command !%s @str_used"):format(sCommand:upper()))
+               -- hPlayer:AddPrestige(-iPrice, ("@str_command !%s @str_used"):format(sCommand:upper()))
+                g_gameRules:PrestigeEvent(hPlayer.id, -iPrice, ("@str_command !%s @str_used"):format(sCommand:upper()))
             end
+
+            -- XP
+            Server.PlayerRanks:XPEvent(hPlayer, XPEvent_CommandUsed)
         end,
 
         ConvertArgumentType = function(self, iType, sKey)

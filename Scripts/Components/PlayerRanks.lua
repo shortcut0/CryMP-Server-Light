@@ -51,6 +51,18 @@ Server:CreateComponent({
 
         },
 
+        XPActions = {},
+        XPEvents = {
+            [XPEvent_ChatMessage] = {
+                Reward  = 1,
+                Actions = 10, -- 1 XP per 10 messages sent
+            },
+            [XPEvent_CommandUsed] = {
+                Reward  = 1,
+                Actions = 5,
+            },
+        },
+
         Initialize = function(self)
         end,
 
@@ -59,6 +71,42 @@ Server:CreateComponent({
 
         IsEnabled = function(self)
             return self.Properties.IsEnabled
+        end,
+
+        XPEvent = function(self, hPlayer, hEvent)
+
+            local tXPEvent = self.XPEvents[hEvent]
+            if (tXPEvent) then
+                local iXP = tXPEvent.Reward
+                local iActions = tXPEvent.Actions
+                local bActionsOk = true
+                if (iActions and iActions > 1) then
+                    self.XPActions[hEvent] = (self.XPActions[hEvent] or {})
+                    self.XPActions[hEvent][hPlayer.id] = (self.XPActions[hEvent][hPlayer.id] or {
+                        Last = TimerNew(),
+                        Count = 0
+                    })
+
+                    local tPlayerAction = self.XPActions[hEvent][hPlayer.id]
+                    if (tXPEvent.Timeout and tPlayerAction.Last.Expired_Refresh(tXPEvent.Timeout)) then
+                        tPlayerAction.Count = 0
+                    else
+                        tPlayerAction.Last.Refresh()
+                    end
+                    local iCompletedActions = (tPlayerAction.Count + 1)
+                    if (iCompletedActions >= iActions) then
+                        iCompletedActions = 0
+                        bActionsOk = true
+                    end
+
+                    tPlayerAction.Count = iCompletedActions
+                end
+                if (bActionsOk) then
+                    self:AwardRankXP(hPlayer, iXP)
+                end
+            else
+                self:LogError("Invalid XP Event '%s'", tostring(hEvent))
+            end
         end,
 
         AwardRankXP = function(self, hPlayer, iXP)

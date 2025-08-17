@@ -8,6 +8,8 @@
 -- This file Contains Date-Formatting Utilities
 -- ===================================================================================
 
+--[[ -- Commented due to IDE getting confused over this
+
 Date = {}
 
 --------------
@@ -152,3 +154,4 @@ end
 
 --------------
 Date:Init()
+]]
