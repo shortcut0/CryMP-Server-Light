@@ -287,6 +287,8 @@ Server:CreateComponent({
                 end
             end
 
+            local sArguments = (tFormat.__Arguments__)-- or "<{Green}S{Gray}: {Green}Nomad{Gray}> <{Blue}N{Gray}: {Blue}669{Gray}>, <{Orange}P{Gray}: {Orange}Nomad{Gray}>, <{Yellow}Msg{Gray}: {Yellow}out of mana..{Gray}>, <{Red}?{Gray}: {Red}third!{Gray}>")
+
             local sPlayerName = hPlayer:GetName()
             local aLogRecipients = Server.Utils:GetPlayers({ NotById = hPlayer.id, ByAccess = hPlayer:GetAccess(Server.AccessHandler:GetAdminLevel()) })
             local aChatLogRecipients = table.copy(aLogRecipients)
@@ -419,7 +421,6 @@ Server:CreateComponent({
                         Message = "@command_consoleLog",
                         MessageFormat = { { Name = hPlayer:GetName(), Command = string.capitalN(sCommandUpper, 1), Reply = sConsole_Log }, tFormat  }
                     })
-                    local sArguments = (tFormat.__Arguments__)-- or "<{Green}S{Gray}: {Green}Nomad{Gray}> <{Blue}N{Gray}: {Blue}669{Gray}>, <{Orange}P{Gray}: {Orange}Nomad{Gray}>, <{Yellow}Msg{Gray}: {Yellow}out of mana..{Gray}>, <{Red}?{Gray}: {Red}third!{Gray}>")
                     if (string.emptyN(sArguments)) then
                         self:LogEvent({
                             Event = self:GetFriendlyName(),
@@ -433,7 +434,11 @@ Server:CreateComponent({
 
             -- Players:
             if (string.emptyN(sChat_Msg)) then
-                Server.Chat:ChatMessage(self.ChatEntities.Info, hPlayer, ("< !%s > %s"):format(sCommandUpper, sChat_Msg), tFormat)
+                local sCommandPrefix = ("< !%s > "):format(sCommandUpper)
+                if (tMessage.RawMessage) then
+                    sCommandPrefix = ""
+                end
+                Server.Chat:ChatMessage(self.ChatEntities.Info, hPlayer, ("%s%s"):format(sCommandPrefix, sChat_Msg), tFormat)
             end
             if (string.emptyN(sConsole_Msg)) then
                 -- So, we only do the normal log if the user used the "say" console command
@@ -1081,7 +1086,7 @@ Server:CreateComponent({
                 return
             elseif (bOk == nil) then
                 SendMessage(self.Responses.NoFeedback, { Name = sCommand })
-            elseif (bOk == true or bOk == CommandResp_Success) then
+            elseif (bOk == true or bOk == CmdResp_Success) then
                 if (sReply) then
                     SendMessage({
                         Success = true,
@@ -1090,12 +1095,24 @@ Server:CreateComponent({
                 else
                     SendMessage(self.Responses.Success, { Name = sCommand })
                 end
-            elseif (bOk == CommandResp_SuccessQuiet) then
+            elseif (bOk == CmdResp_SuccessQuiet) then
                 if (sReply) then
                     SendMessage({
                         Success = true,
                         Message = sReply,
                         ChatOnly = true
+                    }, { Name = sCommand })
+                else
+                    SendMessage(self.Responses.Success, { Name = sCommand })
+                end
+
+            elseif (bOk == CmdResp_RawMessage) then
+                if (sReply) then
+                    SendMessage({
+                        Success = true,
+                        Message = sReply,
+                        ChatOnly = true,
+                        RawMessage = true,
                     }, { Name = sCommand })
                 else
                     SendMessage(self.Responses.Success, { Name = sCommand })

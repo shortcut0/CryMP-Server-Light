@@ -679,6 +679,66 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "enabled",
+        Languages = {
+            English = "Enabled"
+        }
+    },
+    {
+        String = "enabled_on",
+        Languages = {
+            English = "Enabled On {Name}"
+        }
+    },
+    {
+        String = "disabled",
+        Languages = {
+            English = "Disabled"
+        }
+    },
+    {
+        String = "disabled_on",
+        Languages = {
+            English = "Disabled On {Name}"
+        }
+    },
+    {
+        String = "yourself_u",
+        Languages = {
+            English = "YOURSELF"
+        }
+    },
+    {
+        String = "projectile_eliminated",
+        Languages = {
+            English = "{Pre}Projectile Eliminated"
+        }
+    },
+    {
+        String = "this_is_friendlyExplosive",
+        Languages = {
+            English = "WARNiNG: This is a Friendly Explosive"
+        }
+    },
+    {
+        String = "this_is_yourExplosive",
+        Languages = {
+            English = "WARNiNG: This is your Explosive"
+        }
+    },
+    {
+        String = "yourself",
+        Languages = {
+            English = "Yourself"
+        }
+    },
+    {
+        String = "Friendly",
+        Languages = {
+            English = "Friendly"
+        }
+    },
+    {
         String = "reserved",
         Languages = {
             English = "Reserved"
@@ -802,6 +862,18 @@ Server.LocalizationManager:Add({
         String = "first_blood_instantAction",
         Languages = {
             English = "{Shooter} SCORED FIRST:BLOOD ( +{XP} XP )"
+        }
+    },
+    {
+        String = "first_blood_teamRwd",
+        Languages = {
+            English = "First Blood Share"
+        }
+    },
+    {
+        String = "first_blood_soloRwd",
+        Languages = {
+            English = "First Blood"
         }
     },
     {
@@ -1212,6 +1284,64 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "rank_reset_confirmation",
+        Languages = {
+            English = "Are you sure you want to Reset your Rank? This Action is Irreversible."
+        }
+    },
+    {
+        String = "rank_reset_by",
+        Languages = {
+            English = "{Red}{Name}{Gray} Rank has been Reset ({Red}{Reason}{Gray})",
+        }
+    },
+    {
+        String = "rank_reset_by_admin",
+        Extended = ServerAccess_Admin,
+        Languages = {
+            English = {
+                Regular = "{Red}{Name}{Gray} Rank has been Reset ({Red}{Reason}{Gray})",
+                Extended = "{Red}{Name}{Gray} Rank has been Reset by {Red}{Admin}{Gray} ({Red}{Reason}{Gray})"
+            },
+        }
+    },
+    {
+        String = "gift_from",
+        Languages = {
+            English = "Gift From {Name}",
+        }
+    },
+    {
+        String = "Transferred_to",
+        Languages = {
+            English = "Transferred to {Name}",
+        }
+    },
+    {
+        String = "duping_not_allowed",
+        Languages = {
+            English = "Duping Items or Currency is not Allowed",
+        }
+    },
+    {
+        String = "rank_reset",
+        Languages = {
+            English = "Your Rank has Been Reset!",
+        }
+    },
+    {
+        String = "rank_reset_confirmation2",
+        Languages = {
+            English = "You will lose all Privileges and Bonuses associated with your Current Rank"
+        }
+    },
+    {
+        String = "rank_reset_confirmation3",
+        Languages = {
+            English = "Use this Command Again to proceed with the Reset."
+        }
+    },
+    {
         String = "building_type_alien",
         Languages = {
             English = "Alien Energy Site"
@@ -1326,6 +1456,30 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "uniqueId_assigned",
+        Languages = {
+            English = "Assigned Unique ID {Red}{ID}{Gray} to User {Red}{Name}{Gray} ({Red}{UniqueName}{Gray})"
+        }
+    },
+    {
+        String = "user_not_registered",
+        Languages = {
+            English = "User not Registered"
+        }
+    },
+    {
+        String = "unique_name_changed",
+        Languages = {
+            English = "Update Unique Name from User {Red}{OldName}{Gray} to {Red}{NewName}{Gray}"
+        }
+    },
+    {
+        String = "unique_name_changedChat",
+        Languages = {
+            English = "Updated Name to {NewName}"
+        }
+    },
+    {
         String = "user__count",
         Languages = {
             English = "USER:COUNT"
@@ -1431,6 +1585,12 @@ Server.LocalizationManager:Add({
         String = "not_your_vehicle",
         Languages = {
             English = "Not your Vehicle"
+        }
+    },
+    {
+        String = "bouncy_vehicles",
+        Languages = {
+            English = "BOUNCY:VEHICLES"
         }
     },
 })
@@ -1562,13 +1722,25 @@ Server.LocalizationManager:Add({
     {
         String = "arg_reason_desc",
         Languages = {
-            English = "The new name your wish to be renamed to"
+            English = "The reason for your Action"
+        }
+    },
+    {
+        String = "arg_amount_desc",
+        Languages = {
+            English = "The amount you wish to apply" -- ???
         }
     },
     {
         String = "arg_rename_desc",
         Languages = {
             English = "The new name your wish to be renamed to"
+        }
+    },
+    {
+        String = "arg_name_desc",
+        Languages = {
+            English = "The new Name to apply to the target"
         }
     },
     {

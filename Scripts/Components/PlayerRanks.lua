@@ -17,6 +17,8 @@ Server:CreateComponent({
         --    { Key = "PlayerData", Name = "RankData.lua", Path = (SERVER_DIR_DATA .. "Users/") }
         --},
 
+        ChatEntity = "< RANKS >",
+
         Properties = {
 
             IsEnabled = true,
@@ -35,18 +37,22 @@ Server:CreateComponent({
             -- List of Ranks
             Names = {
                 { Name = "PLASTIC",     Stages = 3, StageXPMultiplier = 1.0, },
-                { Name = "POTATO",      Stages = 3, StageXPMultiplier = 1.0, },
-                { Name = "WOODEN",      Stages = 3, StageXPMultiplier = 2.0, },
-                { Name = "COPPER",      Stages = 5, StageXPMultiplier = 3.0, },
+                { Name = "POTATO",      Stages = 3, StageXPMultiplier = 2.0, },
+                { Name = "WOODEN",      Stages = 3, StageXPMultiplier = 3.0, },
+                { Name = "COPPER",      Stages = 5, StageXPMultiplier = 4.0, },
                 { Name = "BRONZE",      Stages = 5, StageXPMultiplier = 5.0, },
                 { Name = "SILVER",      Stages = 5, StageXPMultiplier = 6.0, },
-                { Name = "GOLD",        Stages = 9, StageXPMultiplier = 10,  },
-                { Name = "AMETHYST",    Stages = 9, StageXPMultiplier = 15,  },
-                { Name = "DIAMOND",     Stages = 10, StageXPMultiplier = 18,  },
+                { Name = "GOLD",        Stages = 5, StageXPMultiplier = 10,  },
+                { Name = "PLATINUM",    Stages = 5, StageXPMultiplier = 15,  },
+                { Name = "AMETHYST",    Stages = 5, StageXPMultiplier = 15,  },
+                { Name = "DIAMOND",     Stages = 9, StageXPMultiplier = 18,  },
+                { Name = "EMERALD",     Stages = 9, StageXPMultiplier = 18,  },
+                { Name = "RUBY",        Stages = 9, StageXPMultiplier = 18,  },
+                { Name = "OPAL",        Stages = 9, StageXPMultiplier = 18,  },
                 { Name = "AMD",         Stages = 10, StageXPMultiplier = 25,  },
 
                 -- no one will reach this
-                { Name = "RANK_LIST_END", },
+                { Name = "RANK_LIST_END", Stages = 1000, StageXPMultiplier = 1000 },
             }
 
         },
@@ -116,15 +122,18 @@ Server:CreateComponent({
                 if (not self.Properties.AllowDownRanking) then
                     return
                 end
-
                 -- Refresh rank from scratch upon XP decrement
-                tRankData.Rank = nil
-                tRankData.RankStage = nil
-                tRankData.NextRankXP = nil
+                self:ResetRankData(tRankData)
             end
 
             tRankData.RankXP = (tRankData.RankXP + iXP)
             self:RefreshRank(hPlayer)
+        end,
+
+        ResetRankData = function(self, tRankData)
+            tRankData.Rank = nil
+            tRankData.RankStage = nil
+            tRankData.NextRankXP = nil
         end,
 
         OnRankIncreased = function(self, hPlayer)
@@ -206,6 +215,26 @@ Server:CreateComponent({
             local tRankData = self:GetRankData(hPlayer)
             return tRankData.Name
         end,
+
+        Command_ResetRank = function(self, hPlayer, hAdmin, sReason)
+
+            hPlayer.Data.Rank = self:GetEmptyData()
+            self:RefreshRank(hPlayer)
+
+            if (hAdmin) then
+                sReason = sReason or "@admin_decision"
+            else
+                sReason = sReason or "@user_decision"
+            end
+            self:LogEvent({
+                Message = "@rank_reset_by" .. (hAdmin and "_admin" or ""),
+                MessageFormat = {
+                    Admin = (hAdmin and (hAdmin:GetName()) or ""),
+                    Name = hPlayer:GetName(),
+                    Reason = sReason
+                }
+            })
+        end
 
     }
 })

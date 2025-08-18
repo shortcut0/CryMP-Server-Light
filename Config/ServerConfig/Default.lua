@@ -98,6 +98,8 @@ Server.Config:Create({
 
                 -- Server Only CVars
                 SERVER_USE_HIT_QUEUE = 0,
+                SERVER_USE_EXPLOSION_QUEUE = 0,
+                SERVER_PROJECTILES_SPAWNBEHIND = 0,
 
             }, ---< ForcedCVars
 
@@ -184,6 +186,12 @@ Server.Config:Create({
                 -- Will enable the extended end game radio in instant action games
                 ExtendedInstantActionEndGame = true,
 
+                -- Will allow you to shoot and destroy AV Mines
+                AllowDestroyAVMines = true,
+
+                -- Allows players to destroy friendly explosives
+                AllowDestroyFriendlyExplosives = true,
+
             }, ---< Immersion
 
             --- Gun Turret Configuration
@@ -231,6 +239,9 @@ Server.Config:Create({
 
                 -- Reward for repairing a vehicle
                 VehicleRepairAward = 15,
+
+                -- Prestige reward for destroying an explosive (negative value will be applied for friendly explosives)
+                ExplosiveEliminationAward = 15,
 
             }, ---< Prestige
 

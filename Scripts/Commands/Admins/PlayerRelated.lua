@@ -166,4 +166,41 @@ Server.ChatCommands:Add({
             return true
         end
     },
+
+    -- ================================================================
+    -- !GiveXP <Target> <Amount> <Reason>
+    {
+        Name = "GiveXP",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer },
+            { Name = "@amount", Desc = "@arg_amount_desc", Required = true, Type = CommandArg_TypeNumber, Minimum = 1, Maximum = 255 },
+            { Name = "@reason", Desc = "@arg_reason_desc", Type = CommandArg_TypeMessage, Default = "@admin_decision" },
+        },
+        Properties = {
+           -- GameRules = GameMode_PS, -- r:works for IA too
+        },
+        Function = function(self, hTarget, iAmount, sReason)
+            g_gameRules:XPEvent(hTarget, iAmount, sReason)
+        end
+    },
+
+    -- ================================================================
+    -- !GivePrestige <Target> <Amount> <Reason>
+    {
+        Name = "GivePrestige",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer,  },
+            { Name = "@amount", Desc = "@arg_amount_desc", Required = true, Type = CommandArg_TypeNumber, Minimum = 1, Maximum = 10000 },
+            { Name = "@reason", Desc = "@arg_reason_desc", Type = CommandArg_TypeMessage, Default = "@admin_decision" },
+        },
+        Properties = {
+            GameRules = GameMode_PS,
+            CoolDown = 10,
+        },
+        Function = function(self, hTarget, iAmount, sReason)
+            g_gameRules:PrestigeEvent(hTarget, iAmount, sReason)
+        end
+    },
 })

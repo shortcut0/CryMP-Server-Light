@@ -151,8 +151,9 @@ CommandArg_TypeTeam = 9     -- a valid team name or id
 ALL_PLAYERS = 1000
 
 ----------------------------
-CommandResp_Success = 3
-CommandResp_SuccessQuiet = 4
+CmdResp_Success = 3
+CmdResp_SuccessQuiet = 4
+CmdResp_RawMessage = 5
 
 ----------------------------
 ConfigType_Any = 1
@@ -241,8 +242,15 @@ BuildingType_Proto = "Proto"
 
 GlobalKeys = {
     VehicleLocked = 10,
-    VehicleReserved = 11
+    VehicleReserved = 11,
+
+    PlayerUUIDCheck = 245,
+    PlayerUUIDSalt = 246,
 }
+
+----------------------------
+
+SandboxState_BouncyVehicles = 0
 
 ----------------------------
 PRIORITY_NONE = 1

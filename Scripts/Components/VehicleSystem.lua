@@ -28,8 +28,14 @@ Server:CreateComponent({
             if (hShooter and hShooter.IsPlayer) then
                 if (hShooter:IsSuperman(2) or (hShooter:IsSuperman() and sType == "melee")) then
                     tHit.damage = 0
-                    Server.Utils:AddImpulse(hVehicle, vPos, vDir, (hVehicle:GetMass() * 1000))
+                    Server.Utils:AddImpulse(hVehicle, vPos, vDir, (hVehicle:GetMass() * 100))
                 end
+            end
+
+            local hDriver = hVehicle:GetDriver()
+            if (((hDriver and hDriver.TempData.BouncyVehicles) or Server.Sandbox:GetState(SandboxState_BouncyVehicles)) and sType == "collision") then
+                Server.Utils:AddImpulse(hVehicle, vPos, vDir, (hVehicle:GetMass() * math.min(15,tHit.damage)))
+                tHit.damage = 0
             end
         end,
 
@@ -46,6 +52,7 @@ Server:CreateComponent({
 
             hVehicle:SetTempInfo("BuildBy", hOwner.id)
             hVehicle:SetTempInfo("OwnerFirstEnter", false)
+            --hVehicle:SetInfo("DoomsdayMachine", g_gameRules:IsDoomsdayVehicle(hVehicle.class)) -- moved to Init in vehiclebase
 
             g_gameRules.game:SetSynchedEntityValue(hVehicle.id, GlobalKeys.VehicleLocked, NULL_ENTITY)
             g_gameRules.game:SetSynchedEntityValue(hVehicle.id, GlobalKeys.VehicleReserved, hOwnerId)

@@ -192,6 +192,8 @@ end
 --- Formats a table to string
 table.ToString = function(tbl, tInfo)
 
+    tInfo = tInfo or {}
+
     local iMaxDepth = (tInfo.MaxDepth or -1)
     local iDepth = (tInfo.CurrentDepth or 0)
     local sName = (tInfo.Name or tostring(tbl))
@@ -208,6 +210,8 @@ table.ToString = function(tbl, tInfo)
     for sKey, hValue in pairs(tbl) do
         local sElement
         local sType = type(hValue)
+        local sKeyType = type(sKey)
+        local bKeyNumber = (sKeyType == "number")
         iCurr = (iCurr + 1)
         if (sType == "table") then
             if (tInfo.Processed[hValue]) then

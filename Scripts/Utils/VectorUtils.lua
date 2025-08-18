@@ -27,6 +27,15 @@ Vector.Empty = function()
 end
 
 -- ======================================
+Vector.ToString = function(vec, pretty_print)
+    local t = ("{x=%f,y=%f,z=%f}")
+    if (pretty_print) then
+        t = ("{ x = %0.6f, y = %0.6f, z = %0.6f }")
+    end
+    return t:format(vec.x, vec.y, vec.z)
+end
+
+-- ======================================
 Vector.Up = function()
     return { x = 0, y = 0, z = 1}
 end

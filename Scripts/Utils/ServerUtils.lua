@@ -323,6 +323,32 @@ Server:CreateComponent({
             return self:GetEntity(pEntity, true) ~= nil
         end,
 
+        AddImpulse = function(self, hEntity, vPos, vDir, fImpulse)
+
+
+            vDir = vDir or Vector.Up()
+            vPos = vPos or hEntity:GetPos()
+
+            local hDriver = (hEntity.vehicle and hEntity:GetDriver())
+            if (hEntity.IsPlayer) then
+                Server.ClientMod:ExecuteCode({
+                    Code = ([[g_la:AddImpulse(-1,%s,%s,%f,1)]]):format(Vector.ToString(vPos), Vector.ToString(vDir), fImpulse),
+                    Client = hEntity,
+                    NoQueue = true
+                })
+                return
+            elseif (hDriver and hDriver.IsPlayer) then
+                Server.ClientMod:ExecuteCode({
+                    Code = ([[local v=CryMP_Client:GE("%s")if(not v or not v.vehicle)then return end;v:AddImpulse(-1,%s,%s,%f,1)]]):format(hEntity:GetName(), Vector.ToString(vPos), Vector.ToString(vDir), fImpulse),
+                    Client = hDriver,
+                    NoQueue = true
+                })
+                return
+            end
+
+            hEntity:AddImpulse(-1, vPos, vDir, fImpulse, 1)
+        end,
+
         GetEntities = function(self, aInfo)
             local aEntities
             if (aInfo and aInfo.ByClass) then

@@ -218,6 +218,49 @@ Server:CreateComponent({
             return
         end,
 
+        OnProjectileHit = function(self, hShooterId, hProjectileId, bDestroyed, iDamage, nWeaponId, vPos, vNormal)
+
+            local hShooter = Server.Utils:GetEntity(hShooterId)
+            local hProjectile = Server.Utils:GetEntity(hProjectileId)
+            local hWeapon = Server.Utils:GetEntity(nWeaponId)
+            if (not hShooter) then
+                return
+            end
+
+            local iBonus = g_gameRules.Config.ExplosiveEliminationReward
+            if (g_gameRules.IS_PS) then
+                if (hShooter.IsPlayer) then
+                    if (ServerDLL.GetProjectileOwnerId(hProjectileId) ~= hShooterId) then
+                        if (hShooter:GetTeam() == Server.Utils:GetTeamId(hProjectileId)) then
+                            if (not bDestroyed) then
+                                Server.Chat:TextMessage(ChatType_Center, hShooter, "@this_is_friendlyExplosive")
+                            else
+                                g_gameRules:PrestigeEvent(hShooterId, -iBonus, "@projectile_eliminated", { Pre = "@friendly " })
+                            end
+                        elseif (bDestroyed) then
+                            g_gameRules:PrestigeEvent(hShooterId, iBonus, "@projectile_eliminated", { Pre = "" })
+                        end
+                    else
+                        Server.Chat:TextMessage(ChatType_Center, hShooter, "@this_is_yourExplosive")
+                    end
+                end
+            end
+
+            if (not g_gameRules.Config.AllowDestroyFriendlyExplosives) then
+                return false
+            end
+
+            if (g_gameRules.Config.AllowDestroyAVMines) then
+                if (hProjectile.class == "avexplosive") then
+                    hProjectile.HP = (hProjectile.HP or 1000) - iDamage
+                    if (hProjectile.HP <= 0) then
+                        ServerDLL.ExplodeProjectile(hProjectile.id)
+                    end
+                end
+            end
+            return true
+        end,
+
         OnWeaponFired = function(self, hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
 
             if (hShooter and hShooter.IsPlayer) then

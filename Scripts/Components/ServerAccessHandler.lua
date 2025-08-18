@@ -110,12 +110,22 @@ Server:CreateComponent({
         PostInitialize = function(self)
         end,
 
+        OnHardwareIDReceived = function(self, hPlayer)
+            if (not hPlayer.Info.UniqueIDAssigned) then
+                self:AssignUniqueID(hPlayer, self:GetUniqueID(hPlayer))
+            end
+        end,
+
         OnValidationFinished = function(self, hPlayer)
 
             Server.Chat:SendWelcomeMessage(hPlayer)
             Server.Network:SendMessage(hPlayer, "Connected")
 
-            self:AssignUniqueID(hPlayer, self:GetUniqueID(hPlayer))
+            --moved to timer function to allow clients to send hardware ids
+            --self:AssignUniqueID(hPlayer, self:GetUniqueID(hPlayer))
+            if (string.emptyN(hPlayer:GetHardwareId()) and not hPlayer.Info.UniqueIDAssigned) then
+                self:AssignUniqueID(hPlayer, self:GetUniqueID(hPlayer))
+            end
         end,
 
         GetPlayerByUniqueID = function(self, hId)
@@ -127,9 +137,22 @@ Server:CreateComponent({
         end,
 
         AssignUniqueID = function(self, hPlayer, hId)
+
+            if (hPlayer.Info.UniqueIDAssigned) then
+                self:LogWarning("Attempt to Assign UniqueID AGAIN")
+                return
+            end
+
             hPlayer.Info.UniqueId = hId
             hPlayer.Info.UniqueName = self:GetUniqueName(hId)
+            hPlayer.Info.UniqueIDAssigned = true
             self:Log("Resolved Unique ID for User '%s' ID: %s, Name: %s", hPlayer:GetName(), hId, hPlayer.Info.UniqueName)
+            self:LogEvent({
+                Message = "@uniqueId_assigned",
+                MessageFormat = { Name = hPlayer:GetName(), UniqueName = hPlayer.Info.UniqueName, ID = hId },
+                Recipients = Server.Utils:GetPlayers({ ByAccess = math.max(hPlayer:GetAccess(), ServerAccess_SuperAdmin) })
+            })
+            DebugLog("SHOW TO",math.max(hPlayer:GetAccess(), ServerAccess_SuperAdmin))
 
             -- Check for Hard Bans here
             local bCheckHardBan = true
@@ -637,6 +660,23 @@ Server:CreateComponent({
             --      Host |
             --        IP |
 
+        end,
+
+        Command_SetUniqueName = function(self, hPlayer, hTarget, sName)
+
+            local tProfile = self:GetUniqueProfile(hTarget:GetUniqueID())
+            if (not tProfile) then
+                return false, "@user_not_registered"
+            end
+
+            local tFormat = { OldName = tProfile.UniqueName, NewName = sName }
+            self:LogEvent({
+                Message = "@unique_name_changed",
+                MessageFormat = tFormat,
+                Recipients = math.max(ServerAccess_SuperAdmin, hTarget:GetAccess())
+            })
+            tProfile.UniqueName = sName
+            return true, hPlayer:LocalizeText("@unique_name_changedChat", tFormat)
         end,
 
         Command_UniqueListUsers = function(self, hPlayer, sFilter)

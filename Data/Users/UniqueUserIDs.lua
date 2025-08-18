@@ -10,18 +10,20 @@
 -- Key for the 'AccessHandler' Server Component 
 -- ===================================================================================
 return {
+ ["Next"] = 1,
  ["Profiles"] = {
   [1] = {
-   ["UniqueName"] = "Nomad.CV (#0001)",
+   ["UniqueName"] = "shortcut011212",
    ["UniqueId"] = "u100001",
    ["RegisterDate"] = 1755354778,
    ["Identifiers"] = {
-    [1] = "1073374",
     [2] = "DESKTOP-7EG6T34",
-    [4] = "1073351",
     [3] = "127.0.0.1",
+    [1] = "1073374",
+    [4] = "1073351",
+    [5] = "C75CB66AE28D8EBC6EDED002C28A8BA0D06D3A78C6B5CBF9B2ADE051F0775AC4",
+    [7] = "0",
    },
   },
  },
- ["Next"] = 1,
 }

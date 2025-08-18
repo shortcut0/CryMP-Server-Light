@@ -28,14 +28,12 @@ return {
   ["ServerTime"] = 807,
  },
  ["1073351"] = {
-  ["LastConnect"] = 1755387416,
+  ["LastConnect"] = 1755549641,
   ["FirstBloodScored"] = 0,
-  ["ServerTime"] = 6266,
+  ["ServerTime"] = 17138,
   ["Rank"] = {
-   ["RankXP"] = 87,
-   ["RankStage"] = 1,
    ["Name"] = "PLASTIC I",
-   ["NextRankXP"] = 150,
+   ["RankXP"] = 74,
   },
  },
  ["1073372"] = {

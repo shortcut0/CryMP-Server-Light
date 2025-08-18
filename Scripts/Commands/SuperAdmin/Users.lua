@@ -43,6 +43,26 @@ Server.ChatCommands:Add({
             return self:Command_UniqueListUsers(hPlayer, sFilter)
         end
     },
+
+    -- ================================================================
+    -- !SetUniqueName <Player> <Name>
+    {
+        Name = "SetUniqueName",
+        Access = ServerAccess_SuperAdmin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer },
+            { Name = "@name", Desc = "@arg_name_desc", Required = true, Type = CommandArg_TypeMessage }
+        },
+        Properties = {
+            This = "Server.AccessHandler"
+        },
+        Function = function(self, hPlayer, hTarget, sName)
+            if (not hPlayer:HasAccess(math.min(ServerAccess_Highest, hTarget:GetAccess() + 1))) then
+                return false, "@insufficientAccess"
+            end
+            return self:Command_SetUniqueName(hPlayer, hTarget, sName)
+        end
+    },
 })
 
 --Command_UniqueListUsers

@@ -398,7 +398,7 @@ Server:CreateComponent({
             hActor.IsInTestMode = function(this) return this.Info.IsInTestMode  end
             hActor.SetValidationFailed = function(this, mode)  this.Info.ValidationFailed = mode  end
 
-            hActor.GetPrestige     = function(this) return (999999 or g_gameRules:GetPlayerPrestige(this.id) or 0) end
+            hActor.GetPrestige     = function(this) return (g_gameRules:GetPlayerPrestige(this.id) or 0) end
             hActor.SetPrestige     = function(this, pp, reason)
                 g_gameRules:SetPlayerPrestige(this.id, pp)
                 if (reason) then

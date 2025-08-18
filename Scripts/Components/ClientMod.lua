@@ -173,14 +173,16 @@ Server:CreateComponent({
             self:LogError("Source: %s", tCode.Source)
         end,
 
-        ExecuteCodeOnClient = function(self, hClient, sCode)
+        ExecuteCodeOnClient = function(self, hClient, sCode, bSkipQueuing)
 
             if (hClient.ClientMod.InstallFailed) then
                 self:LogError("Ignoring Client %s", hClient:GetName())
                 return
             elseif (not hClient.ClientMod.IsInstalled) then
-                self:QueueCode(hClient.id, sCode)
-                self:LogWarning("Queued Code for Client %s", hClient:GetName())
+                if (not bSkipQueuing) then
+                    self:QueueCode(hClient.id, sCode)
+                    self:LogWarning("Queued Code for Client %s", hClient:GetName())
+                end
                 return
             end
 
@@ -204,7 +206,7 @@ Server:CreateComponent({
                 tClients = { tClients }
             end
             for _, hClient in pairs(tClients) do
-                self:ExecuteCodeOnClient(hClient, sCode)
+                self:ExecuteCodeOnClient(hClient, sCode, tCode.NoQueue)
             end
 
             if (tCode.Sync) then
@@ -221,6 +223,10 @@ Server:CreateComponent({
             hClient.ClientMod.IsInstalled = true
 
             self:SyncQueue(hClient)
+            self:ExecuteCode({
+                Code = ([[CryMP_Client:GET_INFO("%s","%s")]]):format(hClient.TempData.UUIDCheck, "CryMP"),
+                Client = hClient
+            })
         end,
 
         SyncQueue = function(self, hClient)
@@ -316,6 +322,9 @@ Server:CreateComponent({
                 LastInstall     = TimerNew(10),
             }
 
+            if (not hClient.IsPlayer) then
+                return
+            end
             self:InstallMod(hClient)
         end,
 

@@ -31,6 +31,7 @@ Server = {
 
     FrameCounters = {},
 
+
     PreInitializeList = {}, -- A list of functions to call before Initializing
     InitializeList = {},    -- A list of functions to call upon Initializing
     PostInitializeList = {},-- A list of functions to call upon Post-Initializing
@@ -896,11 +897,18 @@ Server.Logger = {
     end,
 
     DebugLog = function(self, sMessage, bSafe)
+        local sOrigin = LuaUtils.TraceSource(3):gsub("^%s+%.+", "")
         self:Log(sMessage)
+        self:Log("<Debug Origin> %s", sOrigin)
         if (not bSafe) then
             self:LogEvent({
                 Event = ServerLogEvent_ScriptDebug,
                 Message = string.gsub(sMessage, "<Debug>:%s*", "", 1),
+                MessageArgs = {},
+            })
+            self:LogEvent({
+                Event = ServerLogEvent_ScriptDebug,
+                Message = "Origin: " .. string.gsub((sOrigin:match("/?\\?(%w+%.lua.*)") or "<null>"), "<Debug>: Origin: %s*", "", 1),
                 MessageArgs = {},
             })
         end

@@ -31,5 +31,86 @@ Server.ChatCommands:Add({
         Function = function(self, sName)
             return Server.NameHandler:Command_Name(self, sName)
         end
-    }
+    },
+
+    -- ================================================================
+    -- !ResetRank
+    {
+        Name = "ResetRank",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Function = function(self)
+            if (not self.TempData.RankResetConfirmation) then
+                self.TempData.RankResetConfirmation = true
+                Server.Chat:ChatMessage(Server.PlayerRanks.ChatEntity, self, "@rank_reset_confirmation")
+                Server.Chat:ChatMessage(Server.PlayerRanks.ChatEntity, self, "@rank_reset_confirmation2")
+                Server.Chat:ChatMessage(Server.PlayerRanks.ChatEntity, self, "@rank_reset_confirmation3")
+                return true
+            end
+            self.TempData.RankResetConfirmation = false
+            Server.PlayerRanks:Command_ResetRank(self)
+            return true, "@rank_reset"
+        end
+    },
+
+    -- ================================================================
+    -- !TransferPP <Target> <Amount>
+    {
+        Name = "TransferPP",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, NotSelf = true },
+            { Name = "@amount", Desc = "@arg_amount_desc", Required = true, Type = CommandArg_TypeNumber, Minimum = 1 },
+        },
+        Properties = {
+            GameRules = GameMode_PS,
+            CoolDown = 10,
+        },
+        Function = function(self, hTarget, iAmount)
+            local iPrestige = self:GetPrestige()
+            if (iAmount > iPrestige) then
+                return false, "@insufficientPrestige"
+            end
+
+            if (hTarget:GetProfileId() == self:GetProfileId()) then
+                return false, "@duping_not_allowed"
+            end
+
+            local sTargetName = hTarget:GetName()
+            g_gameRules:PrestigeEvent(hTarget, iAmount, "@gift_from", { Name = self:GetName() })
+            g_gameRules:PrestigeEvent(self, -iAmount, "@transferred_to", { Name = sTargetName })
+            return true, self:LocalizeText(("%d PP @transferred_to"):format(iAmount), { Name = sTargetName })
+        end
+    },
+
+    -- ================================================================
+    -- !Flare
+    {
+        Name = "Flare",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Properties = {
+            CoolDown = 120,
+        },
+        Function = function(self)
+            Server.Utils:SpawnEffect((Server.Utils:GetCVar("e_time_of_day") <= 12 and Effect_FlareNight or Effect_Flare), self:GetPos())
+        end
+    },
+
+    -- ================================================================
+    -- !Firework
+    {
+        Name = "Firework",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Properties = {
+            CoolDown = 120,
+        },
+        Function = function(self)
+            Server.Utils:SpawnEffect(Effect_Firework, self:GetPos())
+        end
+    },
 })

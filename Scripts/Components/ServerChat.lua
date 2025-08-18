@@ -261,6 +261,11 @@ Server:CreateComponent({
 
         GetChatEntity = function(self, sName)
 
+            if (not sName) then
+                self:LogError("No Name specified to GetChatEntity()")
+                return
+            end
+
             local sNameLower = sName:lower()
             local hEntity = self.SpawnedChatEntities[sNameLower]
             if (not hEntity or (hEntity:GetName() ~= sName or not hEntity.IS_CHAT_ENTITY)) then

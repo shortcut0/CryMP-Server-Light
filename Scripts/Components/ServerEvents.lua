@@ -55,6 +55,7 @@ Server:CreateComponent({
 
             OnUpdate = function(self, ...)
                 Server:OnUpdate(...)
+                Server.Events:CheckComponentEvents("OnUpdate")
                 Server.Events:CallEvent(ServerEvent_OnUpdate, System.GetFrameTime(), System.GetFrameID())
             end,
 
@@ -124,7 +125,9 @@ Server:CreateComponent({
             end,
             OnEntityCollision       = function() end,
             OnSwitchAccessory       = function() end,
-            OnProjectileHit         = function() end,
+            OnProjectileHit         = function(self, hShooterId, hProjectileId, bDestroyed, iDamage, nWeapon, vPos, vNormal)
+                return Server.PlayerEquipment:OnProjectileHit(hShooterId, hProjectileId, bDestroyed, iDamage, nWeapon, vPos, vNormal)
+            end,
             OnLeaveWeaponModify     = function() end,
             OnProjectileExplosion   = function() end,
             CanStartNextLevel       = function(self)

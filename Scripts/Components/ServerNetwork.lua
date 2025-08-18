@@ -49,6 +49,9 @@ Server:CreateComponent({
             PingControl = {},
             IPFilter = {},
 
+            -- Timeout for waiting on the UUID of a user
+            UUIDAwaitTimeout = 15,
+
 
             GeoService = "http://ip-api.com/json/{Query}?fields=3854107",
 
@@ -196,6 +199,38 @@ Server:CreateComponent({
             Server.Events:Call(ServerScriptEvent_OnProfileValidated, hPlayer, sProfile)
         end,
 
+        ValidateHardwareId = function(self, hPlayer, sSupposedID)
+
+            if (string.emptyN(hPlayer:GetHardwareId())) then
+                self:Log("Hardware ID Already Assigned")
+                return true
+            end
+
+            local hCheck = hPlayer.TempData.UUIDCheck
+            local iCheckLen = string.len(hCheck)
+            local hUUIDCheck = sSupposedID:sub(1, iCheckLen)
+            if (hUUIDCheck ~= hCheck) then
+                self:LogWarning("Hardware ID Checks don't match on User %s", hPlayer:GetName())
+                return true
+            end
+
+            local sIDProof = sSupposedID:sub(iCheckLen + 1)
+            local sHardwareId, sProof = sIDProof:match("(.*):(.*)")
+            if (not sHardwareId or not sProof) then
+                self:LogWarning("Missing Proof or ID on User %s", hPlayer:GetName())
+                return true
+            end
+            if (#sHardwareId ~= 64) then
+                self:LogWarning("ID Length out of Bounds on User %s", hPlayer:GetName())
+                return true
+            end
+
+            hPlayer.Info.HardwareId = sHardwareId
+            self:DestroyUUIDCheck(hPlayer)
+            Server.AccessHandler:OnHardwareIDReceived(hPlayer)
+            return true
+        end,
+
         ValidateProfile = function(self, hPlayer, sProfile, sHash, sName)
 
             sProfile = tostring(sProfile)
@@ -275,7 +310,7 @@ Server:CreateComponent({
 
         GetConnectionTimer = function(self, iChannel)
             if (not self.ActiveConnections[iChannel]) then
-                return error("timer not found!")
+                return TimerNew()--error("timer not found!")
             end
             return self.ActiveConnections[iChannel].Timer
         end,
@@ -306,6 +341,15 @@ Server:CreateComponent({
             self.FailedQueries[iChannel]     = nil
 
         end,
+
+        DestroyUUIDCheck = function(self, hClient)
+            hClient.TempData.UUIDCheck = string.random(math.random(52,125))
+        end,
+
+       Event_OnActorSpawn = function(self, hClient)
+           local sCheck = string.random(math.random(25, 75))
+           hClient.TempData.UUIDCheck = sCheck
+       end,
 
         OnClientConnected = function(self, iChannel, hClient)
 
@@ -587,6 +631,15 @@ Server:CreateComponent({
         end,
 
         Event_TimerSecond = function(self)
+
+            for _, hPlayer in pairs(Server.Utils:GetPlayers()) do
+                if (not hPlayer.Info.UniqueIDAssigned) then
+                    if (hPlayer.Timers.Connection.Diff() >= self.Properties.UUIDAwaitTimeout) then
+                        Server.AccessHandler:AssignUniqueID(hPlayer, Server.AccessHandler:GetUniqueID(hPlayer))
+                        self:DestroyUUIDCheck(hPlayer)
+                    end
+                end
+            end
 
             if (not self.Initialized) then
                 return
