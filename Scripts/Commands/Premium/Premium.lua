@@ -28,4 +28,35 @@ Server.ChatCommands:Add({
             end
         end
     },
+
+    -- ===============================================================================
+    -- !NanoGirl
+    {
+        Name = "NanoGirl",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Properties = {
+            This = "Server.ClientMod"
+        },
+        Function = function(self, hPlayer)
+            return self:Command_RequestModel(hPlayer, self.PlayerModels.NanoGirl)
+        end
+    },
+
+    -- ===============================================================================
+    -- !ModelId
+    {
+        Name = "ModelId",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+            { Name = "@arg_number", "@arg_cmId_desc", Type = CommandArg_TypeNumber, Default = 1000, Required = true }
+        },
+        Properties = {
+            This = "Server.ClientMod"
+        },
+        Function = function(self, hPlayer, iModel)
+            return self:Command_RequestModel(hPlayer, iModel)
+        end
+    },
 })

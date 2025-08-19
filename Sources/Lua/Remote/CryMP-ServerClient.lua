@@ -15,6 +15,11 @@
 -- menus
 -- ccm
 
+
+
+--done
+--<<<fix modelid material (see atomcl)
+
 if (CryMP_Client) then
     WAS_INSTALLED=true
 end
@@ -27,6 +32,7 @@ CryMP_Client = {
         ClientInstalled=10,
     },
 
+    OBJ_MATERIALS = {}, -- list of objects materials
     SLH_LIST = {}, -- a list of persistent silhouettes
 
     -- Voices
@@ -149,6 +155,31 @@ CryMP_Client.VIEW_CHANGED = function(self, in_tp, was_in_tp)
     self:UpdateSLH()
 end
 
+CryMP_Client.SUIT_CHANGED = function(self, p,new,old)
+
+    self:FIX_CM_MAT(p)
+end
+
+CryMP_Client.FIX_CM_MAT = function(self, p,new,old)
+    local cm=p.CM
+    local cm_p=p.CM_P
+    if (cm)then
+        local mat=self:GET_OBJ_MAT(cm_p)
+        p.CM_MAT=mat
+
+        p:ResetMaterial(0)
+        p:SetMaterial(mat)
+        self:DLog("fix mat..")
+    end
+end
+
+CryMP_Client.GET_OBJ_MAT = function(self,m)
+    if(self.OBJ_MATERIALS[m])then return self.OBJ_MATERIALS[m] end
+    local o = System.SpawnEntity({ class = "BasicEntity", properties = { object_Model = m }})
+    if (not o) then return end
+    local mat = o:GetMaterial(0)self.OBJ_MATERIALS[m]=mat System.RemoveEntity(o.id) return mat
+end
+
 CryMP_Client.ITEM_CHANGED = function(self,p,new,old)
 
     if (p.id==g_laId and IS_PS) then
@@ -262,7 +293,7 @@ CryMP_Client.PSE = function(self,eId,se)
 
     self:DLog("pse:eid="..tostring(eId))
     self:DLog("pse:laid="..tostring(g_laId))
-    local p=eId~=nil and System.GetEntity(eId)
+    local p=eId~=nil and type(eId)=="string"and System.GetEntity(eId)
     if(type(eId)=="number")then p=self:GP(eId)end
     if(not p)then
         self:DLog("no flags & SOUND_SEMANTIC_SOUNDSPOT on local")
@@ -334,6 +365,17 @@ CryMP_Client.OnUpdate = function(self)
             self:ITEM_CHANGED(hp,c,hp.LAST_ITEM)
             hp.LAST_ITEM=c
         end
+
+        local s=hp.actor:GetNanoSuitMode()
+        if(s~=hp.LAST_SUIT)then
+            self:DLog("suit=%d",s)
+            self:SUIT_CHANGED(hp,s,hp.LAST_SUIT)
+            hp.LAST_SUIT=s
+        elseif (hp.CM and hp.CM~=hp.LAST_CM)then
+            self:FIX_CM_MAT(hp)
+            hp.LAST_CM=hp.CM
+        end
+
     end
 end
 
@@ -418,7 +460,6 @@ if (not System.GetEntityByName("__ClientUpdater__")) then
         name = "__ClientUpdater__",
         properties = {
             Callback = function()
-                CryMP_Client:DLog("HellO?ß")
                 CryMP_Client:OnUpdate()
             end,
         },

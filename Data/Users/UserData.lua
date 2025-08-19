@@ -18,8 +18,8 @@ return {
    ["Name"] = "COPPER II",
    ["RankXP"] = 1215,
    ["RankStage"] = 2,
-   ["NextRankXP"] = 1425,
    ["Rank"] = 4,
+   ["NextRankXP"] = 1425,
   },
  },
  ["1073374"] = {
@@ -27,13 +27,16 @@ return {
   ["FirstBloodScored"] = 0,
   ["ServerTime"] = 807,
  },
- ["1073351"] = {
-  ["LastConnect"] = 1755549641,
+ ["1073450"] = {
+  ["LastConnect"] = 1755570599,
+  ["LastCMId"] = 16,
   ["FirstBloodScored"] = 0,
-  ["ServerTime"] = 17138,
+  ["ServerTime"] = 4205,
   ["Rank"] = {
-   ["Name"] = "PLASTIC I",
-   ["RankXP"] = 74,
+   ["Name"] = "PLASTIC II",
+   ["RankXP"] = 186,
+   ["RankStage"] = 2,
+   ["NextRankXP"] = 225,
   },
  },
  ["1073372"] = {
@@ -41,9 +44,25 @@ return {
   ["FirstBloodScored"] = 0,
   ["ServerTime"] = 102,
  },
- ["ip10001"] = {
-  ["LastConnect"] = 1755349332,
+ ["1073351"] = {
+  ["LastConnect"] = 1755556620,
   ["FirstBloodScored"] = 0,
-  ["ServerTime"] = 47,
+  ["ServerTime"] = 19665,
+  ["Rank"] = {
+   ["RankXP"] = 80,
+   ["RankStage"] = 1,
+   ["Name"] = "PLASTIC I",
+   ["NextRankXP"] = 150,
+  },
+ },
+ ["ip10001"] = {
+  ["LastConnect"] = 1755566288,
+  ["ServerTime"] = 2955,
+  ["FirstBloodScored"] = 0,
+  ["LastCMId"] = 3,
+  ["Rank"] = {
+   ["Name"] = "PLASTIC I",
+   ["RankXP"] = 69,
+  },
  },
 }

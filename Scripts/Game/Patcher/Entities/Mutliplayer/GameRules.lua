@@ -154,6 +154,8 @@ Server.Patcher:HookClass({
                     AllowDestroyAVMines = Server.Config:Get("GameConfig.Immersion.AllowDestroyAVMines", true, ConfigType_Boolean),
                     AllowDestroyFriendlyExplosives = Server.Config:Get("GameConfig.Immersion.AllowDestroyFriendlyExplosives", true, ConfigType_Boolean),
                     ExplosiveEliminationReward = Server.Config:Get("GameConfig.Prestige.ExplosiveEliminationAward", 10, ConfigType_Number),
+                    UseRankedModels = Server.Config:Get("GameConfig.Immersion.UseRankedModels", true, ConfigType_Boolean),
+                    IAPlayerModels = Server.Config:Get("GameConfig.Immersion.InstantActionPlayerModels", {  }, ConfigType_Array),
                 }
 
                 self:InitBuyList()
@@ -232,6 +234,71 @@ Server.Patcher:HookClass({
                 for i,v in ipairs(self.ammoList) do self.buyList[v.id]=v; if (type(v.ammo)=="nil") then v.ammo=true; end; end;
 
             end,
+        },
+        {
+            ------------------------------
+            ---      GetPlayerModel
+            ------------------------------
+            Name = "GetPlayerModel",
+            Value = function(self, hPlayer, iForTeam)
+
+                if (hPlayer.TempData.CMPath) then
+                    return hPlayer.TempData.CMPath
+                end
+
+                local iTeam = (iForTeam or hPlayer:GetTeam())
+                local sTeam = ((iTeam == GameTeam_US or iTeam == GameTeam_Neutral) and "black" or "tan")
+
+                if (self.IS_IA) then
+                    local sPrevious = hPlayer.ClientMod.Previous_IA_CM
+                    if (sPrevious) then
+                        return sPrevious
+                    end
+
+                    local tModels = self.Config.IAPlayerModels
+                    if (table.empty(tModels)) then
+                        return self.teamModel[sTeam][1][1]
+                    end
+
+                    hPlayer.ClientMod.Previous_IA_CM = tModels[math.random(#tModels)]
+                    return hPlayer.TempData.PreviousIACM
+                end
+
+                return self.teamModel[sTeam][1][1]
+            end,
+        },
+        {
+            ------------------------------
+            ---      GetPlayerModel
+            ------------------------------
+            Name = "GetRankedModel",
+            Value = function(self, hPlayer, iForTeam)
+            end,
+        },
+        {
+            ------------------------------
+            ---      rankModels
+            ------------------------------
+            --GameRank_PVT = 1
+            --GameRank_CPL = 2
+           -- GameRank_SGT = 3
+           -- GameRank_LT = 4
+            --GameRank_CPT = 5
+            --GameRank_MAJ = 6
+            --GameRank_COL = 7
+           --GameRank_GEN = 8
+            Name = "rankModels",
+            Value = {
+                [GameTeam_NK] = {
+                    { RequiredRank = 0, Model = "objects/characters/human/us/nanosuit/nanosuit_us_multiplayer.cdf" },
+                },
+                [GameTeam_US] = {
+                    { RequiredRank = 0, Model = "objects/characters/human/asian/nanosuit/nanosuit_asian_multiplayer.cdf" },
+                },
+                [GameTeam_Neutral] = {
+                    { RequiredRank = 0, Model = { "objects/characters/human/us/nanosuit/nanosuit_us_multiplayer.cdf", "objects/characters/human/asian/nanosuit/nanosuit_asian_multiplayer.cdf" } },
+                },
+            },
         },
         {
             ------------------------------
@@ -1230,6 +1297,27 @@ Server.Patcher:HookClass({
                 end
                 --end
 
+                if (hShooter and hShooter.IsPlayer and hShooter.TempData.CMID == nil) then
+
+                end
+
+            end,
+        },
+        {
+            ------------------------------
+            ---      OnPlayerSpawn
+            ------------------------------
+            Name = "OnPlayerSpawn",
+            Value = function(self, hPlayer)
+
+                if (self.IS_IA) then
+                    local sRandomModel = (hPlayer.TempData.RandomIAModel or self:GetPlayerModel(hPlayer))
+                    if (sRandomModel) then
+                        hPlayer.TempData.RandomIAModel = sRandomModel
+                        g_gameRules.game:SetSynchedEntityValue(hPlayer.id, GlobalKeys.PlayerModel, sRandomModel)
+                        self:Log("Assigning Model '%s' to '%s'", sRandomModel, hPlayer:GetName())
+                    end
+                end
             end,
         },
         {
@@ -3934,6 +4022,31 @@ Server.Patcher:HookClass({
                 { id="rpg",					name="@mp_eML", 				price=200, 			class="LAW", 				uniqueId=8,		category="@mp_catExplosives", loadout=1 },
                 { id="dsg1",				name="@mp_eSniper"	,			price=200, 			class="DSG1", 				uniqueId=9,		category="@mp_catWeapons", loadout=1 },
                 { id="gauss",				name="@mp_eGauss", 				price=600, 			class="GaussRifle",			uniqueId=10,	category="@mp_catWeapons", loadout=1 },
+            },
+        },
+        {
+            ------------------------------
+            ---   teamModel
+            ------------------------------
+            Name = "teamModel",
+            Value = {
+                black = {
+                    {
+                        "objects/characters/human/us/nanosuit/nanosuit_us_multiplayer.cdf",
+                        "objects/weapons/arms_global/arms_nanosuit_us.chr",
+                        "objects/characters/human/asian/nk_soldier/nk_soldier_frozen_scatter.cgf",
+                        "objects/characters/human/us/nanosuit/nanosuit_us_fp3p.cdf",
+                    },
+                },
+
+                tan	= {
+                    {
+                        "objects/characters/human/asian/nanosuit/nanosuit_asian_multiplayer.cdf",
+                        "objects/weapons/arms_global/arms_nanosuit_asian.chr",
+                        "objects/characters/human/asian/nk_soldier/nk_soldier_frozen_scatter.cgf",
+                        "objects/characters/human/asian/nanosuit/nanosuit_asian_fp3p.cdf",
+                    },
+                },
             },
         },
     }

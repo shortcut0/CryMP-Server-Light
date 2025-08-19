@@ -9,17 +9,126 @@
 -- ===================================================================================
 
 Server.ChatCommands:Add({
-    Name = "ClError",
-    Access = ServerAccess_Lowest,
-    Arguments = {
-        { Name = "id", Required = true, Type = CommandArg_TypeNumber },
-        { Name = "error", Required = true, Type = CommandArg_TypeMessage },
+    -- ===============================================================================
+    -- !ClError <StackId> <Description>
+    {
+        Name = "ClError",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+            { Name = "id", Required = true, Type = CommandArg_TypeNumber },
+            { Name = "error", Required = true, Type = CommandArg_TypeMessage },
+        },
+        Properties = {
+            Hidden = true,
+            IsQuiet = true
+        },
+        Function = function(self, hId, sError)
+            Server.ClientMod:OnRemoteError(self, hId, sError)
+        end
     },
-    Properties = {
-        Hidden = true,
-        IsQuiet = true
+
+    -- ===============================================================================
+    -- !Nomad
+    {
+        Name = "Nomad",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Properties = {
+            This = "Server.ClientMod"
+        },
+        Function = function(self, hPlayer)
+           return self:Command_RequestModel(hPlayer, -1)
+        end
     },
-    Function = function(self, hId, sError)
-        Server.ClientMod:OnRemoteError(self, hId, sError)
-    end
+
+    -- ===============================================================================
+    -- !Kyong
+    {
+        Name = "Kyong",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Properties = {
+            This = "Server.ClientMod"
+        },
+        Function = function(self, hPlayer)
+           return self:Command_RequestModel(hPlayer, self.PlayerModels.Kyong)
+        end
+    },
+
+    -- ===============================================================================
+    -- !Prophet
+    {
+        Name = "Prophet",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Properties = {
+            This = "Server.ClientMod"
+        },
+        Function = function(self, hPlayer)
+           return self:Command_RequestModel(hPlayer, self.PlayerModels.Prophet)
+        end
+    },
+
+    -- ===============================================================================
+    -- !Aztec
+    {
+        Name = "Aztec",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Properties = {
+            This = "Server.ClientMod"
+        },
+        Function = function(self, hPlayer)
+           return self:Command_RequestModel(hPlayer, self.PlayerModels.Aztec)
+        end
+    },
+
+    -- ===============================================================================
+    -- !Psycho
+    {
+        Name = "Psycho",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Properties = {
+            This = "Server.ClientMod"
+        },
+        Function = function(self, hPlayer)
+           return self:Command_RequestModel(hPlayer, self.PlayerModels.Psycho)
+        end
+    },
+
+    -- ===============================================================================
+    -- !Jester
+    {
+        Name = "Jester",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Properties = {
+            This = "Server.ClientMod"
+        },
+        Function = function(self, hPlayer)
+           return self:Command_RequestModel(hPlayer, self.PlayerModels.Jester)
+        end
+    },
+
+    -- ===============================================================================
+    -- !Sykes
+    {
+        Name = "Sykes",
+        Access = ServerAccess_Lowest,
+        Arguments = {
+        },
+        Properties = {
+            This = "Server.ClientMod"
+        },
+        Function = function(self, hPlayer)
+           return self:Command_RequestModel(hPlayer, self.PlayerModels.Sykes)
+        end
+    },
 })

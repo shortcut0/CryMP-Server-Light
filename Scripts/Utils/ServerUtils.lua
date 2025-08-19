@@ -49,6 +49,7 @@ Server:CreateComponent({
             local iWidth  = (aParams.ItemWidth or (iBoxWidth / iItems))
             local bValue  = (aParams.Value or false)
             local bPIndex = aParams.PrintIndex
+            local sPIndex = type(bPIndex)=="string" or type(bPIndex)=="number"
             local sColorFilter = aParams.ItemColorFilter
 
             Server.Chat:ConsoleMessage(hPlayer, string.format("$9%s", string.rep("=", iBoxWidth)))
@@ -73,7 +74,7 @@ Server:CreateComponent({
                         sItem = sBefore .. CRY_COLOR_YELLOW .. sPiece .. CRY_COLOR_GRAY .. sAfter
                     end
                 end
-                sLine = sLine .. "$1(" .. string.lspace((bPIndex and tostring(i) or iCurrent), string.len(iTotal)) .. ". $9" .. string.rspace(sItem, iWidth) .. "$1)" .. (iCurrent == iTotal and "" or " ")
+                sLine = sLine .. "$1(" .. string.lspace(((sPIndex and v[sPIndex]) or (bPIndex==true and tostring(i)) or iCurrent), string.len(iTotal)) .. ". $9" .. string.rspace(sItem, iWidth) .. "$1)" .. (iCurrent == iTotal and "" or " ")
                 if (iCurrent % iItems == 0 or iCurrent == iTotal) then
                     Server.Chat:ConsoleMessage(hPlayer, "$9[ " .. string.mspace(string.rspace(string.ridtrail(sLine, "%s", 1), (iBoxWidth - 4), string.COLOR_CODE), iBoxWidth - 4, nil, string.COLOR_CODE)  .. " $9]")
                     sLine = ""

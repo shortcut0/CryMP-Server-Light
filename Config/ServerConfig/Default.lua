@@ -180,6 +180,15 @@ Server.Config:Create({
             -- Some immersive game options
             Immersion = {
 
+                -- Will pick a random one of these models for InstantAction games (the selected model is persistent)
+                InstantActionPlayerModels = {
+                    "objects/characters/human/us/nanosuit/nanosuit_us_multiplayer.cdf",
+                    "objects/characters/human/asian/nanosuit/nanosuit_asian_multiplayer.cdf",
+                },
+
+                -- Will use different player models based on their rank (for PS games only)
+                UseRankedModels = true,
+
                 -- Will automatically open doors upon melee attacks & collisions
                 OpenDoorsOnCollision = true,
 

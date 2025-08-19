@@ -241,12 +241,25 @@ BuildingType_Proto = "Proto"
 ----------------------------
 
 GlobalKeys = {
+
+    -- ================================
+    -- Vehicles
     VehicleLocked = 10,
     VehicleReserved = 11,
 
+    -- ================================
+    -- Players
     PlayerUUIDCheck = 245,
     PlayerUUIDSalt = 246,
+    PlayerModel = 1000,
+    PlayerModelNK = 1000 + GameTeam_NK,
+    PlayerModelUS = 1000 + GameTeam_US,
+
+    -- ================================
+    -- Misc
+    -- ...
 }
+
 
 ----------------------------
 

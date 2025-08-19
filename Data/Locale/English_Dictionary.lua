@@ -1521,6 +1521,48 @@ Server.LocalizationManager:Add({
             English = "Game OVER in ( {Seconds} ) - SECONDS"
         }
     },
+    {
+        String = "cm_activated",
+        Languages = {
+            English = "{Name} SELECTED to PLAY as {ModelName}"
+        }
+    },
+    {
+        String = "cm_removedCl",
+        Languages = {
+            English = "Custom Model Removed! You're Playing as Nomad Again"
+        }
+    },
+    {
+        String = "you_have_noCM",
+        Languages = {
+            English = "Already Playing as Nomad"
+        }
+    },
+    {
+        String = "choose_different_cm",
+        Languages = {
+            English = "Already Playing as {Name}"
+        }
+    },
+    {
+        String = "cm_reservedForTeam",
+        Languages = {
+            English = "RESERVED for TEAM {TeamName}"
+        }
+    },
+    {
+        String = "custom_models",
+        Languages = {
+            English = "Custom Models"
+        }
+    },
+    {
+        String = "arg_cmId_desc",
+        Languages = {
+            English = "The Index of the Model List"
+        }
+    },
 })
 
 

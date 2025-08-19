@@ -10,14 +10,15 @@
 -- Key for the 'AccessHandler' Server Component 
 -- ===================================================================================
 return {
- ["Next"] = 1,
  ["Profiles"] = {
   [1] = {
    ["UniqueName"] = "shortcut011212",
    ["UniqueId"] = "u100001",
    ["RegisterDate"] = 1755354778,
    ["Identifiers"] = {
+    [6] = "8484F75BD2C7FED261324CD2D6AAFE6E72F1C9B3139E0DEAE5A30230E3D78F47",
     [2] = "DESKTOP-7EG6T34",
+    [8] = "1073450",
     [3] = "127.0.0.1",
     [1] = "1073374",
     [4] = "1073351",
@@ -26,4 +27,5 @@ return {
    },
   },
  },
+ ["Next"] = 1,
 }

@@ -146,6 +146,7 @@ Server:CreateComponent({
                 -- We assume that this is done before ANYTHING else on a new actor/client, but not 100% sure!
                 if (bActor) then
                     Server.ActorHandler:OnActorSpawn(hEntity)
+                    g_gameRules:OnPlayerSpawn(hEntity)
                 end
 
                 if (bVehicle) then
