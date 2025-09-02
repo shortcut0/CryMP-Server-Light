@@ -117,7 +117,7 @@ Server:CreateComponent({
             RegisterFail = TimerNew(0),
 
             PingUpdate = TimerNew(1),
-            PingWarning = TimerNew(8),
+            PingWarning = TimerNew(32),
         },
 
         Initialize = function(self)
@@ -269,7 +269,7 @@ Server:CreateComponent({
         OnChannelCreated = function(self, iChannel)
 
             local sIPAddress = ServerDLL.GetChannelIP(iChannel)
-            local sNickname = ServerDLL.GetChannelNick(iChannel)
+            local sNickname = ServerDLL.GetChannelNick(iChannel) or "Nomad"
 
             local aGeoInfo, bIsInvalidIP = self:GetGeoInfo(sIPAddress, iChannel)
 
@@ -324,7 +324,7 @@ Server:CreateComponent({
         OnChannelDisconnect = function(self, iChannel, sDescription)
 
             local sReasonShort, sReason = self:ParseDisconnectReason(sDescription)
-            local sNickname = ServerDLL.GetChannelNick(iChannel)
+            local sNickname = ServerDLL.GetChannelNick(iChannel) or "Nomad"
 
             if (not self.BannedChannels[iChannel]) then
                 self:LogEvent({
@@ -442,7 +442,7 @@ Server:CreateComponent({
 
             Server.NameHandler:CheckChannelNick(iChannel)
 
-            local sNickname = ServerDLL.GetChannelNick(iChannel)
+            local sNickname = ServerDLL.GetChannelNick(iChannel) or "Nomad"
             local sIPAddress = ServerDLL.GetChannelIP(iChannel)
 
             local sCountryName = self:GetCountryName(iChannel)
@@ -813,7 +813,7 @@ Server:CreateComponent({
                 local sMapName      = Server.MapRotation:GetMapPath()
                 local sMapTitle     = self:GetMapTitle(sMapName)
                 local sMapDownload  = self:GetMapDownloadLink()
-                local iTimeLeft     = (g_gameRules.game:GetRemainingGameTime())
+                local iTimeLeft     = (g_gameRules and g_gameRules.game:GetRemainingGameTime() or 0)
 
                 -- Player Config
                 local iMaxPlayers   = Server.Utils:GetCVar("sv_maxPlayers")
@@ -986,7 +986,7 @@ Server:CreateComponent({
             end,
 
             GetMapDownloadLink = function(self, sLevel)
-                return (Server.Network.Properties.MapLinkList[string.lower((sLevel or ServerDLL.GetMapName()))] or "")
+                return (Server.Network.Properties.MapLinkList[string.lower((sLevel or ServerDLL.GetMapName() or ""))] or "")
             end,
 
             GetServerPakLink = function(self)
@@ -1108,11 +1108,14 @@ Server:CreateComponent({
             local iUp = aStatistics.Up
             local iDown = aStatistics.Down
 
-            if (iUp >= tNetThresholds.Up) then
+            local iPlayerCount = math.max(1, #Server.Utils:GetPlayers())
+            local iUpThreshold = (tNetThresholds.Up * iPlayerCount)
+            local iDownThreshold = (tNetThresholds.Down * iPlayerCount)
+            if (iUp >= iUpThreshold) then
                 ColorUp = CRY_COLOR_RED
                 bShowWarning = true
             end
-            if (iDown >= tNetThresholds.Down) then
+            if (iDown >= iDownThreshold) then
                 ColorDown = CRY_COLOR_RED
                 bShowWarning = true
             end
@@ -1172,6 +1175,8 @@ Server:CreateComponent({
                             Recipients = ServerAccess_Admin,
                         })
                     end
+                else
+                    self.Timers.PingWarning.expire()
                 end
 
             end

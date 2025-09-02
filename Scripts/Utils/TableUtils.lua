@@ -193,6 +193,7 @@ end
 table.ToString = function(tbl, tInfo)
 
     tInfo = tInfo or {}
+    tInfo.Processed = tInfo.Processed or {}
 
     local iMaxDepth = (tInfo.MaxDepth or -1)
     local iDepth = (tInfo.CurrentDepth or 0)
@@ -267,5 +268,58 @@ table.ToTable = function(t, d)
     end
     -- t is a table
     return t
+end
+
+----------------------------------
+--- Assigns a value to a table using a nested key path.
+---
+--- Supports dot-separated paths and automatically creates intermediate tables.
+--- Optionally raises an error if a non-table value would be overwritten.
+---
+--- Examples:
+--- local x = {}
+--- table.Assign(x, "a.b.c", "hello world")
+--- -- Result: x = { a = { b = { c = "hello world" } } }
+---
+--- table.Assign(x, "a", "hello world")
+--- -- Result: x = { a = "hello world" }
+---
+--- table.Assign(x, "a.b", 42, true)
+--- -- Raises an error if 'a' is not a table
+---
+---@param tbl table         The table to assign the value into.
+---@param nest string       The nested key path (dot-separated), e.g., "foo.bar.baz".
+---@param value any         The value to assign at the specified path.
+---@param raise_error boolean?  If true, raises an error when a non-table key would be overwritten.
+---@return any              Returns the assigned value.
+table.Assign = function(tbl, nest, value, raise_error)
+
+    local curr_index = tbl
+    if (not string.find(nest, "%.")) then
+        tbl[nest] = value
+        return value
+    end
+
+    local split = string.split(nest, ".")
+    for i = 1, #split do
+        local index = split[i]
+        if (i == #split) then
+            curr_index[index] = value
+            break
+        end
+
+        if (curr_index[index] == nil) then
+            curr_index[index] = {}
+        else
+            local index_type = type(curr_index[index])
+            if (raise_error and index_type ~= "table") then
+                error("attempt to overwrite an existing key " .. tostring(index) .. " - its a " .. index_type)
+            end
+        end
+
+        curr_index = curr_index[index]
+    end
+
+    return value
 end
 

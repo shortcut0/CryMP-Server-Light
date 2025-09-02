@@ -5,7 +5,7 @@
 --        | |___| |  | |_| | |  | |  __/  |_____|  ___) |  __/ |   \ V /  __/ |     --
 --         \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|     --
 --                    |___/          by: shortcut0                                  --
--- A Server Configuration file
+-- The Default Server Configuration file
 -- ===================================================================================
 
 Server.Config:Create({
@@ -44,6 +44,7 @@ Server.Config:Create({
 
                 sv_dedicatedMaxRate = 60, -- overwritten elsewhere,  has no effect
                 sv_cheatprotection = 0,
+                g_reviveTime = 8,
 
                 -- Some performance related CVars
                 e_profile_level_loading = 0,
@@ -112,8 +113,8 @@ Server.Config:Create({
 
             -- Warning Thresholds for net Usage
             NetworkUsageWarningThresholds = {
-                Up = 20000,
-                Down = 10000,
+                Up = 15000,  -- Per Player, so Warning will be shown >= this*player_count
+                Down = 5000, -- Per Player, so Warning will be shown >= this*player_count
             },
 
             --- Ping Control Config
@@ -166,12 +167,23 @@ Server.Config:Create({
 
             -- The Name of Server
             ServerName = "CryMP ~ {MapName} ~",
-            ServerName = "Lord Farquaad's Dungeon",
+            ServerName = "Lord Farquaad's {MapName} Dungeon",
 
             -- The Description which will appear on the Website
-            ServerDescription = "When you get older, plainer, saner\nWill you remember all the danger we came from?\nBurnin' like embers, falling tender\nLonging for the days of no surrender, years ago\nAnd will you know?"
+            ServerDescription = "Hello there"
 
         }, ---< Server
+
+        ------------------------------------------
+        --- Anti-Cheat Configuration
+        AntiCheat = {
+
+            -- This partially enables or disables the AntiCheat
+            -- Detected cheats are still blocked, but no action will be taken at all.
+            -- Detections are still logged to the external file, but not the admin console
+            IsEnabled = true,
+
+        }, ---< AntiCheat
 
         ------------------------------------------
         --- Game Configuration
@@ -185,6 +197,9 @@ Server.Config:Create({
                     "objects/characters/human/us/nanosuit/nanosuit_us_multiplayer.cdf",
                     "objects/characters/human/asian/nanosuit/nanosuit_asian_multiplayer.cdf",
                 },
+
+                -- Will LOCK Spawn Base Doors for other teams
+                LockSpawnBaseDoors = true,
 
                 -- Will use different player models based on their rank (for PS games only)
                 UseRankedModels = true,
@@ -200,6 +215,9 @@ Server.Config:Create({
 
                 -- Allows players to destroy friendly explosives
                 AllowDestroyFriendlyExplosives = true,
+
+                -- Will delete ALL forbidden areas during map start
+                DeleteForbiddenAreas = true,
 
             }, ---< Immersion
 
@@ -226,10 +244,16 @@ Server.Config:Create({
                 -- Damage Scale for RPGs
                 RPGDamageScale = 1,
 
+                -- Will enable players being able to control turrets
+                EnablePlayerTurretControl = true,
+
                 -- Will enable turrets shooting at players who are attacking them (within reason, of course)
                 TargetPlayersOnAttack = true,
 
-                -- Repair upon repairing a turret
+                -- Will command all turrets to attack anyone attacking the HQ
+                TargetHQAttackers = true,
+
+                -- Reward upon repairing a turret
                 RepairReward = 100,
 
             }, ---< TurretConfig
@@ -263,6 +287,33 @@ Server.Config:Create({
             -- Configuration for Hits
             HitConfig = {
 
+                HQs = {
+
+                    -- Use these settings
+                    UseCustomSettings = true,
+
+                    -- Will disable destroying of HQs entirely
+                    AllUnDestroyable = false,
+
+                    -- Sets the delay for attacking HQs
+                    AttackDelay = FIFTEEN_MINUTES,
+
+                    -- Will use localized damage instead of a fixed amount of hits
+                    UseLocalizedDamage = false,
+
+                    -- The amount of TAC hits required to destroy an HQ
+                    TacHits = 5,
+
+                    -- Reward for hitting an HQ
+                    HitRewards = {
+                        PP = 250,
+                        XP = 25,
+                    },
+
+                    -- Amplification for VIP users
+                    PremiumRewardAmplification = 1.15,
+                },
+
                 FriendlyFire = {
 
                     -- Friendly fire damage ratio (0 to disable)
@@ -288,7 +339,7 @@ Server.Config:Create({
 
                     -- The Distribution type
                     -- Type 1 means the rewards are divided by percent the damage contributed to the kill
-                    -- Type 2 means the rewards are divided by the percentage of hits landed that ultimately lead to the kill
+                    -- Type 2 means the rewards are divided by the percentage of hits landed that ultimately led to the kill
                     Type = 1,
 
                     -- The Assist threshold to receive a reward (0>100 in percentage)
@@ -327,9 +378,9 @@ Server.Config:Create({
                     Enabled = true,
 
                     -- The Minimum Distance for a kill to be considered special
-                    MinimumDistance = 100,
+                    MinimumDistance = 200,
 
-                    RewardPP = 500,
+                    RewardPP = 325,
                     RewardXP = 30,
 
                     -- Reward scale for headshots
@@ -427,8 +478,11 @@ Server.Config:Create({
 
             }, ---< KillConfig
 
-            -- The Spawn Equipment Config
+            ------------------------------
+            --- The Spawn Equipment Config
             SpawnEquipment = {
+
+                -- ...
                 PowerStruggle = {
 
                     -- Status of this config entry
@@ -534,16 +588,16 @@ Server.Config:Create({
 
             -- If the server should delete all client-only entities
             -- Disabled for now. I suspect this can cause aspect errors during map change.
-            -- Edit: aspect errors were caused a bug inside the exe.
+            -- Edit: aspect errors were caused a bug inside the c++ code.
             DeleteClientEntities = true,
 
             -- A list of forbidden maps
             ForbiddenMaps = {
                 PowerStruggle = {
-                    "Shore"
+                    --"Shore"
                 },
                 InstantAction = {
-                    DisableAll = true, -- This will disable all instant action maps at once
+                    DisableAll = false, -- This will disable all instant action maps at once
                 },
             },
 
@@ -561,6 +615,7 @@ Server.Config:Create({
                     InstantAction = ONE_MINUTE * 30,
                 }, ---< DefaultTimeLimits
 
+                -- TODO:
                 -- The Rotation will ignore all maps that do not have a download-link available
                 IgnoreNonDownloadable = true,
 
@@ -596,23 +651,101 @@ Server.Config:Create({
             --          [3] Fu...CK! -> *******
             BadWordMatchGreediness = 1,
             ShadowWordsMatchGreediness = 1,
+            ReplacementMatchGreediness = 1, -- Just a default fallback value
 
             --- A list of bad words which will be censored
             BadWords = {
-                { Trigger = "Nigga", Asterisk = "*" },
+                --- You can define a custom asterisk to be used for each individual trigger word
+                { Trigger = "Nigga", Asterisk = "*", AggressionLevel = 2 },
+                { Trigger = "nigger", Asterisk = ".", AggressionLevel = 2 },
                 { Trigger = "fuck" },
                 { Trigger = "shit" },
-                { Trigger = "gay", AggressionLevel = 0 },
+                --{ Trigger = "gay", AggressionLevel = 0 },
                 { Trigger = "pussy" },
                 { Trigger = "faggot" },
                 { Trigger = "retard" },
-                { Trigger = "haendel" },  -- FIXME: tests
-                { Trigger = "mistersd" },  -- FIXME: tests
+                { Trigger = "cunt", AggressionLevel = 0, },
+                { Trigger = "bitch" },
+                { Trigger = "whore" },
+                { Trigger = "slut", AggressionLevel = 0 },
+                { Trigger = "ass", AggressionLevel = 0 },
+                { Trigger = "cock", AggressionLevel = 0 },
+                { Trigger = "dick", AggressionLevel = 0 },
+                { Trigger = "pussy", AggressionLevel = 2 },
+                --{ Trigger = "haendel" },  -- FIXME: tests
+                --{ Trigger = "mistersd" },  -- FIXME: tests
             },
 
             --- A list of shadow banned words
             ShadowWords = {
-                { Trigger = "laggy server", AggressionLevel = 3 }
+                --- Experimental.. remove later :3
+                { Trigger = {
+                    "join alien",
+                    "join fun and f",
+                    "switch server",
+                    "laggy server",
+                    "shit server",
+                    "trash server"
+                }, AggressionLevel = 3 }
+            },
+
+            --- A list of trigger words and their respective replacements
+            --- With great power comes great responsibility.
+            --- 01.09.2025 R: Greatly nerf this for the release version..
+            Replacements = {
+
+                -- Disables the entire List
+                Enabled = true,
+
+                -- MsgVisibility_OthersOnly = Changes will be Only visible to others
+                -- MsgVisibility_SenderOnly = Changes will be Only visible to sender
+
+                -- The {%trigger} in a replacement will be formatted to the detected trigger
+                -- Trigger = "World"
+                -- Replacements = "hello {%trigger}"
+                -- "world" ==> "hello world"
+
+                -- The ..list..
+                List = {
+                    {
+                        Triggers = { "brb", "i brb", "will brb" },
+                        WholeMessage = true,
+                        Replacements = "brb hittin the shitter",
+                        ReplaceEntirety = true,
+                        AggressionLevel = 0, -- for direct matches
+                        VisibilityType = MsgVisibility_OthersOnly,
+                    },
+                    {
+                        Triggers = {
+                            "haendel",
+                        },
+                        Replacements = "ragelord {trigger}",
+                        AggressionLevel = 2, -- for direct matches
+                        VisibilityType = MsgVisibility_OthersOnly,
+                    },
+                    --[[
+                    {
+                        Triggers = {
+                            "ez",
+                        },
+                        TriggerChange = 25,
+                        WholeMessage = true,
+                        Replacements = {
+                            "close", "hihi", "not bad", "diddy style"
+                        },
+                        AggressionLevel = 0, -- for direct matches
+                        VisibilityType = MsgVisibility_OthersOnly,
+                    },
+                    {
+                        Triggers = {
+                            "trump",
+                        },
+                        Replacements = "mr president sir {trigger} (my king)",
+                        AggressionLevel = 2, -- for direct matches
+                        VisibilityType = MsgVisibility_OthersOnly,
+                    },
+                    ]]
+                },
             },
         },
 
@@ -652,5 +785,25 @@ Server.Config:Create({
 
         }, ---< PlayerNames
 
-    },
+        --- Configurations for User-Plugins
+        Plugins = {
+
+            --- Configuration for the 'PersistentScore' Plugin
+            PersistentScore = {
+
+                -- Will save the persistent score for each map the player plays on
+                SaveScoreForEachMap = true,
+
+                -- Will delete a players persistent score after this amount of time they have not connected
+                DeletePersistentScoreAfter = ONE_MONTH,
+
+                -- Resets the saved scores for the current map (or global) once a map ends (by command or naturally)
+                ResetScoreOnMapEnd = true,
+
+            }, ---< PersistentScore
+
+        }, ---< Plugins
+
+
+    }, ---< !!BODY!!
 })

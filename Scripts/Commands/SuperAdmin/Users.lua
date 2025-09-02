@@ -29,6 +29,24 @@ Server.ChatCommands:Add({
     },
 
     -- ================================================================
+    -- !HardMute <Player> <Duration> <Reason>
+    {
+        Name = "HardMute",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, NotSelf = true },
+            { Name = "@time",   Desc = "@arg_time_desc",   Required = true, Type = CommandArg_TypeTime, AcceptInvalidTime = true },
+            { Name = "@reason", Desc = "@reason_desc", Default = "@admin_decision", Type = CommandArg_TypeMessage },
+        },
+        Properties = {
+            This = "Server.Punisher"
+        },
+        Function = function(self, hPlayer, hTarget, sDuration, sReason)
+            return self:Command_MutePlayer(hPlayer, hTarget, sDuration, sReason, true)
+        end
+    },
+
+    -- ================================================================
     -- !UniqueUsers <Filter>
     {
         Name = "UniqueUsers",

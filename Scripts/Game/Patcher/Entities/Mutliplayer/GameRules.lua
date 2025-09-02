@@ -66,6 +66,9 @@ Server.Patcher:HookClass({
                 --    self:GotoState("InGame")
                 --end
 
+
+                self.LastHQHitTimeExtended = false
+                self.LastHQHitTimer = TimerNew(120) -- two minutes since last HQ hit when calling .Expired()
                 self.NoKillMessagePlayers = {}
                 self.TaggedExplosives = {}
                 self.TimedActions = {}
@@ -111,7 +114,9 @@ Server.Patcher:HookClass({
 
                 self.TurretConfig = {
                     RPGTurretDamageScale = Server.Config:Get("GameConfig.TurretConfig.RPGDamageScale", 1, ConfigType_Number),
+                    EnablePlayerTurretControl = Server.Config:Get("GameConfig.TurretConfig.EnablePlayerTurretControl", true, ConfigType_Boolean),
                     TargetPlayersOnAttack = Server.Config:Get("GameConfig.TurretConfig.TargetPlayersOnAttack", true, ConfigType_Boolean),
+                    TargetHQAttackers = Server.Config:Get("GameConfig.TurretConfig.TargetHQAttackers", true, ConfigType_Boolean),
                     RepairReward = Server.Config:Get("GameConfig.TurretConfig.RepairReward", 125, ConfigType_Number),
                 }
 
@@ -149,6 +154,7 @@ Server.Patcher:HookClass({
                 }
 
                 self.Config = {
+                    LockSpawnBaseDoors = Server.Config:Get("GameConfig.Immersion.LockSpawnBaseDoors", false, ConfigType_Boolean),
                     OpenDoorsOnCollision = Server.Config:Get("GameConfig.Immersion.OpenDoorsOnCollision", true, ConfigType_Boolean),
                     InstantActionEndGameCountdown = Server.Config:Get("GameConfig.Immersion.ExtendedInstantActionEndGame", true, ConfigType_Boolean),
                     AllowDestroyAVMines = Server.Config:Get("GameConfig.Immersion.AllowDestroyAVMines", true, ConfigType_Boolean),
@@ -156,7 +162,22 @@ Server.Patcher:HookClass({
                     ExplosiveEliminationReward = Server.Config:Get("GameConfig.Prestige.ExplosiveEliminationAward", 10, ConfigType_Number),
                     UseRankedModels = Server.Config:Get("GameConfig.Immersion.UseRankedModels", true, ConfigType_Boolean),
                     IAPlayerModels = Server.Config:Get("GameConfig.Immersion.InstantActionPlayerModels", {  }, ConfigType_Array),
+                    DeleteForbiddenAreas = Server.Config:Get("GameConfig.Immersion.DeleteForbiddenAreas", false, ConfigType_Boolean),
                 }
+
+                self.HQConfig = {
+                    UseCustomHQSettings = Server.Config:Get("GameConfig.HitConfig.HQs.UseCustomSettings", true, ConfigType_Boolean),
+                    HQUnDestroyable = Server.Config:Get("GameConfig.HitConfig.HQs.AllUnDestroyable", true, ConfigType_Boolean),
+                    AttackDelay = Server.Config:Get("GameConfig.HitConfig.HQs.AttackDelay", FIVE_MINUTES, ConfigType_Number),
+                    UseLocalizedDamage = Server.Config:Get("GameConfig.HitConfig.HQs.UseLocalizedDamage", false, ConfigType_Boolean),
+                    TacHits = Server.Config:Get("GameConfig.HitConfig.HQs.TacHits", 5, ConfigType_Number),
+                    HitRewards = Server.Config:Get("GameConfig.HitConfig.HQs.HitRewards", { }, ConfigType_Array),
+                    PremiumRewardAmplification = Server.Config:Get("GameConfig.HitConfig.HQs.PremiumRewardAmplification", 1, ConfigType_Number),
+                }
+
+                if (self.Config.DeleteForbiddenAreas) then
+                    Server.Utils:RemoveEntitiesByClass("ForbiddenArea")
+                end
 
                 self:InitBuyList()
                 self:Log("Initialized with Config")
@@ -237,6 +258,38 @@ Server.Patcher:HookClass({
         },
         {
             ------------------------------
+            ---      InitBuyList
+            ------------------------------
+            Name = "Event_TimerSecond",
+            Value = function(self)
+                for _, hPlayer in pairs(Server.Utils:GetPlayers()) do
+                    local hStandingOn = hPlayer.TempData.StandingOnEntity
+                    if (hStandingOn and table.find_value({ "AutoTurret", "AutoTurretAA"}, hStandingOn.class)) then
+                        hStandingOn.GunTurret:AimAtPos(hPlayer:CalcPos(100), 2.5)
+                    end
+                end
+            end,
+        },
+        {
+            ------------------------------
+            ---      InitBuyList
+            ------------------------------
+            Name = "Event_OnWeaponFired",
+            Value = function(self, hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
+
+                if (not self.TurretConfig.EnablePlayerTurretControl) then
+                    return
+                end
+
+                local hStandingOn = hShooter.TempData.StandingOnEntity
+                if (hStandingOn and table.find_value({ "AutoTurret", "AutoTurretAA"}, hStandingOn.class)) then
+                    hStandingOn.GunTurret:StartFire(false, 2.5)
+                    --hStandingOn.weapon:StartFire(true, 2.5)
+                end
+            end,
+        },
+        {
+            ------------------------------
             ---      GetPlayerModel
             ------------------------------
             Name = "GetPlayerModel",
@@ -309,6 +362,20 @@ Server.Patcher:HookClass({
 
                 self:CollectPSBuildings()
                 self:InitializeConfig() -- FIXME
+
+                if (self.IS_PS) then
+                    for _, hSpawnBase in pairs(System.GetEntitiesByClass("SpawnGroup") or {}) do
+                        if ((hSpawnBase.Properties.teamName == "tan" or hSpawnBase.Properties.teamName == "black") and not hSpawnBase.Properties.bCaptureable) then
+                            local aDoors = Server.Utils:GetEntities({ Class = "Door", InRange = 45, FromPos = hSpawnBase:GetPos() })
+                            for _, hDoor in pairs(aDoors or {}) do
+                                if (hDoor.Properties.fileModel == "objects/library/architecture/multiplayer/barracks/barracks_door_a.cgf") then
+                                    hDoor.IsBaseDoor = true
+                                    hDoor.BaseTeamId = Server.Utils:GetTeamId(hSpawnBase.id)
+                                end
+                            end
+                        end
+                    end
+                end
 
                 Server.Utils:SetCVar("g_friendlyfireRatio", Server.Config:Get("GameConfig.HitConfig.FriendlyFire.Ratio", 0, ConfigType_Number))
                 Server.Utils:SetCVar("mp_killMessages", (self.KillConfig.NewMessages and "0" or "1"))
@@ -413,7 +480,7 @@ Server.Patcher:HookClass({
                 -- Init Functions
                 for _, hBuilding in pairs(self.Buildings) do
                     if (hBuilding.GetTeam == nil) then
-                        hBuilding.GetTeam = function(this) return self.game:GetTeam(this.id)  end
+                        hBuilding.GetTeam = function(this) return g_gameRules.game:GetTeam(this.id)  end
                     end
                 end
             end,
@@ -554,21 +621,31 @@ Server.Patcher:HookClass({
 
                     elseif (self.Config.InstantActionEndGameCountdown) then
                         local aRadioTimers = {
-                            [120] = "mp_american/us_commander_2_minute_warming_01",
-                            [60 ] = "mp_american/us_commander_1_minute_warming_01",
-                            [30 ] = "mp_american/us_commander_30_second_warming_01",
-                            [5  ] = "mp_american/us_commander_final_countdown_01",
+                            -- These are already in the new Client (v23)..
+                            [120] = { Version = "20", Sound = "mp_american/us_commander_2_minute_warming_01" },
+                            [60 ] = { Version = "20", Sound = "mp_american/us_commander_1_minute_warming_01" },
+                            [30 ] = { Version = "20", Sound = "mp_american/us_commander_30_second_warming_01" },
+                            [5  ] = {                 Sound = "mp_american/us_commander_final_countdown_01" },
                         }
 
                         self:CheckTimedAction("GameEndRadio", 1, function(this)
                             local iLeft  = math.floor(iTimeLeft)
-                            local sSound = aRadioTimers[iLeft]
-                            if (sSound) then
-                                Server.Chat:TextMessage(ChatType_Info, ALL_PLAYERS, "@gameEnd_countDown", { Seconds = iLeft })
-                                Server.ClientMod:ExecuteCode({
-                                    Code = ([[CryMP_Client:PSE(nil,'%s')]]):format(sSound),
-                                    Clients = ALL_PLAYERS
-                                })
+                            local tSoundInfo = aRadioTimers[iLeft]
+                            if (tSoundInfo) then
+                                local sSound = tSoundInfo.Sound
+                                local sVersion = tSoundInfo.Version or ""
+                                if (string.emptyN(sVersion)) then
+                                    sVersion = ("if(GetVersion()>=%s)then return;end;"):format(sVersion)
+                                end
+                                if (sSound) then
+                                    if (iTimeLeft > 31) then -- we already get a center message at this time
+                                        Server.Chat:TextMessage(ChatType_Info, ALL_PLAYERS, "@gameEnd_countDown", { Seconds = iLeft })
+                                    end
+                                    Server.ClientMod:ExecuteCode({
+                                        Code = ([[%sCryMP_Client:PSE(nil,'%s')]]):format(sVersion, sSound),
+                                        Clients = ALL_PLAYERS
+                                    })
+                                end
                             end
 
                             if (iTimeLeft <= 30) then
@@ -578,6 +655,34 @@ Server.Patcher:HookClass({
                     end
                 end
             end
+        },
+        {
+            ------------------------------
+            --- Server.OnHQHit
+            ------------------------------
+            Name = "Server.OnHQHit",
+            Value = function(self, hHQ, tHit)
+                if (hHQ and tHit.damage > 0 and self:GetState() == "InGame") then
+                    local teamId = self.game:GetTeam(hHQ.id) or 0
+                    if (teamId ~= 0) then
+
+                        self.LastHQHitTimer.Refresh()
+
+                        if (_time - self.lastHQHit[teamId] >= 5) then
+                            self.lastHQHit[teamId] = _time
+                            local aPlayers = self.game:GetTeamPlayers(teamId, true)
+                            if (aPlayers) then
+                                for i, hPlayer in pairs(aPlayers) do
+                                    local iChannel = hPlayer.actor:GetChannel()
+                                    if (iChannel > 0) then
+                                        self.onClient:ClHQHit(iChannel, hHQ.id)
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end,
         },
         {
             ------------------------------
@@ -598,6 +703,13 @@ Server.Patcher:HookClass({
                 elseif (bIsLimited) then
 
                     if (iTimeLeft <= FIVE_MINUTES) then
+                        if (not self.LastHQHitTimer.Expired()) then
+                            if (not self.LastHQHitTimeExtended) then
+                                Server.Chat:ChatMessage(Server.MapRotation.ChatEntity, ALL_PLAYERS, "@fiveMinutesToDestroyHQ")
+                                Server.MapRotation:SetTimeLimit("10m")
+                                self.LastHQHitTimeExtended = true
+                            end
+                        end
 
                     elseif (iTimeLeft <= FIFTEEN_MINUTES) then
                         self:CheckAction("MapEndsSoon", function()
@@ -741,12 +853,19 @@ Server.Patcher:HookClass({
             ---    GetStepCaptureSpeed
             ------------------------------
             Name = "GetStepCaptureSpeed",
-            Value = function(self, hBuilding, iInsideCount)
+            Value = function(self, hBuilding, iInsideCount, aInside)
 
                 local iCaptureSpeed = 1
                 -- Amplify the speed based on the players inside
                 iCaptureSpeed = (iCaptureSpeed * (1 + math.min((math.max(0, iInsideCount-1) * self.CaptureConfig.PlayerCountAmplification), self.CaptureConfig.PlayerCountAmplificationLimit)))
 
+                for _, hInsideId in pairs(aInside or hBuilding.inside or {}) do
+                    local hInside = Server.Utils:GetEntity(hInsideId)
+                    if (hInside and hInside.IsPlayer and hInside:IsInTestMode()) then
+                        iCaptureSpeed = 1000
+                        break
+                    end
+                end
                -- DebugLog("hello?",iInsideCount,iCaptureSpeed)
                 return iCaptureSpeed
             end,
@@ -756,12 +875,19 @@ Server.Patcher:HookClass({
             ---    GetStepUncaptureSpeed
             ------------------------------
             Name = "GetStepUncaptureSpeed",
-            Value = function(self, hBuilding, iInsideCount)
+            Value = function(self, hBuilding, iInsideCount, aInside)
 
                 local iCaptureSpeed = 1
                 -- Amplify the speed based on the players inside
                 iCaptureSpeed = (iCaptureSpeed * (1 + math.min((math.max(0, iInsideCount-1) * self.CaptureConfig.PlayerCountAmplification), self.CaptureConfig.PlayerCountAmplificationLimit)))
 
+                for _, hInsideId in pairs(aInside or hBuilding.inside or {}) do
+                    local hInside = Server.Utils:GetEntity(hInsideId)
+                    if (hInside and hInside.IsPlayer and hInside:IsInTestMode()) then
+                        iCaptureSpeed = 1000
+                        break
+                    end
+                end
                -- DebugLog("UN hello?",iInsideCount,iCaptureSpeed)
                 return iCaptureSpeed
             end,
@@ -791,6 +917,24 @@ Server.Patcher:HookClass({
             Name = "SetDeaths",
             Value = function(self, hPlayerId, iDeaths)
                 return (g_gameRules.game:SetSynchedEntityValue(hPlayerId, self.SCORE_DEATHS_KEY, iDeaths))
+            end,
+        },
+        {
+            ------------------------------
+            ---        SetHeadshots
+            ------------------------------
+            Name = "SetHeadshots",
+            Value = function(self, hPlayerId, iHS)
+                return (g_gameRules.game:SetSynchedEntityValue(hPlayerId, self.SCORE_HEADSHOTS_KEY, iHS))
+            end,
+        },
+        {
+            ------------------------------
+            ---        GetHeadshots
+            ------------------------------
+            Name = "GetHeadshots",
+            Value = function(self, hPlayerId)
+                return (g_gameRules.game:GetSynchedEntityValue(hPlayerId, self.SCORE_HEADSHOTS_KEY) or 0)
             end,
         },
         {
@@ -848,6 +992,18 @@ Server.Patcher:HookClass({
                     return 0
                 end
                 return (g_gameRules.game:SetSynchedEntityValue(hPlayerId, self.PP_AMOUNT_KEY, iPP))
+            end,
+        },
+        {
+            ------------------------------
+            ---    GetPlayerXP
+            ------------------------------
+            Name = "GetPlayerXP",
+            Value = function(self, hPlayerId)
+                if (self.IS_IA) then
+                    return 0
+                end
+                return (g_gameRules.game:GetSynchedEntityValue(hPlayerId, self.CP_AMOUNT_KEY) or 0)
             end,
         },
         {
@@ -1232,11 +1388,13 @@ Server.Patcher:HookClass({
                 end
 
 
-                if (iKillType == KillType_Enemy) then-- or (hShooter.IsPlayer and hShooter:IsTesting())) then
+                if (iKillType == KillType_Enemy) then-- or (hShooter.IsPlayer and hShooter:IsInTestMode())) then
                     local aFirstBlood = self.FirstBlood
                     local iTeam = self.game:GetTeam(hShooter.id)
-                    if ((aFirstBlood.Shooters[iTeam] == nil and aFirstBlood.Enabled)) then
-                        aFirstBlood.Shooters[iTeam] = TimerNew()
+
+                    -- Only ONE first blood (TODO: Config, for each team?)
+                    if ((aFirstBlood.Shooters[GameTeam_Neutral] == nil and aFirstBlood.Enabled)) then
+                        aFirstBlood.Shooters[GameTeam_Neutral] = TimerNew()
 
                         local iRewardPP = aFirstBlood.RewardPP or 100
                         local iRewardCP = aFirstBlood.RewardCP or 10
@@ -1608,6 +1766,51 @@ Server.Patcher:HookClass({
                 end
                 ]]
             end
+        },
+        {
+            ------------------------------
+            ---      Award
+            ------------------------------
+            Name = "Award",
+            Value = function(self, player, deaths, kills, headshots, teamkills, selfkills)
+
+                if (self.IS_TIA) then
+                    teamkills = teamkills or 0
+                    selfkills = selfkills or 0
+                    if (player) then
+                        local cTeamKills=teamkills + (self.game:GetSynchedEntityValue(player.id, self.SCORE_TEAMKILLS_KEY, 0) or 0);
+                        self.game:SetSynchedEntityValue(player.id, self.SCORE_TEAMKILLS_KEY, cTeamKills);
+                        local cSelfKills=selfkills + (self.game:GetSynchedEntityValue(player.id, self.SCORE_SELFKILLS_KEY, 0) or 0);
+                        self.game:SetSynchedEntityValue(player.id, self.SCORE_SELFKILLS_KEY, cSelfKills);
+                    end
+                end
+
+                if (player) then
+                    local ckills=kills + (self.game:GetSynchedEntityValue(player.id, self.SCORE_KILLS_KEY) or 0);
+                    local cdeaths=deaths + (self.game:GetSynchedEntityValue(player.id, self.SCORE_DEATHS_KEY) or 0);
+                    local cheadshots=headshots + (self.game:GetSynchedEntityValue(player.id, self.SCORE_HEADSHOTS_KEY) or 0);
+
+                    self.game:SetSynchedEntityValue(player.id, self.SCORE_KILLS_KEY, ckills);
+                    self.game:SetSynchedEntityValue(player.id, self.SCORE_DEATHS_KEY, cdeaths);
+                    self.game:SetSynchedEntityValue(player.id, self.SCORE_HEADSHOTS_KEY, cheadshots);
+
+                    if (kills and kills~=0) then
+                        CryAction.SendGameplayEvent(player.id, eGE_Scored, "kills", ckills);
+                    end
+
+                    if (deaths and deaths~=0) then
+                        CryAction.SendGameplayEvent(player.id, eGE_Scored, "deaths", cdeaths);
+                    end
+
+                    if (headshots and headshots~=0) then
+                        CryAction.SendGameplayEvent(player.id, eGE_Scored, "headshots", cheadshots);
+                    end
+
+                    if (self.CheckPlayerScoreLimit) then
+                        self:CheckPlayerScoreLimit(player.id, ckills);
+                    end
+                end
+            end,
         },
         {
             ------------------------------
@@ -2957,7 +3160,8 @@ Server.Patcher:HookClass({
                         if (not bDestroyed and bShooterPlayer and teamId ~= self.game:GetTeam(hShooter.id)) then
 
                             if (aTurretConfig.TargetPlayersOnAttack and Server.Utils:GetDistance(hTurret, hShooter) < 300) then
-                                hTurret.weapon:Sv_GunTurretTargetEntity(hShooter.id, 5)
+                                hTurret.GunTurret:SetTarget(hShooter.id, 5)
+                                DebugLog("attack!")
                             end
 
                             local iMaxHP = hTurret.Properties.HitPoints

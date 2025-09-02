@@ -23,6 +23,7 @@ if (Server) then
     --iFullInitStart, bIsFullInitializing = Server.FullInitializationStart, Server.IsFullInitializing
 end
 
+---@class Server
 Server = {
 
     Properties = {
@@ -107,6 +108,10 @@ Server.Initialize = function(self)
         return false
     end
 
+    if (self:ConfigureComponents() == false) then
+        return false
+    end
+
     if (self:InitializeComponents() == false) then
         return false
     end
@@ -127,6 +132,14 @@ Server.PostInitialize = function(self)
     local iFullInitStart = self.FullInitializationStart
     self.Chat:ChatMessage(ChatEntity_Server, ChatType_ToAll, "@post_initialization_start")
     self.Logger:LogEvent({ Event = "Server", Message = ("@post_initialization_start"), Recipients = self.Utils:GetPlayers() })
+
+    -- Something went wrong. Either mad failed to load or is being accesses by a different process.
+    if (not g_gameRules) then
+        ServerLogFatal(LOG_STARS .. LOG_STARS)
+        ServerLogFatal("PostInitialize called without GameRules!")
+        ServerLogFatal("Either the Map Failed to Load, does not exist, or its currently opened by a different process.")
+        return false
+    end
 
     self.ErrorHandler:PostInitialize()
     if (not self.FileLoader:PostInitialize()) then
@@ -198,6 +211,7 @@ end
 Server.OnMapCommand = function(self)
     self:OnReset()
     self:ExportComponentData()
+    self.Events.Callbacks:OnMapCommand()
 end
 
 ----------------------------------
@@ -220,8 +234,9 @@ Server.OnReset = function(self)
     ServerLog("Resetting ..")
     for _, aComponent in pairs(self.ComponentList) do
         local sComponent = aComponent.Name
-        if (self[sComponent].OnReset) then
-            local bOk, sError = pcall(self[sComponent].OnReset, self[sComponent])
+        local fResetFunc = self[sComponent].OnReset
+        if (fResetFunc) then
+            local bOk, sError = pcall(fResetFunc, self[sComponent])
             if (not bOk) then
                 self:LogFatal("Failed to Reset Component '%s'", sComponent)
                 self:LogFatal("%s", (sError or "<Null>"))
@@ -261,7 +276,15 @@ Server.SpawnServerEntity = function(self)
         class = "Reflex",
         name = sName,
         position = vector.make(0, 0, 0),
-        orientation = vector.make(0, 0, 1)
+        orientation = vector.make(0, 0, 1),
+        properties = {
+            bAdjustToTerrain = 1,
+            Respawn = {
+                bRespawn = 1,
+                nTimer = 1,
+                bUnique = 1
+            }
+        }
     })
 
     if (not hEntity) then
@@ -354,6 +377,57 @@ Server.OnServerEmptied = function(self)
 end
 
 ----------------------------------
+Server.ConfigureComponents = function(self)
+
+    local pConfig = self.Config
+    if (not pConfig) then
+        self:LogError("Cannot Configure Components yet")
+        return
+    end
+
+    self:Log("Configuring Components ..")
+
+    for _, aComponent in pairs(self.ComponentList) do
+        local sComponent = aComponent.Name
+        local tComponent = self[sComponent]
+        if (tComponent) then
+            local tConfig = tComponent.ComponentConfig
+            local iAssignments = 0
+            local iDefaults = 0
+            if (tConfig) then
+
+                --tComponent:Log("Configuring..")
+                if (tComponent.Config == nil) then
+                    tComponent.Config = {}
+                end
+
+                local tComponentConfig = tComponent.Config
+                for _, tInfo in pairs(tConfig) do
+
+                    ServerLog(tInfo.Config)
+                    local hConfigValue, bIsDefault = pConfig:Get(tInfo.Config, tInfo.Default, tInfo.Type)
+                    table.Assign(tComponentConfig, ("%s"):format(tInfo.Key), hConfigValue)
+                    iAssignments = iAssignments + 1
+                    if (bIsDefault) then
+                        tComponent:LogWarning("Unable to locate Configuration '%s' for Key 'Config.%s'", tInfo.Config, tInfo.Key)
+                        iDefaults = iDefaults + 1
+                    end
+                end
+            end
+
+            if (iAssignments > 0) then
+                tComponent:Log("Configured %d Keys with %d Defaults", iAssignments, iDefaults)
+            end
+        else
+            self:LogFatal("Unknown Component in ComponentList found '%s'", sComponent)
+            return false
+        end
+    end
+
+    self:Log("Components Configured!")
+end
+
+----------------------------------
 Server.InitializeComponents = function(self)
 
     ServerLog("Initializing Components...")
@@ -388,7 +462,6 @@ Server.InitializeComponents = function(self)
         self[sComponentName].Initialized = true
     end
     self.ComponentsInitialized = true
-
 end
 
 ----------------------------------
@@ -425,6 +498,7 @@ Server.ExportComponentData = function(self)
         end
     end
 
+    self.Events.Callbacks:OnExportScriptData()
     ServerLog("Exported %d Keys from %d Components (Size %s)", table.countRec(self.ComponentExternal, nil, 1), table.count(self.ComponentExternal), self.Utils:ByteSuffix(iTotalSize))
 end
 
@@ -492,19 +566,23 @@ Server.LoadComponentExternal = function(self, aBody, sName, bIsAfterInit)
 
                         for _, sFile in pairs(aFiles) do
                             local sFileName = ServerLFS.FileGetName(sFile)
-                            if (ServerLFS.DirIsDir(sFile)) then
-                                if (LoadRecursive(sFile) == false) then
-                                    return false
-                                end
+                            if (sFileName:sub(1, 1) ~= "!") then
+                                if (ServerLFS.DirIsDir(sFile)) then
+                                    if (LoadRecursive(sFile) == false) then
+                                        return false
+                                    end
 
-                            elseif (aKeyInfo.NamePattern == nil or string.match(sFileName, aKeyInfo.NamePattern)) then
-                                bOk, hData = self.FileLoader:ExecuteFile(sFileName, ServerLFS.FileGetPath(sFile), {}, eFileType_Data)
-                                if (not bOk) then
-                                    ServerLogFatal("Failed to Import External Data for Component '%s'", sName)
-                                    ServerLogFatal("Aborting Initialization to Preserve Data!")
-                                    return false
+                                elseif (aKeyInfo.NamePattern == nil or string.match(sFileName, aKeyInfo.NamePattern)) then
+                                    bOk, hData = self.FileLoader:ExecuteFile(sFileName, ServerLFS.FileGetPath(sFile), {}, eFileType_Data)
+                                    if (not bOk) then
+                                        ServerLogFatal("Failed to Import External Data for Component '%s'", sName)
+                                        ServerLogFatal("Aborting Initialization to Preserve Data!")
+                                        return false
+                                    end
+                                    aBody:Log("Loaded External Data File %s", sFileName)
                                 end
-                                aBody:Log("Loaded External Data File %s", sFileName)
+                            else
+                                aBody:Log("Skipping Ignored file %s",sFileName)
                             end
                         end
 
@@ -601,7 +679,6 @@ Server.CreateComponents = function(self)
             return false
         end
 
-
         table.insert(self.InitializedComponents, sName)
         ServerLog("Component %s Created", sName)
     end
@@ -647,12 +724,18 @@ end
 ----------------------------------
 Server.CreateLogAbstract = function(self, aBody, sName)
 
-    aBody.LogFatal   = (aBody.LogFatal or function(this, sMessage, ...) Server:LogFatal(("[" .. this:GetName() .. "] <Fatal>: " .. sMessage), ...) end)
-    aBody.LogError   = (aBody.LogError or function(this, sMessage, ...) Server:LogError(("[" .. this:GetName() .. "] Error: " .. sMessage), ...) end)
-    aBody.LogWarning = (aBody.LogWarning or function(this, sMessage, ...) Server:LogWarning(("[" .. this:GetName() .. "] Warning: " .. sMessage), ...) end)
-    aBody.Log        = (aBody.Log or function(this, sMessage, ...) Server:Log(("[" .. this:GetName() .. "] " .. sMessage), ...) end)
-    aBody.LogDirect  = (aBody.Log or function(this, sMessage, ...) Server.Logger:Log(("[" .. this:GetName() .. "] " .. sMessage), ...) end)
-    aBody.LogDebug   = (aBody.LogDebug or function(this, sMessage, ...) Server:LogDebug(("[" .. this:GetName() .. "] <Debug>: " .. sMessage), ...) end)
+    aBody.GetLogName = aBody.GetLogName or function(this)
+        return (sName or this:GetName())
+    end
+
+    aBody.LogFatal   = (aBody.LogFatal or function(this, sMessage, ...) Server:LogFatal(("[" .. this:GetLogName() .. "] <Fatal>: " .. sMessage), ...) end)
+    aBody.LogError   = (aBody.LogError or function(this, sMessage, ...) Server:LogError(("[" .. this:GetLogName() .. "] Error: " .. sMessage), ...) end)
+    aBody.LogWarning = (aBody.LogWarning or function(this, sMessage, ...) Server:LogWarning(("[" .. this:GetLogName() .. "] Warning: " .. sMessage), ...) end)
+    aBody.Log        = (aBody.Log or function(this, sMessage, ...) Server:Log(("[" .. this:GetLogName() .. "] " .. sMessage), ...) end)
+    aBody.LogDirect  = (aBody.Log or function(this, sMessage, ...) Server.Logger:Log(("[" .. this:GetLogName() .. "] " .. sMessage), ...) end)
+    aBody.LogDebug   = (aBody.LogDebug or function(this, sMessage, ...) Server:LogDebug(("[" .. this:GetLogName() .. "] <Debug>: " .. sMessage), ...) end)
+
+    aBody.LogWarning_NoPrefix = (aBody.LogWarning_NoPrefix or function(this, sMessage, ...) Server:LogWarning(("[" .. this:GetLogName() .. "] " .. sMessage), ...) end)
 
     aBody.LogEvent = (aBody.LogEvent or function(this, tEvent)
         if (tEvent.Class == nil) then
@@ -663,6 +746,7 @@ Server.CreateLogAbstract = function(self, aBody, sName)
         end
         if (tEvent.Recipients == nil) then
             tEvent.Recipients = Server.Utils:GetPlayers()
+            this:LogWarning("No Recipients to LogEvent()")
         end
         Server.Logger:LogEvent(tEvent)--(aBody.LogEventType or sName), sMessage, ...)
     end)
@@ -749,12 +833,13 @@ Server.Logger = {
     end,
 
     PostInitialize = function(self)
-        for i = 1, table.size(self.EventQueue) do
-            self:LogEvent(self.EventQueue[i])
-        end
 
         self.CommonTags["MapName"] = Server.MapRotation:GetMapName()
         self.CommonTags["MapPath"] = Server.MapRotation:GetMapPath()
+
+        for i = 1, table.size(self.EventQueue) do
+            self:LogEvent(self.EventQueue[i])
+        end
 
         self.EventQueue = {}
         self:Log("Logger Queue Cleared..")
@@ -778,16 +863,24 @@ Server.Logger = {
         local sClass = string.match(sMessage, "^%[([^%]]+)%]")
         if (sClass == nil) then
             sClass = hEvent
-        else
+
+        elseif (not IsArray(sClass)) then
             sMessage = string.gsub(sMessage, "^(%[" .. sClass .. "%] )", "", 1)
+        else
+            sClass = (sClass.Class or hEvent)
         end
 
         local aMessageInfo = {
             Recipients = aRecipients,
             Message = sMessage,
             Format = tFormat,
-            Class = sClass
+            Class = tEvent.Class or sClass
+           -- Class = sClass
         }
+
+        --for _, v in pairs(tEvent) do
+        --    if (aMessageInfo[_] == nil) then ServerLog("add%s",_)aMessageInfo[_] = v end -- Merge..
+        --end
 
         -- If we are not yet initialized, we push the log into the queue BUT immediately log it to the console
         if (not Server:IsInitialized()) then
@@ -823,7 +916,7 @@ Server.Logger = {
         elseif (not tEvent.NoServerLog) then
 
             -- Only log this for non warnings and errors, as that's done by now already!
-            self:Log(string.format("[%s] %s", sClass, Server.LocalizationManager:LocalizeMessage(sMessage, Language_English, tFormat, true)))
+            self:Log(string.format("[%s] %s", tostring(sClass), Server.LocalizationManager:LocalizeMessage(sMessage, Language_English, tFormat, true)))
         end
 
         Server.Chat:ConsoleMessage(aMessageInfo)
@@ -1058,20 +1151,29 @@ Server.FileLoader = {
         return true
     end,
 
-    LoadComponents = function(self)
+    LoadComponents = function(self, sDir)
 
-        local sPath = SERVER_DIR_CORE
-        local aFiles = ServerLFS.DirGetFiles(sPath, GETFILES_FILES)
-        if ((#aFiles <= 0)) then
+        sDir = (sDir or SERVER_DIR_CORE)
+        local aFolders = ServerLFS.DirGetFiles(sDir, GETFILES_DIR)
+        if (#(aFolders or {}) > 0) then
+            for _, sFolder in pairs(aFolders) do
+                if (not self:LoadComponents(sFolder)) then
+                    return false
+                end
+            end
+        end
+
+        local aFiles = ServerLFS.DirGetFiles(sDir, GETFILES_FILES, ".*")
+        if (#aFiles == 0) then
             return true
         end
 
         for _, sFile in pairs(aFiles) do
+            -- We don't load Components where the name starts with '!'
             if ((string.sub(ServerLFS.FileGetName(sFile), 1, 1) ~= "!") and not self:LoadFile(sFile, eFileType_Core)) then
                 return false
             end
         end
-
         return true
     end,
 

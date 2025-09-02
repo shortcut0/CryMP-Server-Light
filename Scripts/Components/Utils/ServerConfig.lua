@@ -28,34 +28,60 @@ Server:CreateComponent({
         PostInitialize = function(self)
         end,
 
-        Get = function(self, sValue, hDefault, iType)
-            local hValue = LuaUtils.CheckGlobal("Server.Config.ActiveConfiguration.Body." .. sValue, hDefault)
+        GetType = function(self, hValue)
 
-            iType = (iType or ConfigType_Any)
-            if (iType == eConfigGet_Any) then
+            if (hValue == nil) then
+                return ConfigType_Any
+            end
+
+            local sType = type(hValue)
+            if (sType == "string") then
+                return ConfigType_String
+
+            elseif (sType == "number") then
+                return ConfigType_Number
+
+            elseif (sType == "boolean") then
+                return ConfigType_Boolean
+
+            elseif (sType == "table") then
+                return ConfigType_Array
+
+            end
+
+            self:LogError("Unresolved type for GetType() '%s'", sType or "<Null>")
+            return ConfigType_Any
+        end,
+
+        Get = function(self, sValue, hDefault, iType)
+
+            local hValue = LuaUtils.CheckGlobal("Server.Config.ActiveConfiguration.Body." .. sValue)--, hDefault)
+            local bIsDefault = true
+
+            if (iType == nil or iType == eConfigGet_Any) then
                 if (hValue ~= nil) then
                     return hValue
                 end
-                return hDefault
+                return hDefault, bIsDefault
 
             elseif (iType == ConfigType_Array) then
                 if (not IsArray(hValue)) then
-                    return hDefault
+                    return hDefault, bIsDefault
                 end
 
             elseif (iType == ConfigType_Number) then
                 if (not IsNumber(hValue)) then
-                    return hDefault
+                    return hDefault, bIsDefault
                 end
 
             elseif (iType == ConfigType_String) then
                 if (not IsString(hValue)) then
-                    return hDefault
+                    return hDefault, bIsDefault
                 end
 
             elseif (iType == ConfigType_Boolean) then
                 if (not IsBool(hValue)) then
-                    return hDefault
+                    return hDefault, bIsDefault
                 end
             end
 

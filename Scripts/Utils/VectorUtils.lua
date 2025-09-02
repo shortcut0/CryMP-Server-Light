@@ -41,6 +41,11 @@ Vector.Up = function()
 end
 
 -- ======================================
+Vector.Down = function()
+    return { x = 0, y = 0, z = -1}
+end
+
+-- ======================================
 Vector.Copy = function(vec_a)
     return { x = vec_a.x, y = vec_a.y, z = vec_a.z }
 end
@@ -92,6 +97,27 @@ Vector.Scale = function(vec_a, scale, in_place)
     vec_new.x = vec_a.x * scale
     vec_new.y = vec_a.y * scale
     vec_new.z = vec_a.z * scale
+    return vec_new
+end
+
+-- ======================================
+Vector.Negative = function(vec_a, in_place)
+    return Vector.Scale(vec_a, -1, in_place)
+end
+
+-- ======================================
+Vector.Add = function(vec_a, vec_b, in_place)
+    if (in_place) then
+        vec_a.x = vec_a.x + vec_b.x
+        vec_a.y = vec_a.y + vec_b.y
+        vec_a.z = vec_a.z + vec_b.z
+        return vec_a
+    end
+
+    local vec_new = {}
+    vec_new.x = vec_a.x + vec_b.x
+    vec_new.y = vec_a.y + vec_b.y
+    vec_new.z = vec_a.z + vec_b.z
     return vec_new
 end
 

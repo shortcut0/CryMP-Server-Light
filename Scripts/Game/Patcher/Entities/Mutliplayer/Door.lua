@@ -40,6 +40,7 @@ Server.Patcher:HookClass({
             ---------------------------
             Name  = "Server.OnHit",
             Value = function(self, tHit)
+
                 if g_gameRules.Config.OpenDoorsOnCollision then
                     if (tHit.type == "melee") then
                         Server.Utils:SpawnEffect("bullet.hit_metal.a" or "explosions.Deck_sparks.VTOL_explosion", tHit.pos, tHit.normal, 0.3)
@@ -47,6 +48,70 @@ Server.Patcher:HookClass({
                     end
                 end
             end
+        },
+        {
+            ---------------------------
+            --      OnSpawn
+            ---------------------------
+            Name  = "OnSpawn",
+            Value = function(self)
+
+                CryAction.CreateGameObjectForEntity(self.id)
+                CryAction.BindGameObjectToNetwork(self.id)
+                CryAction.ForceGameObjectUpdate(self.id, true)
+
+                self.isServer=CryAction.IsServer()
+                self.isClient=CryAction.IsClient()
+
+                self:Reset(1)
+                self:InitCryMP()
+            end
+        },
+        {
+            ---------------------------
+            --      InitCryMP
+            ---------------------------
+            Name  = "InitCryMP",
+            Value = function(self)
+
+            end
+        },
+        {
+            ---------------------------
+            --    Server.SvRequestOpen
+            ---------------------------
+            Name  = "Server.SvRequestOpen",
+            Value = function(self, hUserId, bOpen)
+
+                if (not hUserId) then return end
+                local hUser = Server.Utils:GetEntity(hUserId)
+                if (not hUser) then
+                    System.Log("No User entity found to open door")
+                    return
+                end
+
+                local bMode = DOOR_TOGGGLE
+                if (bOpen) then
+                    bMode = DOOR_OPEN
+                else
+                    bMode = DOOR_CLOSE
+                end
+
+                local pGR = g_gameRules
+                if (bMode == DOOR_OPEN or (bMode == DOOR_TOGGLE and self.action == DOOR_OPEN)) then
+                    if (pGR.IS_PS) then
+                        local bBaseDoorsLocked = pGR.Config.LockSpawnBaseDoors
+                        if (self.IsBaseDoor and bBaseDoorsLocked) then
+                            if (Server.Utils:GetTeamId(hUserId) ~= self.BaseTeamId) then
+                                Server.Chat:TextMessage(ChatType_Error, hUser, "@cannot_open_door")
+                                return
+                            end
+                        end
+                    end
+                end
+
+                self:Open(hUser, bMode)
+            end,
         },
         {
             ---------------------------

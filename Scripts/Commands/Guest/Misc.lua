@@ -73,6 +73,10 @@ Server.ChatCommands:Add({
                 return false, "@insufficientPrestige"
             end
 
+            -- A player could connect with the same profile twice, transfer all their prestige to the second account,
+            -- Disconnect with the first, then the second, then reconnect with both, and both now would have the same amount of prestige
+            -- Doing this for a few times will grant them an unreasonably large amount of prestige
+            -- Another way to fix or block this issue is to erase the stored prestige upon connecting to the server, but this works as well :)
             if (hTarget:GetProfileId() == self:GetProfileId()) then
                 return false, "@duping_not_allowed"
             end

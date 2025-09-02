@@ -28,6 +28,58 @@ Server.ChatCommands:Add({
         end
     },
 
+    -- TODO: !UnBan
+    -- ================================================================
+    -- !UnBan <Identifier> <Reason>
+    {
+        Name = "UnBan",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@Identifier", Desc = "@arg_Identifier_desc", Required = true },
+            { Name = "@reason", Desc = "@reason_desc", Default = "@admin_decision", Type = CommandArg_TypeMessage },
+        },
+        Properties = {
+            This = "Server.Punisher"
+        },
+        Function = function(self, hPlayer, sIdentifier, sReason)
+            return self:Command_UnBanPlayer(hPlayer, sIdentifier, sReason)
+        end
+    },
+
+    -- ================================================================
+    -- !BanList <Index> <Action>
+    {
+        Name = "BanList",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@index", Desc = "@arg_banIndex_desc", },
+            { Name = "@action",     Desc = "@arg_banAction_desc",         },
+        },
+        Properties = {
+            This = "Server.Punisher"
+        },
+        Function = function(self, hPlayer, sIndex, sAction)
+            return self:Command_ListBans(hPlayer, sIndex, sAction)
+        end
+    },
+
+    -- ================================================================
+    -- !BanInfo <Index> <Action>
+    {
+        Name = "BanInfo",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@index", Desc = "@arg_banIndex_desc", },
+            { Name = "@action",     Desc = "@arg_banAction_desc",         },
+        },
+        Properties = {
+            This = "Server.Punisher"
+        },
+        Function = function(self, hPlayer, sIndex, sAction)
+            return self:Command_IndexBan(hPlayer, sIndex, sAction)
+        end
+    },
+
     -- ================================================================
     -- !KickChannel <ChannelId> <Reason>
     {

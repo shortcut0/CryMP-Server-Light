@@ -76,9 +76,9 @@ ServerTimer_ExportComponentData = "ExportComponentData"
 
 BattleLog_Information = 1
 
-ChatType_ToAll = 5
-ChatType_ToTeam = 6
-ChatType_ToTarget = 7
+ChatType_ToAll = 100 -- because of ServerAccess slots
+ChatType_ToTeam = 101
+ChatType_ToTarget = 102
 
 ChatType_Console         = TextMessageConsole
 ChatType_ConsoleCentered = TextMessageConsole + 10
@@ -146,6 +146,7 @@ CommandArg_TypeTime = 6     -- a Time value (1d, 86400)
 CommandArg_TypeAccess = 7   -- a valid server access level
 CommandArg_TypeCVar = 8     -- a valid cvar
 CommandArg_TypeTeam = 9     -- a valid team name or id
+CommandArg_TypeTimeRaw = 10     -- a valid team name or id
 
 ----------------------------
 ALL_PLAYERS = 1000
@@ -259,6 +260,14 @@ GlobalKeys = {
     -- Misc
     -- ...
 }
+
+ChatEntities = {
+    HQMod = "HQ-MODS",
+    Equipment = "EQUiP"
+}
+
+MsgVisibility_SenderOnly = 1 -- Modified to sender, original to others
+MsgVisibility_OthersOnly = 2 -- Original to sender, modified to others
 
 
 ----------------------------

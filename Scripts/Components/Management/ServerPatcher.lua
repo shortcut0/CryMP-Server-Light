@@ -45,7 +45,8 @@ Server:CreateComponent({
 
             self:LogEvent({
                 Message = "@patcher_initialized",
-                MessageFormat = { Classes = table.size(self.ActiveHooks), Functions = self.TotalHookCount }
+                MessageFormat = { Classes = table.size(self.ActiveHooks), Functions = self.TotalHookCount },
+                Recipients = ServerAccess_GetAdmins()
             })
 
             if (Server:WasInitialized()) then

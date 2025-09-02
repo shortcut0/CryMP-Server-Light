@@ -5,7 +5,7 @@
 --        | |___| |  | |_| | |  | |  __/  |_____|  ___) |  __/ |   \ V /  __/ |     --
 --         \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|     --
 --                    |___/          by: shortcut0                                  --
---                          This file Contains Chat-Commands
+-- Contains the Server-Side Handler for the Remote Client Script
 -- ===================================================================================
 
 Server:CreateComponent({
@@ -61,7 +61,7 @@ Server:CreateComponent({
             GongPitter  = { ID = 17, Name = "Gong Pitter",       Model = "objects/characters/human/us/fire_fighter/green_cleaner.cdf" },
             JumpSailor  = { ID = 18, Name = "Jump Sailor",       Model = "objects/characters/human/us/jumpsuitsailor/jumpsuitsailor.cdf" },
             NavyPilot   = { ID = 19, Name = "Navy Pilot",        Model = "objects/characters/human/us/navypilot/navypilot.cdf" },
-            NKPilot     = { ID = 20, Name = "Asian Pilot",       Model = "objects/characters/human/asian/pilot/koreanpilot.cdf" },
+            NKPilot     = { ID = 20, Name = "Asian Pilot",       Team = GameTeam_NK, Model = "objects/characters/human/asian/pilot/koreanpilot.cdf" },
             Technician  = { ID = 21, Name = "Asian Technician",  Model = {
                 "objects/characters/human/asian/technician/technician_01.cdf",
                 "objects/characters/human/asian/technician/technician_02.cdf",
@@ -226,7 +226,7 @@ Server:CreateComponent({
             if (self.Properties.ObfuscateStackIds) then
                 hId = hId + math.random(66666, 77777)
             end
-            self.CodeStack.LastId = (self.CodeStack.LastId + 1)
+            self.CodeStack.LastId = hId
 
             --self.CodeStack[hId] = {
             table.insert(self.CodeStack.Stack, {
@@ -298,6 +298,7 @@ Server:CreateComponent({
 
         ExecuteCodeOnClient = function(self, hClient, sCode, bSkipQueuing)
 
+
             if (hClient.ClientMod.InstallFailed) then
                 self:LogError("Ignoring Client %s", hClient:GetName())
                 return
@@ -311,7 +312,7 @@ Server:CreateComponent({
 
             Server.Statistics:Event(StatisticsEvent_ClientDataSent, #sCode)
             g_gameRules.onClient:ClWorkComplete(hClient:GetChannel(), hClient.id, sCode)
-            self:Log("exec %s",sCode)
+            self:Log("ToClient %s",sCode)
         end,
 
         ExecuteCode = function(self, tCode)
@@ -418,13 +419,12 @@ Server:CreateComponent({
                                     elseif (not hReturnOrError) then
                                         tStack[hSyncID] = nil
                                         bPredicateOk = false
-                                        self:Log("Predicate failed to SyncID '%s' for Entity '%s', Discarding..", tostring(hSyncID), sBoundEntityName)
+                                        self:Log("Predicate failed for SyncID '%s' for Entity '%s', Discarding..", tostring(hSyncID), sBoundEntityName)
                                     end
                                 end
                                 if (bPredicateOk) then
                                     iSyncedCount = iSyncedCount + 1
                                     self:ExecuteCodeOnClient(hClient, tCode.Client)
-                                    DebugLog("exec",tCode.Client)
                                     if (tCode.Server) then
                                         error("implementation missing.")
                                     end
@@ -437,17 +437,21 @@ Server:CreateComponent({
             end
 
             if (iSyncedCount > 0) then
-                self:LogEvent({ Message = "@clientMod_synched", MessageFormat = { Items = iSyncedCount }})
+                self:LogEvent({ Recipients = ServerAccess_Admin, Message = "@clientMod_synched", MessageFormat = { Items = iSyncedCount }})
             end
         end,
 
-        InstallMod = function(self, hClient)
+        InstallMod = function(self, hClient, bResetAttempts)
+
 
             if (not self:IsComponentEnabled()) then
                 return
             end
 
             local iAttempt = hClient.ClientMod.InstallAttempts
+            if (bResetAttempts) then
+                iAttempt = 0
+            end
 
             self:Log("Installing on '%s'", hClient:GetName())
             self:LogEvent({
@@ -459,6 +463,7 @@ Server:CreateComponent({
             hClient.ClientMod.IsInstalled     = false
             hClient.ClientMod.InstallAttempts = (iAttempt + 1)
             hClient.ClientMod.LastInstall.Refresh()
+
             RPC:OnPlayer(hClient, "Execute", { url = self.Properties.ClientScriptURL });
         end,
 

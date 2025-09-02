@@ -354,9 +354,52 @@ Server:CreateComponent({
             local aEntities
             if (aInfo and aInfo.ByClass) then
                 aEntities = System.GetEntitiesByClass(aInfo.ByClass)
+            else
+                aEntities = System.GetEntities()
             end
 
-            return aEntities or {}
+            if (not aEntities) then
+                return {}
+            end
+
+            local aFilteredEntities = {}
+            for _, hEntity in pairs(aEntities) do
+
+                local bOk = true
+
+                if (aInfo.Class) then
+                    if (IsArray(aInfo.Class)) then
+                        bOk = table.find_value(aInfo.Class, hEntity.class)
+                    else
+                        bOk = hEntity.class == aInfo.Class
+                    end
+                end
+
+                if (aInfo.ById) then
+                    bOk = (bOk and (aInfo.ById == hEntity.id))
+                elseif (aInfo.NotById) then
+                    bOk = (bOk and (aInfo.NotById ~= hEntity.id))
+                end
+
+                if (aInfo.ByTeam) then
+                    bOk = (bOk and (self:GetTeamId(hEntity.id) == aInfo.ByTeam))
+                elseif (aInfo.NotByTeam) then
+                    bOk = (bOk and (self:GetTeamId(hEntity.id) ~= aInfo.NotByTeam))
+                end
+
+                if (bOk and aInfo.FromPos) then
+                    if (aInfo.InRange) then
+                        bOk = bOk and self:GetDistance(hEntity, aInfo.FromPos) < aInfo.InRange
+                    elseif (aInfo.OutsideRange) then
+                        bOk = bOk and self:GetDistance(hEntity, aInfo.FromPos) > aInfo.OutsideRange
+                    end
+                end
+
+                if (bOk) then
+                    table.insert(aFilteredEntities, hEntity)
+                end
+            end
+            return aFilteredEntities
         end,
 
         GetEntity = function(self, hId, bExcludeByName)
@@ -376,12 +419,23 @@ Server:CreateComponent({
             return ServerDLL.GetVehicleClasses()
         end,
 
+        RemoveEntitiesByClass = function(self, sClass)
+            for _, hEntity in pairs(System.GetEntitiesByClass(sClass) or {}) do
+                self:RemoveEntity(hEntity.id)
+            end
+        end,
+
+        RemoveEntity = function(self, hId)
+            System.RemoveEntity(hId) -- FIXME: accept tables
+        end,
+
         SpawnEntity = function(self, tParams)
 
             tParams = (tParams or {})
 
             -- Is it capital P or not!!
             -- edit: yes
+            -- edit2: NO!
             if (tParams.properties == nil) then
                 tParams.properties = {}
             end
@@ -404,6 +458,12 @@ Server:CreateComponent({
         SpawnEffect = function(self, sEffect, vPos, vDir, iScale)
             if (not sEffect) then
                 error("no effect")
+            end
+            if (IsTable(sEffect)) then
+                iScale = sEffect.Scale
+                vDir = sEffect.Dir
+                vPos = sEffect.Pos
+                sEffect = sEffect.Effect or sEffect.Name
             end
             g_gameRules:CreateExplosion(NULL_ENTITY, NULL_ENTITY, 1, vPos, (vDir or Vector.Up()), 45, 0.1, 0.1, 0.1, sEffect, (iScale or 1), 0.1, 0.1, 0.1);
         end,

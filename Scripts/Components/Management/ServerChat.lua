@@ -47,7 +47,7 @@ Server:CreateComponent({
                     { Tag = "DEAD",     Condition = "IsDead" },
                     --{ Tag = "VIP",      Condition = "IsPremium" },
                     --{ Tag = "LAG",      Condition = "IsLagging" },
-                    --{ Tag = "TESTING",  Condition = "IsTesting" },
+                    --{ Tag = "TESTING",  Condition = "IsInTestMode" },
                     --{ Tag = "GOD",      Condition = "HasGodMode" },
                     --{ Tag = "DEV",      Condition = "IsDeveloper" },
                     --{ Tag = "ADMIN",    Condition = "IsAdmin" },
@@ -87,6 +87,10 @@ Server:CreateComponent({
             ["GameRules"] = {
                 Class = "System",
                 Tag = "GameRules",
+            },
+            ["HQMods"] = {
+                Class = "System",
+                Tag = "HQ-Mods",
             },
         },
 
@@ -135,6 +139,8 @@ Server:CreateComponent({
                 HiddenWords = Server.Config:Get("ChatConfig.ShadowWords", {}, ConfigType_Array),
                 HiddenWordMatchGreediness = Server.Config:Get("ChatConfig.ShadowWordsMatchGreediness", 1, ConfigType_Number),
 
+                Replacements = Server.Config:Get("ChatConfig.Replacements", {}, ConfigType_Array),
+                ReplacementMatchGreediness = Server.Config:Get("ChatConfig.ReplacementMatchGreediness", 1, ConfigType_Number),
                 --[[
                 Replacements = {
                     Status = Server.Config:Get("ChatConfig.Replacements.Status", true ,ConfigType_Boolean),
@@ -242,6 +248,12 @@ Server:CreateComponent({
                 class = (self.Properties.ChatEntityClass or "Reflex"),
                 position = Vector.NewVec(0, 0, 0),
                 orientation = Vector.NewVec(0, 0, 1),
+                bAdjustToTerrain = 1,
+                Respawn = {
+                    bRespawn = 1,
+                    nTimer = 1,
+                    bUnique = 1
+                }
             })
 
             if (not hEntity) then
@@ -307,13 +319,13 @@ Server:CreateComponent({
 
             if (iTeamId) then
                 for _, hTarget in pairs(Server.Utils:GetPlayers({ ByTeam = iTeamId })) do
-                    g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, (Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
+                    g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, Server.Logger:RidColors(Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
                 end
                 return --self:SendMessageToTeam(pSender, iTeamId, sMessage)
 
             elseif (pTarget == ChatType_ToAll or pTarget == ALL_PLAYERS) then
                 for _, hTarget in pairs(Server.Utils:GetPlayers()) do
-                    g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, (Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
+                    g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, Server.Logger:RidColors(Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
                 end
                 return --self:SendMessageToAll(pSender, sMessage)
 
@@ -326,7 +338,7 @@ Server:CreateComponent({
             end
 
             for _, hTarget in pairs(aTargetList) do
-                g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, (Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
+                g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hTarget.id, Server.Logger:RidColors(Server.LocalizationManager:LocalizeForPlayer(hTarget, sMessage, tFormat)))
             end
         end,
 
@@ -344,9 +356,12 @@ Server:CreateComponent({
                 return self:SendTextMessageToAll(iType, sMessage, tFormat)
 
             end
-            local aTargetList = ((IsArray(pTarget) and pTarget.id) and { Server.Utils:GetEntity(pTarget) or pTarget})
-            if (table.empty(aTargetList)) then
-                return
+            local aTargetList = pTarget
+            if (not table.IsRecursive(pTarget)) then
+                aTargetList = ((IsArray(pTarget) and pTarget.id) and { Server.Utils:GetEntity(pTarget) or pTarget})
+                if (table.empty(aTargetList)) then
+                    return
+                end
             end
 
             for _, hTarget in pairs(aTargetList) do
@@ -358,6 +373,7 @@ Server:CreateComponent({
         -- pTarget = Player
         -- tFormat = Format for localization?
         ConsoleMessage = function(self, aMessageInfo, pArg1, pArg2, pArg3, pArg4, pArg5)
+
 
             -- The classic approach
             if (not IsTable(aMessageInfo)) then
@@ -410,11 +426,13 @@ Server:CreateComponent({
                 local sMessageColor = (aMessageInfo.MessageColor or aClassInfo.MessageColor or self.Properties.ConsoleLogMessageColor)
 
                 local sClass = string.format("%s%s(%s%s%s) {Gray}: %s", sClassColor, aClassInfo.Class, sTagColor, (aMessageInfo.Tag or aClassInfo.Tag), sClassColor, sMessageColor)
+
                 local iClassOffset = self.Properties.ConsoleLogClassOffset
 
                 sClass = Server.Logger:FormatTags(sClass)
                 sClass = string.lspace(sClass, iClassOffset, string.COLOR_CODE)
                 sMessage = string.format("%s%s", sClass, sMessage)
+          --  else
             end
 
             if (bCentered or iType == ChatType_ConsoleCentered) then
@@ -451,23 +469,23 @@ Server:CreateComponent({
         end,
 
         SendMessageToTeam = function(self, hSender, iTeamId, sMessage)
-            g_gameRules.game:SendChatMessage(ChatToTeam, hSender.id, hSender.id, sMessage, iTeamId)
+            g_gameRules.game:SendChatMessage(ChatToTeam, hSender.id, hSender.id, Server.Logger:RidColors(sMessage), iTeamId)
         end,
 
         SendMessageToAll = function(self, hSender, sMessage)
-            g_gameRules.game:SendChatMessage(ChatToAll, hSender.id, hSender.id, sMessage)
+            g_gameRules.game:SendChatMessage(ChatToAll, hSender.id, hSender.id, Server.Logger:RidColors(sMessage))
         end,
 
         SendTextMessageToTeam = function(self, iType, iTeamId, sMessage, tFormat)
             for _, hClient in pairs(Server.Utils:GetPlayers({ ByTeam = iTeamId })) do
-                self:SendTextMessageToTarget(iType, hClient, sMessage, tFormat)
+                self:SendTextMessageToTarget(iType, hClient, (sMessage), tFormat)
             end
             --g_gameRules.game:SendTextMessage(iType, sMessage, TextMessageToTeam, iTeamId)
         end,
 
         SendTextMessageToAll = function(self, iType, sMessage, tFormat)
             for _, hClient in pairs(Server.Utils:GetPlayers()) do
-                self:SendTextMessageToTarget(iType, hClient, sMessage, tFormat)
+                self:SendTextMessageToTarget(iType, hClient, (sMessage), tFormat)
             end
         end,
 
@@ -526,9 +544,9 @@ Server:CreateComponent({
                 end
                 if (bShow) then
                     local sTagLocalized = Server.LocalizationManager:LocalizeForPlayer(hRecipient, sTag, {})
-                    local sFinalMessage = ("%s%s%s"):format(aProperties.ConsoleChatMessageSenderColor, hSender:GetName(), sTagLocalized)
+                    local sFinalMessage = ("%s%s%s"):format(aLogInfo.SenderColor or aProperties.ConsoleChatMessageSenderColor, hSender:GetName(), sTagLocalized)
                     sFinalMessage = string.lspace(sFinalMessage, aProperties.ConsoleChatOffset - 3, string.COLOR_CODE)
-                    sFinalMessage = ("%s : %s%s"):format(sFinalMessage, aProperties.ConsoleChatMessageColor, sMessage)
+                    sFinalMessage = ("%s {Gray}: %s%s"):format(sFinalMessage, aLogInfo.MessageColor or aProperties.ConsoleChatMessageColor, sMessage)
                     local sMessageLocalized = Server.LocalizationManager:LocalizeForPlayer(hRecipient, sFinalMessage, {})
 
                     self:ConsoleMessage({
@@ -650,7 +668,7 @@ Server:CreateComponent({
                 local sPattern = (tInfo._Pattern_ or self:CreatePattern(sBadWord, (tInfo.AggressionLevel or iMatchDots)))
                 tInfo._Pattern_ = sPattern
                 sMessage, iBadWords = sMessage:gsub(sPattern, function(sMatch)
-                    DebugLog("sPattern=",sPattern,"=",sMatch)
+                   -- DebugLog("sPattern=",sPattern,"=",sMatch)
                     return string.gsub(sMatch, "[^ ]", sAsterisk)
                 end)
                 iBadWordCount = iBadWordCount + iBadWords
@@ -663,36 +681,143 @@ Server:CreateComponent({
             local aHideList = self.Properties.ChatFilters.HiddenWords
             local iAggressionLevel = (self.Properties.ChatFilters.HiddenWordMatchGreediness or 1)
             for _, tInfo in pairs(aHideList) do
-                local sBadWord = tInfo.Trigger
-                local sPatter = (tInfo._Pattern_ or self:CreatePattern(sBadWord, (tInfo.AggressionLevel or iAggressionLevel)))
-                local _, iCount = sMessage:gsub(sPatter, "")
-                if (iCount and iCount > 0) then
-                    return true
+                local aBadWords = table.ToTable(tInfo.Trigger)
+                for _, sBadWord in pairs(aBadWords) do
+                    local sPatter = (tInfo._Pattern_ or self:CreatePattern(sBadWord, (tInfo.AggressionLevel or iAggressionLevel)))
+                    local _, iCount = sMessage:gsub(sPatter, "")
+                    if (iCount and iCount > 0) then
+                        return true
+                    end
                 end
             end
             return false
+        end,
+
+        ReplaceMessage = function(self, sMessage)
+
+            local aReplacements = self.Properties.ChatFilters.Replacements
+
+            local iVisibility
+            if (not aReplacements.Enabled) then
+                return sMessage
+            end
+
+            local iAggressionLevel = (self.Properties.ChatFilters.ReplacementMatchGreediness or 1)
+            for _, tInfo in pairs(aReplacements.List) do
+
+                local bTriggerChanceOk = true
+                if (tInfo.TriggerChange) then
+                    bTriggerChanceOk = (tInfo.TriggerChange >= 100 or (tInfo.TriggerChange > 0 and math.random(1, 100) <= tInfo.TriggerChange))
+                end
+                if (tInfo.Enabled ~= false and bTriggerChanceOk) then
+                    tInfo._Patterns_ = (tInfo._Patterns_ or {})
+
+                    local aTriggerWords = table.ToTable(tInfo.Triggers)
+                    local aReplacementWords = table.ToTable(tInfo.Replacements)
+                    for _, sTrigger in pairs(aTriggerWords) do
+
+                        local sReplacement = table.Random(aReplacementWords)
+                        if (tInfo.WholeMessage) then
+                            if (sMessage:lower() == sTrigger:lower()) then
+                                sMessage = sReplacement
+                                sMessage = sMessage:gsub("{trigger}", sTrigger)
+                                iVisibility = (tInfo.VisibilityType or iVisibility)
+                                break
+                            end
+                        else
+                            local sPattern = (tInfo._Patterns_[sTrigger] or self:CreatePattern(sTrigger, (tInfo.AggressionLevel or iAggressionLevel)))
+                            tInfo._Patterns_[sTrigger] = sPattern
+
+                            local _, iCount = sMessage:gsub(sPattern, sReplacement)
+                            if (iCount and iCount > 0) then
+                                if (tInfo.ReplaceEntirety) then
+                                    sMessage = sReplacement
+                                else
+                                    sMessage = _
+                                 --   DebugLog("found ",_)
+                                end
+
+                                sMessage = sMessage:gsub("{trigger}", sTrigger)
+                               -- DebugLog("final ",sMessage)
+                                iVisibility = (tInfo.VisibilityType or iVisibility)
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+            return sMessage, iVisibility
+        end,
+
+        ToAdminConsole = function(self, sName, sMessage)
+            self:ConsoleMessage({
+                Message = sMessage,
+                Recipients = ServerAccess_Admin,
+                Class = {
+                    Class = "AdminLog",
+                    Tag = sName,
+                    TagColor = CRY_COLOR_RED
+                },
+            })
         end,
 
         FilterMessage = function(self, hSender, hTarget, sMessage, iType, bSentByServer, aInfo)
 
             local bOk = true
             local bLogMessage = true
+            local sOriginalMessage = sMessage
+            local iBadWordCount = 0
 
+            local sChatTag = self:GetChatPrefixTag(iType, hSender)
             local aLogInfo = {
                 Type    = iType,
                 Sender  = hSender,
                 Target  = hTarget,
                 Message = sMessage,
             }
+            if (sChatTag and self.Properties.ChatMessageTags.ShowInConsole) then
+                aLogInfo.Tag = sChatTag
+            end
+
+            local function AddTags(sMsg)
+                if (sChatTag) then
+                    sMsg = ("(%s): %s"):format(sChatTag, sMsg)
+                    if (self.Properties.ChatMessageTags.ShowInConsole) then
+                        aLogInfo.Tag = sChatTag
+                    end
+                end
+                return sMsg
+            end
+            local function DevLog()
+                self:LogChatMessage({
+                    Recipients = Server.Utils:GetPlayers({ ByAccess = ServerAccess_Developer }),
+                    Type    = iType,
+                    Sender  = hSender,
+                    Target  = hTarget,
+                    Message = ("$9(CENSORED) $4%s"):format(sOriginalMessage), -- Modified to others
+                    SenderColor = CRY_COLOR_RED,
+                    MessageColor = CRY_COLOR_RED
+                })
+            end
+
+            local aRecipients = Server.Utils:GetPlayers()
+            if (iType == ChatToTeam) then
+                aRecipients = Server.Utils:GetPlayers({ ByTeam = hSender:GetTeam() })
+            elseif (iType == ChatToTarget) then
+                aRecipients = {
+                    hSender, hTarget
+                }
+            end
 
             if (bSentByServer) then
                 bLogMessage = false
-            elseif (not hSender:HasAccess(ServerAccess_SuperAdmin)) then
+
+            -- FIXME: true (enabled for now to catch bugs)
+            elseif (true or not hSender:HasAccess(ServerAccess_SuperAdmin)) then
 
                 local aFilterConfig = self.Properties.ChatFilters
                 if (LuaUtils.True(aFilterConfig.Enabled, false, true)) then
                     local sFilteredMessage = sMessage
-                    local iBadWordCount = 0
 
                     if (not hSender.Data.HasToxicityPass) then
                         sFilteredMessage, iBadWordCount = self:CensorMessage(sFilteredMessage)
@@ -704,26 +829,86 @@ Server:CreateComponent({
                         end
                     end
 
-
                     if (self:ShouldHideMessage(sMessage)) then
                         g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hSender.id, sMessage)
                         aLogInfo.ShowLog = hSender.id
                         bOk = false
+                    else
+                        local sReplacedMessage, iVisibility = self:ReplaceMessage(sMessage)
+                        if (iVisibility) then
+                            if (iVisibility == MsgVisibility_SenderOnly) then
+                                -- Show modified to sender
+                                g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hSender.id, AddTags(sReplacedMessage))
+                                for _, _hTarget in pairs(aRecipients) do
+                                    if (_hTarget ~= hSender) then
+                                        g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, _hTarget.id, AddTags(sMessage))
+                                    end
+                                end
+                                aLogInfo = {
+                                    {
+                                        Type    = iType,
+                                        Sender  = hSender,
+                                        Target  = hTarget,
+                                        Message = sReplacedMessage,
+                                        ShowLog = hSender.id, -- show ONLY to the sender
+                                    },
+                                    {
+                                        Type    = iType,
+                                        Sender  = hSender,
+                                        Target  = hTarget,
+                                        Message = sMessage, -- Original to others
+                                        HideLog = hSender.id -- show the targets EXCEPT the sender
+                                    }
+                                }
+                                DevLog()
+                                bOk = false
+                            elseif (iVisibility == MsgVisibility_OthersOnly) then
+                                -- Show modified to sender
+                                g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, hSender.id, AddTags(sMessage))
+                                for _, _hTarget in pairs(aRecipients) do
+                                    if (_hTarget ~= hSender) then
+                                        g_gameRules.game:SendChatMessage(ChatToTarget, hSender.id, _hTarget.id, AddTags(sReplacedMessage))
+                                    end
+                                end
+                                aLogInfo = {
+                                    {
+                                        Type    = iType,
+                                        Sender  = hSender,
+                                        Target  = hTarget,
+                                        Message = sMessage,
+                                        ShowLog = hSender.id, -- original to sender
+                                    },
+                                    {
+                                        Type    = iType,
+                                        Sender  = hSender,
+                                        Target  = hTarget,
+                                        Message = sReplacedMessage, -- Modified to others
+                                        HideLog = hSender.id
+                                    }
+                                }
+                                DevLog()
+                                bOk = false
+                            end
+                        else
+                            sMessage = sReplacedMessage
+                            aInfo.NewMessage = sReplacedMessage
+                            aLogInfo.Message = sReplacedMessage
+                        end
                     end
                 end
             end
 
-            local sChatTag = self:GetChatPrefixTag(iType, hSender)
-            if (sChatTag) then
-                aInfo.NewMessage = ("(%s): %s"):format(sChatTag, aInfo.NewMessage)
-                if (self.Properties.ChatMessageTags.ShowInConsole) then
-                    aLogInfo.Tag = sChatTag
-                end
-            end
+            -- FIXME: NOT triggered for REPLACEMENTS
+            aInfo.NewMessage = AddTags(sMessage)
 
             if (bLogMessage) then
+                if (iBadWordCount > 0 or sOriginalMessage ~= sMessage) then
+                    --self:ToAdminConsole(hSender:GetName(), sOriginalMessage)
+                    DevLog()
+                end
                 self:LogChatMessage(aLogInfo)
             end
+            --aLogInfo.Message = sMessage
             return bOk
         end,
 
@@ -739,6 +924,9 @@ Server:CreateComponent({
 
                 if (not bSentByServer) then
                     if (Server.ChatCommands:CheckMessage(hSender, sMessage, iType)) then
+                        aInfo.Ok = false
+
+                    elseif (not Server.Punisher:CheckChatMessage(hSender, sMessage, iType)) then
                         aInfo.Ok = false
 
                     elseif (not self:FilterMessage(hSender, hTarget, sMessage, iType, bSentByServer, aInfo)) then

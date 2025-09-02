@@ -30,9 +30,9 @@ Server.Patcher:HookClass({
 
                 local sModification = self.Properties.Modification
                 self:SetInfo("DoomsdayMachine", IsAny(sModification, "TACCannon", "Singularity"))
-                ServerLog("Is machine: %s",tostring(self:GetInfo("DoomsdayMachine")))
 
-                ServerLog("VehicleBase.InitCryMP on '%s'. Is Child %s", self:GetName(), (self.IsOriginalSpawn and "No" or "Yes"))
+                --ServerLog("Is machine: %s",tostring(self:GetInfo("DoomsdayMachine")))
+                --ServerLog("VehicleBase.InitCryMP on '%s'. Is Child %s", self:GetName(), (self.IsOriginalSpawn and "No" or "Yes"))
             end,
         },
         {

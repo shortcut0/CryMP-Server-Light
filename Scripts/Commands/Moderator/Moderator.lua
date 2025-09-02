@@ -130,4 +130,36 @@ Server.ChatCommands:Add({
             return true, self:LocalizeText("@movedToTeam", { Target = "@you_were", TeamName = sTeamName })
         end
     },
+
+    -- ================================================================
+    -- !ToxPass <Target>
+    {
+        Name = "ToxPass",
+        Description = "@cmd_toxPass_desc",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, AcceptSelf = true,},
+        },
+        Properties = {
+        },
+        Function = function(self, hTarget)
+
+            local bMode = (hTarget.Data.HasToxicityPass)
+            local sStatus = "@enabled_on"
+            if (bMode) then
+                sStatus = "@disabled_on"
+            end
+
+            if (hTarget ~= self) then
+                if (hTarget:HasAccess(self:GetAccess())) then
+                    return false, "@insufficientAccess"
+                end
+
+                Server.Chat:ChatMessage(ChatEntity_Server, hTarget, hTarget:LocalizeText("@tox_pass " .. sStatus:gsub("_on", " (@admin_decision)")))
+            end
+            hTarget.Data.HasToxicityPass = (not bMode) -- toggle
+
+            return CmdResp_RawMessage, self:LocalizeText("@tox_pass " .. sStatus, {{}, { Name = (self == hTarget and "@yourself" or hTarget:GetName()) }})
+        end
+    },
 })

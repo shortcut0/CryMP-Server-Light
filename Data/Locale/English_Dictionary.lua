@@ -529,6 +529,18 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "admin",
+        Languages = {
+            English = "Admin"
+        }
+    },
+    {
+        String = "expiry",
+        Languages = {
+            English = "Expiry"
+        }
+    },
+    {
         String = "insufficientAccess",
         Languages = {
             English = "Insufficient Access"
@@ -700,12 +712,6 @@ Server.LocalizationManager:Add({
         String = "disabled_on",
         Languages = {
             English = "Disabled On {Name}"
-        }
-    },
-    {
-        String = "yourself_u",
-        Languages = {
-            English = "YOURSELF"
         }
     },
     {
@@ -1162,6 +1168,155 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "banlist",
+        Languages = {
+            English = "BAN{Red}:{Gray}LIST"
+        }
+    },
+    {
+        String = "baninfo",
+        Languages = {
+            English = "BAN{Red}:{Gray}iNFO"
+        }
+    },
+    {
+        String = "unique_name",
+        Languages = {
+            English = "Unique Name"
+        }
+    },
+    {
+        String = "unique_id",
+        Languages = {
+            English = "Unique ID"
+        }
+    },
+    {
+        String = "access",
+        Languages = {
+            English = "Access"
+        }
+    },
+    {
+        String = "time_ago",
+        Languages = {
+            English = "Time Ago"
+        }
+    },
+    {
+        String = "banned_by",
+        Languages = {
+            English = "Banned By"
+        }
+    },
+    {
+        String = "hard_ban",
+        Languages = {
+            English = "Hard-Ban"
+        }
+    },
+    {
+        String = "bans",
+        Languages = {
+            English = "Bans"
+        }
+    },
+    {
+        String = "ban_index_info",
+        Languages = {
+            English = "For {Red}Detailed{Gray} Info, Index a Ban using {White}!{Gray}BanInfo <#{Red}ID{Gray}>"
+        }
+    },
+    {
+        String = "ban_not_found",
+        Languages = {
+            English = "Ban not Found"
+        }
+    },
+    {
+        String = "no_bans_found",
+        Languages = {
+            English = "No Bans Found"
+        }
+    },
+    {
+        String = "arg_banIndex_desc",
+        Languages = {
+            English = "The Index of the BanList"
+        }
+    },
+    {
+        String = "identifiers",
+        Languages = {
+            English = "Identifiers"
+        }
+    },
+    {
+        String = "for_map",
+        Languages = {
+            English = "For Map"
+        }
+    },
+    {
+        String = "ban_action_info1",
+        Languages = {
+            English = "Possible Actions: Del, Erase, Flush, Unban, Delete, Remove"
+        }
+    },
+    {
+        String = "invalid_action",
+        Languages = {
+            English = "Invalid Action"
+        }
+    },
+    {
+        String = "arg_banAction_desc",
+        Languages = {
+            English = "The Action you wish to perform on the indexed ban"
+        }
+    },
+    {
+        String = "you_are_muted",
+        Languages = {
+            -- You are Muted | You're out of Mana | Expiry: Never
+            -- You are Muted | You're out of Mana | Expiry: 10m 15s
+            -- You are Muted | Reason (You're out of Mana) | Expiry: (10m 15s)
+            English = "You are Muted | {Reason} | Expiry: {Expiry}"
+        }
+    },
+    {
+        String = "player_alreadyMuted",
+        Languages = {
+            English = "Player Already Muted"
+        }
+    },
+    {
+        String = "player_muted",
+        Extended = ServerAccess_Moderator,
+        Languages = {
+            English = {
+                Regular = "{Red}{Name}{Gray} Has been {Red}Muted{Gray} ({Red}{Time}{Gray}, {Red}{Reason}{Gray})",
+                Extended = "{Red}{Name}{Gray} Has been {Red}Muted{Gray} By {Red}{Admin}{Gray} ({Red}{Time}{Gray}, {Red}{Reason}{Gray})"
+            }
+        }
+    },
+    {
+        String = "player_unMuted",
+        Extended = ServerAccess_Moderator,
+        Languages = {
+            English = {
+                Regular = "{Red}{Name}{Gray} Has been {Red}UnMuted{Gray} ({Red}{Reason}{Gray})",
+                Extended = "{Red}{Name}{Gray} Has been {Red}UnMuted{Gray} By {Red}{Admin}{Gray} ({Red}{Reason}{Gray})"
+            }
+        }
+    },
+    {
+        String = "mute_expired",
+        Languages = {
+            English = "Mute Expired",
+        }
+    },
+    {
         String = "player_kicked",
         Extended = ServerAccess_Moderator,
         Languages = {
@@ -1203,7 +1358,7 @@ Server.LocalizationManager:Add({
         Languages = {
             English = {
                 Regular  = "{Red}{Name}{Gray} Has been {Green}Unbanned{Gray} ({UnbanReason})",
-                Extended = "{Red}{Admin}{Gray} Has Unbanned {Red}{Name}{Gray} ({UnbanReason})"
+                Extended = "{Red}{Admin}{Gray} Has been Unbanned by {Red}{Name}{Gray} ({UnbanReason})"
             }
         }
     },
@@ -1438,6 +1593,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "cannot_open_door",
+        Languages = {
+            English = "You cannot Open this Door"
+        }
+    },
+    {
         String = "player",
         Languages = {
             English = "Player"
@@ -1563,12 +1724,90 @@ Server.LocalizationManager:Add({
             English = "The Index of the Model List"
         }
     },
+    {
+        String = "fiveMinutesToDestroyHQ",
+        Languages = {
+            English = "You get FIVE for MINUTES to FINISH THE MISSION"
+        }
+    },
+    {
+        String = "hq_notDestroyable",
+        Languages = {
+            English = "HQs are Currently not Destroyable"
+        }
+    },
+    {
+        String = "hq_protectedTime",
+        Languages = {
+            English = "HQs Are Currently Protected! Destroyable in [ {Time} ]"
+        }
+    },
+    {
+        String = "enemy_hq_hit",
+        Languages = {
+            English = "Enemy HQ Hit"
+        }
+    },
+    {
+        String = "our_hq_wasHit",
+        Languages = {
+            English = "Our HQ has been HIT by {Red}{Name}{Gray} (Remaining Hits: {Red}{Remaining}{Gray})"
+        }
+    },
+    {
+        String = "enemy_hq_wasHit",
+        Languages = {
+            English = "{Red}{Name}{Gray} Has Successfully Hit the Enemy HQ! {Reward}"
+        }
+    },
+    {
+        String = "our_hq_wasDestroyed",
+        Languages = {
+            English = "{Red}{Name}{Gray} Has DESTROYED Our HQ"
+        }
+    },
+    {
+        String = "enemy_hq_wasDestroyed",
+        Languages = {
+            English = "{Red}{Name}{Gray} Has DESTROYED the Enemy HQ"
+        }
+    },
+    {
+        String = "items",
+        Languages = {
+            English = "Items"
+        }
+    },
+    {
+        String = "item_given_to",
+        Languages = {
+            English = "Gave x{Count} {Item} to {Name}"
+        }
+    },
+    {
+        String = "item_Received",
+        Languages = {
+            English = "Received x{Count} {Item} From {Name}"
+        }
+    },
+    {
+        String = "all_players",
+        Languages = {
+            English = "All Players"
+        }
+    },
 })
 
 
 -- ===================================================================================
 
 Server.LocalizationManager:Add({
+    {
+        String = "v_yielded",
+        Languages = {
+            English = "VEHICLE:YIELDED"
+        }
+    },
     {
         String = "v_unlocked_u",
         Languages = {
@@ -1633,6 +1872,30 @@ Server.LocalizationManager:Add({
         String = "bouncy_vehicles",
         Languages = {
             English = "BOUNCY:VEHICLES"
+        }
+    },
+    {
+        String = "developerMode",
+        Languages = {
+            English = "Developer Mode"
+        }
+    },
+    {
+        String = "tox_pass",
+        Languages = {
+            English = "Toxicity Pass"
+        }
+    },
+})
+
+
+-- ===================================================================================
+
+Server.LocalizationManager:Add({
+    {
+        String = "cmd_toxPass_desc",
+        Languages = {
+            English = "Enables the Toxicity Pass (Allows the usage of Swear Words) On yourself or a selected Player."
         }
     },
 })
@@ -1771,6 +2034,12 @@ Server.LocalizationManager:Add({
         String = "arg_amount_desc",
         Languages = {
             English = "The amount you wish to apply" -- ???
+        }
+    },
+    {
+        String = "arg_item_class",
+        Languages = {
+            English = "The Item class to Spawn or Equip on the target entity" -- ???
         }
     },
     {

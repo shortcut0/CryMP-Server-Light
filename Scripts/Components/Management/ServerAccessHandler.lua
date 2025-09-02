@@ -80,6 +80,12 @@ Server:CreateComponent({
                     ProfileID = "1073103" -- someone keep this thing static please
                 }
                 ]]
+                {
+                    Name = "shortcut0",
+                    AccessLevel = 9,
+                    NameProtected = true,
+                    ProfileID = "1073450" -- someone keep this thing static please
+                }
             },
 
             -- The offset for ip-profiles
@@ -139,7 +145,12 @@ Server:CreateComponent({
         AssignUniqueID = function(self, hPlayer, hId)
 
             if (hPlayer.Info.UniqueIDAssigned) then
-                self:LogWarning("Attempt to Assign UniqueID AGAIN")
+                local hOldId = hPlayer:GetUniqueID()
+                if (hOldId and hId ~= hOldId) then
+                    self:LogWarning("Attempt to Assign a different UniqueID to '%s$9' (Old ID: %s, New ID: %s)", hPlayer:GetName(), hOldId, hId)
+                    return
+                end
+                self:LogWarning("Attempt to Assign UniqueID even though it's already been Assigned to '%s'", hPlayer:GetName())
                 return
             end
 
@@ -152,7 +163,6 @@ Server:CreateComponent({
                 MessageFormat = { Name = hPlayer:GetName(), UniqueName = hPlayer.Info.UniqueName, ID = hId },
                 Recipients = Server.Utils:GetPlayers({ ByAccess = math.max(hPlayer:GetAccess(), ServerAccess_SuperAdmin) })
             })
-            DebugLog("SHOW TO",math.max(hPlayer:GetAccess(), ServerAccess_SuperAdmin))
 
             -- Check for Hard Bans here
             local bCheckHardBan = true
@@ -243,7 +253,7 @@ Server:CreateComponent({
                 hPlayer:SetProfileValidated(true)
                 hPlayer:SetProfileId(sIPProfile)
 
-                -- This is purely so that if the user if of higher access, they will be able to see this log as well.
+                -- This is purely so that if the user is of higher access, they will be able to see this log as well.
                 -- after all, i'm not thor!
                 local function Log()
                     self:LogEvent({ Event = self:GetName(), Recipients = self:GetAdministrators(), Message = [[@user_ipIdAssigned]], MessageFormat = { ID = sIPProfile, UserName = hPlayer:GetName() }, })
@@ -388,8 +398,10 @@ Server:CreateComponent({
             local iIPDecimal = string.ip2dec(sIPAddress)
             local sIPProfile = self.IPProfiles[iIPDecimal]
             if (sIPProfile == nil) then
-                sIPProfile = ("ip%d"):format(self.Properties.IPProfileOffset + (self.IPProfiles["Next"] or 1))
-                self.IPProfiles["Next"] = (self.IPProfiles["Next"] or 0) + 1
+
+                local iNext = (self.IPProfiles["Next"] or 1)
+                sIPProfile = ("ip%d"):format(self.Properties.IPProfileOffset + iNext)
+                self.IPProfiles["Next"] = iNext
                 self.IPProfiles[iIPDecimal] = sIPProfile
                 self:Log("Inserted new IP-Profile %s on Index %d", sIPProfile, self.IPProfiles["Next"])
             else
@@ -451,14 +463,14 @@ Server:CreateComponent({
         SetPlayerDefaultAccess = function(self, hPlayer)
             local iDefaultLevel = self:GetDefaultAccess()
             local bIsLocal = ServerDLL.IsChannelLocal(hPlayer:GetChannel())
+            local sLocale = ""
             if (bIsLocal) then
-                bIsLocal = nil
                 if (self.Properties.GrantHighestAccessToLocalUsers) then
                     iDefaultLevel = self:GetHighestAccess()
-                    bIsLocal = "@str_local"
+                    sLocale = "@str_local"
                 end
             end
-            hPlayer:SetAccess(iDefaultLevel, { Local = bIsLocal })
+            hPlayer:SetAccess(iDefaultLevel, { Local = sLocale })
         end,
 
         SetUserAccess = function(self, hUser, hAdmin, iAccessLevel, bForceTemporary)
@@ -530,6 +542,12 @@ Server:CreateComponent({
                     MessageFormat = { Local = sLocalUser, Temporary = sTemporary, UserName = hUser:GetName(), AccessColor = sAccessColor, AccessName = sAccessName },
                     Recipients = self:GetAdmins()
                 })
+            end
+
+            if (hUser.Data.HasToxicityPass == nil) then
+                if (hUser:HasAccess(ServerAccess_Admin)) then
+                    hUser.Data.HasToxicityPass = true -- Automatically enable this on Admins
+                end
             end
         end,
 

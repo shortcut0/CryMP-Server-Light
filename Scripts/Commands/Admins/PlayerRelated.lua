@@ -203,4 +203,94 @@ Server.ChatCommands:Add({
             g_gameRules:PrestigeEvent(hTarget, iAmount, sReason)
         end
     },
+
+    -- ================================================================
+    -- !GivePrestige <Target> <Amount> <Reason>
+    {
+        Name = "GiveItem",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", AcceptSelf = true,Required = true, Type = CommandArg_TypePlayer,  },
+            { Name = "@Item",  Desc = "@arg_item_class" , Required = true },
+            { Name = "@amount",  Desc = "@arg_amount_desc", Required = true, Default = 1, Type = CommandArg_TypeNumber, Minimum = 1, Maximum = 100 },
+        },
+        Properties = {
+            CoolDown = 10,
+        },
+        Function = function(self, hTarget, sClass, iCount, ...)
+
+            local aItems = ServerDLL.GetItemClasses()
+            local iItems = table.size(aItems)
+            if (iItems == 0) then
+                return false, self:LocalizeText("@noClassToDisplay", {Class = "@items"})
+            end
+
+            local aFound
+            if (sClass) then
+                aFound = table.it(aItems, function(x, i, v)
+                    local t = x
+                    local a = string.lower(v)
+                    local b = string.lower(sClass)
+                    if (a == b) then
+                        return { v }, 1
+                    elseif (string.len(b) > 1 and string.match(a, "^" .. b)) then
+                        if (t) then
+                            table.insert(t, v)
+                            return t
+                        end
+                        return { v }
+                    end
+                    return t
+                end)
+                if (table.count(aFound) == 0) then aFound = nil end
+            end
+            if (sClass == nil or (not aFound or table.count(aFound) > 1)) then
+                Server.Utils:ListToConsole({
+                    Client      = self,
+                    List        = (aFound or aItems),
+                    Title       = self:LocalizeText("@item_list"),
+                    ItemWidth   = 20,
+                    PerLine     = 4,
+                    Value       = 1
+                })
+                return true, self:LocalizeText("@entitiesListedInConsole", { Class = "@items", Count = table.count((aFound or aItems)) })
+            end
+
+            local sItem = aFound[1]
+            local hReceived
+            local aAttachments = { ... }
+
+            if (hTarget == ALL_PLAYERS) then
+                for _, hPlayer in pairs(Server.Utils:GetPlayers()) do
+                    if (hPlayer:IsAlive()) then
+                        if (hPlayer ~= self) then
+                            for _ = 1, iCount do
+                                hReceived = hPlayer:GiveItem(sItem)
+                            end
+                            if (hReceived) then
+                                Server.PlayerEquipment:AttachOnWeapon(hPlayer, Server.Utils:GetEntity(hReceived), aAttachments)
+                            end
+                        end
+                        if (self ~= hPlayer) then
+                            Server.Chat:ChatMessage(ChatEntities.Equipment, self, self:LocalizeText("@item_Received", { By = self:GetName(), Item = sItem, Count = iCount }))
+                        end
+                    end
+                end
+                Server.Chat:ChatMessage(ChatEntities.Equipment, self, self:LocalizeText("@item_given_to", { Name = "@all_players", Item = sItem, Count = iCount }))
+                return true
+            else
+                for i = 1, iCount do
+                    hReceived = hTarget:GiveItem(sItem)
+                end
+                if (hReceived) then
+                    Server.PlayerEquipment:AttachOnWeapon(hTarget, Server.Utils:GetEntity(hReceived), aAttachments)
+                end
+                if (self ~= hTarget) then
+                    Server.Chat:ChatMessage(ChatEntities.Equipment, self, self:LocalizeText("@item_Received", { By = self:GetName(), Item = sItem, Count = iCount }))
+                end
+                Server.Chat:ChatMessage(ChatEntities.Equipment, self, self:LocalizeText("@item_given_to", { Name = (hTarget == self and "@yourself" or hTarget:GetName()), Item = sItem, Count = iCount }))
+            end
+            return true
+        end
+    },
 })

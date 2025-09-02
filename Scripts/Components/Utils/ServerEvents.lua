@@ -31,6 +31,7 @@ Server:CreateComponent({
             OnProfileValidated = function(this, hPlayer, sProfile)
                 Server.ActorHandler:OnProfileValidated(hPlayer, sProfile)
                 Server.AccessHandler:OnProfileValidated(hPlayer, sProfile)
+                Server.Events:CheckComponentEvents("OnProfileValidated", hPlayer, sProfile)
             end,
 
             OnActorSpawn = function(this, hPlayer)
@@ -42,12 +43,17 @@ Server:CreateComponent({
             end,
 
             OnPostInitialize = function(this)
-                g_gameRules:PostInitialize()
+               --FIXME
+                Server.Events:SafeCall(g_gameRules, "PostInitialize")
                 Server.Events:CallEvent(ServerEvent_OnPostInit)
             end,
 
             OnInitialize = function(this)
                 Server.Events:CallEvent(ServerEvent_OnInit)
+            end,
+
+            OnExportScriptData = function(this)
+                Server.Events:CheckComponentEvents("OnExportScriptData")
             end,
 
             -- ============================================================================
@@ -63,6 +69,8 @@ Server:CreateComponent({
 
                 if (iTimerID == 1) then
                     Server.Events:CheckComponentEvents("TimerSecond")
+                    --FIXME
+                    Server.Events:SafeCall(g_gameRules, "Event_TimerSecond")
                     Server.Events:CallEvent(ServerEvent_OnTimerSecond, iTimerID)
 
                 elseif (iTimerID == 2) then
@@ -76,21 +84,32 @@ Server:CreateComponent({
 
             OnCheat                 = function()
             end,
-            RequestDropWeapon       = function()
+            RequestDropWeapon       = function(self, pActorId, pItemId)
+                DebugLog("Request DROP WEAPON")
+                return true
             end,
-            RequestPickWeapon       = function()
+            RequestPickWeapon       = function(self, pActorId, pItemId)
+                DebugLog("Request PICK WEAPON")
+                return true
             end,
-            RequestUseWeapon        = function() end,
+            RequestPickObject       = function(self, pActorId, pItemId)
+                DebugLog("Request PICK OBJECT")
+                return true
+            end,
+            RequestUseWeapon        = function(self, pActorId, pItemId)
+                DebugLog("Request USE ITEM")
+                return true
+            end,
             OnWeaponDropped         = function() end,
             OnShoot                 = function(self, hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
                 Server.PlayerEquipment:OnWeaponFired(hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
+                Server.Events:SafeCall(g_gameRules, "Event_OnWeaponFired", hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
             end,
             OnStartReload           = function() end,
             OnEndReload             = function() end,
             OnMelee                 = function(self, hShooterId, hWeaponId)
                 Server.PlayerEquipment:OnWeaponMelee(hShooterId, hWeaponId)
             end,
-            RequestPickObject       = function() end,
             OnObjectPicked          = function() end,
             OnExplosivePlaced       = function() end,
             OnExplosiveRemoved      = function() end,
@@ -104,6 +123,7 @@ Server:CreateComponent({
             OnClientDisconnect      = function(self, iChannel, hPlayer, sDescription)
                 Server.Network:OnClientDisconnect(hPlayer, iChannel, sDescription)
                 Server.ActorHandler:OnPlayerDisconnect(hPlayer)
+                Server.Events:CheckComponentEvents("OnClientDisconnect", hPlayer, iChannel, sDescription)
             end,
             OnClientEnteredGame     = function() end,
             OnClientConnect     = function(self, hPlayer, iChannel, bIsReset, bWasOnHold)
@@ -146,7 +166,7 @@ Server:CreateComponent({
                 -- We assume that this is done before ANYTHING else on a new actor/client, but not 100% sure!
                 if (bActor) then
                     Server.ActorHandler:OnActorSpawn(hEntity)
-                    g_gameRules:OnPlayerSpawn(hEntity)
+                    Server.Events:SafeCall(g_gameRules, "OnPlayerSpawn", hEntity) -- Why is this Called OnPlayerSpawn and not OnActorSpawn ?_?
                 end
 
                 if (bVehicle) then
@@ -164,7 +184,9 @@ Server:CreateComponent({
             OnScriptLoaded          = function(self, sFileName)
                 Server.Patcher:OnScriptLoaded(sFileName)
             end,
-            OnMapCommand            = function() end,
+            OnMapCommand            = function(self)
+                Server.Events:CheckComponentEvents("OnMapCommand")
+            end,
             OnScriptError            = function(this, sError)
                 Server.ErrorHandler:HandleError(sError)
             end,
@@ -192,6 +214,23 @@ Server:CreateComponent({
 
         TestOne = function(MASTER, ...)
             ServerLog("MASTER=%s, PUSHED=%s",ToString(MASTER),table.concat({...},","))
+        end,
+
+        SafeCall = function(self, hObject, sFunction, ...)
+
+            if (not hObject) then
+                self:LogError("Null Object to SafeCall")
+                self:LogError("Call Origin: %s", LuaUtils.TraceSource(1))
+                return
+            end
+
+            local pFunction = hObject[sFunction]
+            if (not pFunction) then
+                self:LogError("Function '%s' for Object '%s' not found", sFunction, table.lookup(_G, hObject) or "<Unknown>")
+                return
+            end
+
+            pFunction(hObject, ...)
         end,
 
         CheckComponentEvents = function(self, sEvent, ...)

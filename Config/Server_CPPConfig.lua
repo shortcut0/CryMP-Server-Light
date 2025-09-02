@@ -22,4 +22,9 @@ Server_CPPConfig = {
     -- If enabled, upon loading a script, the server will check if an identical file is present inside the overwrite folder
     -- if there is, that one will be loaded INSTEAD.
     UseAutomaticScriptRedirection = true,
+
+    -- Sets the status for enabling CryNetwork multithreading
+    -- Comment or set to NIL to use default setting
+    -- TRUE will enable it, FALSE will disable it
+    EnableCryNetworkMultithreading = false, -- FIXME
 }

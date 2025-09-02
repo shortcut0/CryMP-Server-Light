@@ -5,3 +5,5 @@ CryMP-Server-Light.iml
 /.idea
 /Sources/C++/.vs
 /Sources/Lua/Crysis Scripts
+CryMP-Server.log
+/LogBackups

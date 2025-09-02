@@ -12,6 +12,6 @@ Server.ChatCommands:Add({
     Name = "reload",
     Access = ServerAccess_Developer,
     Function = function(self)
-        Server.Utils:ExecuteCommand("server_reloadScript")
+        Server.Utils:ExecuteCommand("server_reloadScript", self)
     end
 })

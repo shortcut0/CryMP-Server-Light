@@ -371,13 +371,13 @@ Server:CreateComponent({
         end,
 
         GetMapPath = function(self)
-            return ServerDLL.GetMapName() or "Unknown"
+            return ServerDLL.GetMapName() or "<Unknown>"
         end,
 
         CanStartNextLevel = function(self)
 
             if (not self.Properties.RotationEnabled) then
-            --    return true -- Let C++ handle it
+                return true -- Let C++ handle it
             end
 
             if (self.MapRotation:IsEmpty()) then

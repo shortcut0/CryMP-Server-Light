@@ -507,7 +507,7 @@ Server:CreateComponent({
                 return true -- Block Message
             end
 
-            self:ProcessCommand(hPlayer, aCommandList[1], tArgs, iType)
+            self:ProcessCommand(hPlayer, sCommand, aCommandList[1], tArgs, iType)
             return true -- Block Message
         end,
 
@@ -648,7 +648,7 @@ Server:CreateComponent({
             return sArgs
         end,
 
-        ProcessCommand = function(self, hPlayer, aCommand, tArgs, iType)
+        ProcessCommand = function(self, hPlayer, sEnteredCommand, aCommand, tArgs, iType)
 
             Server.Statistics:Event(StatisticsEvent_OnCommandUsed)
 
@@ -690,7 +690,7 @@ Server:CreateComponent({
                     NoStatus = true,
                     Message = "@command_notFound",
                     AdminMessage = "@insufficientAccess"
-                }, { Name = sCommand })
+                }, { Name = sEnteredCommand })
                 return
             end
 
@@ -901,7 +901,7 @@ Server:CreateComponent({
                                 SendMessage(self.Responses.InsufficientAccess, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
                                 return
                             end
-                        elseif ((aCmdArg.NotUser or aCmdArg.NotSelf) and hPlayer == hArgReplacement) then
+                        elseif (not bInTestMode and (aCmdArg.NotUser or aCmdArg.NotSelf) and hPlayer == hArgReplacement) then
                             SendMessage({
                                 Message = "@command_argNotSelf"
                             }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
@@ -918,29 +918,31 @@ Server:CreateComponent({
                         return
                     end
 
-                    if (iArgMax and hArgReplacement > iArgMax) then
-                        if (aCmdArg.ForceLimit) then
-                            hArgReplacement = iArgMax
-                        else
-                            SendMessage({
-                                Message = "@command_argTooHigh"
-                            }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
-                            return
+                    if (not bInTestMode) then
+                        if (iArgMax and hArgReplacement > iArgMax) then
+                            if (aCmdArg.ForceLimit) then
+                                hArgReplacement = iArgMax
+                            else
+                                SendMessage({
+                                    Message = "@command_argTooHigh"
+                                }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
+                                return
+                            end
+                        end
+
+                        if (iArgMin and hArgReplacement < iArgMin) then
+                            if (aCmdArg.ForceLimit) then
+                                hArgReplacement = iArgMin
+                            else
+                                SendMessage({
+                                    Message = "@command_argTooLow"
+                                }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
+                                return
+                            end
                         end
                     end
 
-                    if (iArgMin and hArgReplacement < iArgMin) then
-                        if (aCmdArg.ForceLimit) then
-                            hArgReplacement = iArgMin
-                        else
-                            SendMessage({
-                                Message = "@command_argTooLow"
-                            }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
-                            return
-                        end
-                    end
-
-                elseif (iArgType == CommandArg_TypeTime) then
+                elseif (iArgType == CommandArg_TypeTime or iArgType == CommandArg_TypeTimeRaw) then
 
                     hArgReplacement = Date:ParseTime(sUserArg)
                     if (aCmdArg.AcceptInvalidTime and (sUserArgLower == "-1" or sUserArgLower == "never")) then
@@ -953,25 +955,29 @@ Server:CreateComponent({
                         return
                     end
 
-                    if (iArgMax and hArgReplacement > iArgMax) then
-                        if (aCmdArg.ForceLimit) then
-                            hArgReplacement = iArgMax
-                        else
-                            SendMessage({
-                                Message = "@command_argTooHigh"
-                            }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
-                            return
-                        end
-                    end
+                    if (iArgType == CommandArg_TypeTimeRaw) then
+                        hArgReplacement = sUserArg
 
-                    if (iArgMin and hArgReplacement < iArgMin) then
-                        if (aCmdArg.ForceLimit) then
-                            hArgReplacement = iArgMin
-                        else
-                            SendMessage({
-                                Message = "@command_argTooLow"
-                            }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
-                            return
+                    elseif (not bInTestMode) then
+                        if (iArgMax and hArgReplacement > iArgMax) then
+                            if (aCmdArg.ForceLimit) then
+                                hArgReplacement = iArgMax
+                            else
+                                SendMessage({
+                                    Message = "@command_argTooHigh"
+                                }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
+                                return
+                            end
+                        end
+                        if (iArgMin and hArgReplacement < iArgMin) then
+                            if (aCmdArg.ForceLimit) then
+                                hArgReplacement = iArgMin
+                            else
+                                SendMessage({
+                                    Message = "@command_argTooLow"
+                                }, { Player = sUserArg, Index = sArgIndex, Name = sCommand })
+                                return
+                            end
                         end
                     end
 
@@ -1317,6 +1323,7 @@ Server:CreateComponent({
             Server.Chat:ConsoleMessage(hPlayer, "      " .. hPlayer:LocalizeText("@commandList_help_2"))
 
             return true, hPlayer:LocalizeText("@entitiesListedInConsole", { Class = "@commands", Count = iTotalDisplayed })
+
         end,
     }
 })

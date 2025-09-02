@@ -27,12 +27,12 @@ Server.ChatCommands:Add({
 
             if (hTarget == ALL_PLAYERS) then
                 for _, hVictim in pairs(Server.Utils:GetPlayers()) do
-                    Server.ClientMod:InstallMod(hVictim)
+                    Server.ClientMod:InstallMod(hVictim, true)
                 end
                 return true
             end
 
-            Server.ClientMod:InstallMod(hTarget)
+            Server.ClientMod:InstallMod(hTarget, true)
             return true
         end
     },

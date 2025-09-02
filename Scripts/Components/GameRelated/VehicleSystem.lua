@@ -68,7 +68,7 @@ Server:CreateComponent({
                 return false, "@vehicle_hasNoOwner"
             end
             hVehicle:SetTempInfo("BuildBy", nil)
-            Server.Chat:BattleLog(BattleLog_Information, hOwner, "@v_locked_u")
+            Server.Chat:BattleLog(BattleLog_Information, hOwner, "@v_yielded_UPPER")
             return true
         end,
 

@@ -123,6 +123,25 @@ Server:CreateComponent({
         -- A singular string, e.g "test_locale"
         LocalizeString = function(self, sString, sLanguage, tFormat, iExtended)
 
+            --test (it works)
+            --sString=sString.."_lower"
+
+            local sUpper = sString:sub(#sString - 5)
+            local UPPER, LOWER = 1, 2
+            local iCaseFmt = nil
+
+            --DebugLogSafe("sUpper",sUpper)
+            if (sUpper) then
+                if (sUpper:lower() == "_lower") then
+                    iCaseFmt = LOWER
+                elseif (sUpper:upper() == "_UPPER") then
+                    iCaseFmt = UPPER
+                end
+                if (iCaseFmt ~= nil) then
+                    sString = sString:sub(1, #sString - 6)
+                end
+            end
+
             local aLocaleInfo = self:GetLocaleInfo(sString)
             if (not aLocaleInfo) then
                 self:LogWarning("Localization Info for String '%s' not found!", sString)
@@ -159,6 +178,10 @@ Server:CreateComponent({
             end
 
             sLocalized = Server.Logger:FormatTags(sLocalized)
+            if (iCaseFmt ~= nil) then
+                sLocalized = (iCaseFmt == UPPER and sLocalized:upper() or sLocalized:lower())
+               -- DebugLogSafe("iCaseFmt..",iCaseFmt)
+            end
             return sLocalized
         end,
 

@@ -82,6 +82,13 @@ Server:CreateComponent({
             if (hActor:IsValidated()) then
                 hActor.Data.ServerTime = (hActor.Data.ServerTime + 1)
             end
+
+            if (hActor:IsAlive()) then
+                local tHitInfo = hActor:GetHitPos(hActor:GetPos(), Vector.Down(), 2)
+                hActor.TempData.StandingOnEntity = tHitInfo and tHitInfo.entity
+            else
+                hActor.TempData.StandingOnEntity = nil
+            end
         end,
 
         OnServerSpawn = function(self, hServer)
@@ -215,6 +222,8 @@ Server:CreateComponent({
 
             if (bIsPlayer) then
                 self:Log("OnActorSpawn(%s)", hActor:GetName())
+            else
+                self:Log("OnNPCSpawn(%s)", hActor:GetName())
             end
 
             hActor.Initialized = true
@@ -254,6 +263,37 @@ Server:CreateComponent({
             hActor.SetIntentionalDisconnect = function(this, mode) this:SetKicked(mode) this:SetBanned(mode)  end
             hActor.WasIntentionallyDisconnected = function(this) return this:WasBanned() or this:WasKicked()  end
 
+            hActor.GetHitPos = function(this, vPos, vDir, iDistance)
+                local iTypes = ent_all
+
+                vPos = vPos or this:GetHeadPos()
+                vDir = vDir or this:SmartGetDir()
+                iDistance = iDistance or 5
+
+                local iPosP = 0
+                if (iDistance < 0) then
+                    iDistance = iDistance * -1
+                    if (iDistance < 1) then iPosP = (1 - iDistance) iDistance = 1 end
+                    vDir = Vector.Scale(Vector.Negative(vDir or self:SmartGetDir()), iDistance)
+                else
+                    if (iDistance < 1) then iPosP = (1 - iDistance) iDistance = 1 end
+                    vDir = Vector.Scale(vDir or self:SmartGetDir(), iDistance)
+                end
+
+                if (iPosP > 0) then
+                    vPos = Vector.Add(vPos, Vector.Scale(Vector.Negative(vDir), iPosP))
+                    Server.Utils:SpawnEffect(Effect_Flare,vPos,g_Vectors.up,0.1)
+                end
+
+                local hIgnoreId = this:GetVehicleId()
+                local iHits = ServerDLL.RayWorldIntersection(vPos, vDir, 1, iTypes, this.id, hIgnoreId, g_HitTable)
+                local aHit = g_HitTable[1]
+                if (iHits and iHits > 0) then
+                    aHit.surfaceName = System.GetSurfaceTypeNameById( aHit.surface )
+                    return aHit
+                end
+                return
+            end
             hActor.CalcPos             = function(this, distance, dv) local d = this:SmartGetDir(dv) local p = this:GetPos() Vector.FastSum(p, p, Vector.Scale(d, (distance or 5))) return p end
             hActor.IsSwimming          = function(this) return this:IsUnderwater(1) or this:GetStance(STANCE_SWIM)  end
             hActor.GetHeadPos          = function(this) return this.actor:GetHeadPos() end
@@ -278,13 +318,13 @@ Server:CreateComponent({
             hActor.HasItem         = function(this, class) return this.inventory:GetItemByClass(class) end
             hActor.GetItem         = function(this, class) return this.inventory:GetItemByClass(class) end
             hActor.RemoveItem      = function(this, class) local id = this.inventory:GetItemByClass(class) if (id) then this.inventory:RemoveItem(id) end end
-            hActor.GiveItem        = function(this, class, noforce) this.actor:SetActorMode(ActorMode_NoItemLimit, 1) if (class == "Parachute") then this:RemoveItem("Parachute") end local i = ItemSystem.GiveItem(class, this.id, (not noforce))this.actor:SetActorMode(ActorMode_NoItemLimit, 0) return i end
+            hActor.GiveItem        = function(this, class, noforce) local o=this:GetCheatMode(ActorCheat_UnlimitedItems)or 0 this.actor:SetCheatMode(ActorCheat_UnlimitedItems, 1) if (class == "Parachute") then this:RemoveItem("Parachute") end local i = ItemSystem.GiveItem(class, this.id, (not noforce))this.actor:SetCheatMode(ActorCheat_UnlimitedItems, o) return i end
             hActor.GiveItemPack    = function(this, pack, noforce) return ItemSystem.GiveItemPack(this.id, pack, (not noforce)) end
             hActor.SelectItem      = function(this, class) return this.actor:SelectItemByNameRemote(class) end
             hActor.GetEquipment    = function(this) local a = this.inventory:GetInventoryTable() local e for i, v in pairs(a) do local x = Server.Utils:GetEntity(v) if (x and x.weapon) then if (e == nil) then e = {} end table.insert(e, { x.class, x.weapon:GetAttachedAccessories(true)}) end end return e end
             hActor.GetInventory    = function(this) local a = this.inventory:GetInventoryTable() local n = {} for _,id in pairs(a or {}) do table.insert(n,Server.Utils:GetEntity(id)) end return n end
-            hActor.SetActorMode    = function(this, m, v) this.actor:SetActorMode(m,v) end
-            hActor.GetActorMode    = function(this, m) return this.actor:GetActorMode(m) end
+            hActor.SetCheatMode    = function(this, m, v) this.actor:SetCheatMode(m,v) end
+            hActor.GetCheatMode    = function(this, m) return this.actor:HasCheatMode(m) end
             hActor.IsLagging       = function(this) return this.actor:IsLagging() or this:GetPing() >= g_gameRules:GetPingControlLimit() end --this.actor:IsFlying()  end
             hActor.IsFlying        = function(this) return this.actor:IsFlying()  end
             hActor.IsInDoors       = function(this) return Server.Utils:IsPointInDoors(this:GetPos())  end
@@ -398,8 +438,15 @@ Server:CreateComponent({
             hActor.IsInTestMode = function(this) return this.Info.IsInTestMode  end
             hActor.SetValidationFailed = function(this, mode)  this.Info.ValidationFailed = mode  end
 
-            hActor.GetPrestige     = function(this) return (g_gameRules:GetPlayerPrestige(this.id) or 0) end
+            hActor.GetPrestige     = function(this)
+                if (not g_gameRules.GetPlayerPrestige) then
+                    return 0
+                end
+                return (g_gameRules:GetPlayerPrestige(this.id) or 0) end
             hActor.SetPrestige     = function(this, pp, reason)
+                if (not g_gameRules.SetPlayerPrestige) then
+                    return 0
+                end
                 g_gameRules:SetPlayerPrestige(this.id, pp)
                 if (reason) then
                 end
@@ -410,6 +457,9 @@ Server:CreateComponent({
                 end
             end
             hActor.AwardPrestige   = function(this, pp, reason, tFormat)
+                if (not g_gameRules.PrestigeEvent) then
+                    return 0
+                end
                 g_gameRules:PrestigeEvent(this.id, pp, reason, tFormat)
             end
 
