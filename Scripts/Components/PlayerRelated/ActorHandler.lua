@@ -39,9 +39,15 @@ Server:CreateComponent({
         OnPlayerDisconnect = function(self, hActor)
             if (hActor.Info.IsValidated) then
                 hActor.Data.LastConnect = Date:GetTimestamp()
-                hActor.Data.LastName = nil
+                if (hActor.Info.HasRenamed) then -- Only destroy a last used name if the player's name has been changed (by themself or an admin)
+                    hActor.Data.LastName = nil
+                else
+                    DebugLog("not renamed, keep saved name")
+                end
                 if (not Server.NameHandler:IsNomadOrTemplate(hActor:GetName())) then
                     hActor.Data.LastName = hActor:GetName()
+                else
+                    DebugLog("its a damn nomad")
                 end
                 self:ExportPlayerData(hActor.Data, hActor:GetProfileId())
             end
@@ -63,13 +69,13 @@ Server:CreateComponent({
             end
         end,
 
-        Event_TimerSecond = function(self)
-            for _, hPlayer in pairs(Server.Utils:GetPlayers()) do
-                self:OnActorTick(hPlayer)
-            end
-        end,
+        --Event_TimerSecond = function(self)
+        --    for _, hPlayer in pairs(Server.Utils:GetPlayers()) do
+        --        self:OnActorTick(hPlayer)
+        --    end
+        --end,
 
-        OnActorTick = function(self, hActor)
+        Event_OnActorTick = function(self, hActor)
 
             if (hActor.Timers.Initialized.diff() >= self.Properties.AwaitProfileTimeout) then
                 -- We never received a profile
@@ -130,6 +136,7 @@ Server:CreateComponent({
                 Spawn       = TimerNew(),
                 WallJump    = TimerNew(),
                 UnclaimedVehicle = TimerNew(),
+                ChatTimer   = TimerNew()
             }
 
             hActor.TagAward = {
@@ -154,9 +161,12 @@ Server:CreateComponent({
                 IPAddress = "127.0.0.1",
                 HostName  = "localhost",
                 Port      = "localhost",
-                HardwareId = nil, -- TODO
+                HardwareId = nil,
 
                 GeoData   = Server.Network:GetDefaultGeoData(),
+
+                ServerConsole = nil,
+                IsChatting = nil,
 
                 Access    = 0,
                 IsInTestMode = false,
@@ -308,7 +318,7 @@ Server:CreateComponent({
             hActor.GetStance           = function(this, check) local s = this.actorStats.stance if (check) then return s==check end return s end
 
 
-            hActor.GetPing         = function(this, check, n) local p = this.Info.LastPing if (check) then if (n) then return p ~= check end return p == check end return p end
+            hActor.GetPing         = function(this, check, n) local p = this.Info.FakePing if (check) then if (n) then return p ~= check end return p == check end return p end
             hActor.SetPing         = function(this, ping) this.Info.LastPing = ping end
             hActor.GetRealPing     = function(this) return (g_gameRules.game:GetPing(this:GetChannel() or 0) * 1000)  end
             hActor.SetRealPing     = function(this, real) g_gameRules.game:SetSynchedEntityValue(this.id, g_gameRules.SCORE_PING_KEY, math.floor(real))  end
@@ -325,7 +335,7 @@ Server:CreateComponent({
             hActor.GetInventory    = function(this) local a = this.inventory:GetInventoryTable() local n = {} for _,id in pairs(a or {}) do table.insert(n,Server.Utils:GetEntity(id)) end return n end
             hActor.SetCheatMode    = function(this, m, v) this.actor:SetCheatMode(m,v) end
             hActor.GetCheatMode    = function(this, m) return this.actor:HasCheatMode(m) end
-            hActor.IsLagging       = function(this) return this.actor:IsLagging() or this:GetPing() >= g_gameRules:GetPingControlLimit() end --this.actor:IsFlying()  end
+            hActor.IsLagging       = function(this) return this.actor:IsLagging() or this:GetPing() >= Server.Network:GetPingLimit() end --this.actor:IsFlying()  end
             hActor.IsFlying        = function(this) return this.actor:IsFlying()  end
             hActor.IsInDoors       = function(this) return Server.Utils:IsPointInDoors(this:GetPos())  end
             hActor.IsFrozen        = function(this) return g_gameRules.game:IsFrozen(this.id)  end
@@ -405,10 +415,10 @@ Server:CreateComponent({
             hActor.IsDeveloper      = function(this, iAccessLevel) iAccessLevel = iAccessLevel or this.Info.Access return Server.AccessHandler:IsDeveloper(iAccessLevel)  end
             hActor.IsPremium        = function(this, iAccessLevel) iAccessLevel = iAccessLevel or this.Info.Access return Server.AccessHandler:IsPremium(iAccessLevel)  end
             hActor.IsServerOwner    = function(this, iAccessLevel) iAccessLevel = iAccessLevel or this.Info.Access return Server.AccessHandler:IsOwner(iAccessLevel)  end
-            hActor.GetTeam    = function(this) return Server.Utils:GetTeamId(this) end
+            hActor.GetTeam    = function(this, comp) return Server.Utils:GetTeamId(this, comp) end
 
             hActor.GetTeamName     = function(this, neutral) return Sever.Utils:GetTeam_String(this) end
-            hActor.SetTeam         = function(this, iTeam) g_gameRules.game:SetTeam(iTeam, this.id) end
+            hActor.SetTeam         = function(this, iTeam) this.Info.TeamSelected = true g_gameRules.game:SetTeam(iTeam, this.id) end
             hActor.GetKills        = function(this) return (g_gameRules:GetKills(this.id) or 0) end
             hActor.SetKills        = function(this, kills) g_gameRules:SetKills(this.id, kills) end
             hActor.GetDeaths       = function(this) return (g_gameRules:GetDeaths(this.id) or 0) end
@@ -435,7 +445,7 @@ Server:CreateComponent({
             hActor.GetISP   = function(this) return Server.Network:GetISP(this)  end
 
             hActor.IsHuman      = function(this) return this.Info.IsPlayer  end
-            hActor.IsInTestMode = function(this) return this.Info.IsInTestMode  end
+            hActor.IsInTestMode = function(this) return this.Data.IsInTestMode  end
             hActor.SetValidationFailed = function(this, mode)  this.Info.ValidationFailed = mode  end
 
             hActor.GetPrestige     = function(this)

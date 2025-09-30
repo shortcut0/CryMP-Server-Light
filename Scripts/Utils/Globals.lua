@@ -57,6 +57,7 @@ ServerEvent_OnInit          = Inc()
 
 ServerEvent_MAX = IncEnd()
 
+ServerScriptEvent_OnValidationFinished = "OnValidationFinished"
 ServerScriptEvent_OnProfileValidated = "OnProfileValidated"
 ServerScriptEvent_OnValidationFailed = "OnValidationFailed"
 ServerScriptEvent_OnPostInit = "OnPostInitialize"
@@ -89,6 +90,12 @@ ChatType_Info    = TextMessageInfo
 ChatType_Server  = TextMessageServer
 
 ChatEntity_Server = -1000
+
+ConsoleLogType_Chat = 0
+
+ConsoleLogStyle_SFWCL = 2
+ConsoleLogStyle_CryFire = 1
+ConsoleLogStyle_Modern = 0
 
 ----------------------------
 ---       GAME VARS      ---
@@ -146,7 +153,7 @@ CommandArg_TypeTime = 6     -- a Time value (1d, 86400)
 CommandArg_TypeAccess = 7   -- a valid server access level
 CommandArg_TypeCVar = 8     -- a valid cvar
 CommandArg_TypeTeam = 9     -- a valid team name or id
-CommandArg_TypeTimeRaw = 10     -- a valid team name or id
+CommandArg_TypeTimeRaw = 10 -- a not parsed, but valid time value
 
 ----------------------------
 ALL_PLAYERS = 1000
@@ -238,6 +245,12 @@ BuildingType_Small = "Small"
 BuildingType_War = "War"
 BuildingType_Boat = "Boat"
 BuildingType_Proto = "Proto"
+BuildingType_Unknown = "<Unknown>"
+
+-- ??? que
+CaptureIndex_Normal = 1
+CaptureIndex_Special = 2
+CaptureIndex_SuperSpecial = 3
 
 ----------------------------
 
@@ -255,10 +268,16 @@ GlobalKeys = {
     PlayerModel = 1000,
     PlayerModelNK = 1000 + GameTeam_NK,
     PlayerModelUS = 1000 + GameTeam_US,
+    PlayerUsabilityMessage = 1010,
+    PlayerAccessName = 1011,
+    PlayerAccessColor = 1012,
+    PlayerChattingStatus = 1014,
+    PlayerLevelXP = 1018,
+    PlayerRankXP = 1019,
 
     -- ================================
     -- Misc
-    -- ...
+    EntityUsabilityMessage = 1250,
 }
 
 ChatEntities = {
@@ -273,6 +292,11 @@ MsgVisibility_OthersOnly = 2 -- Original to sender, modified to others
 ----------------------------
 
 SandboxState_BouncyVehicles = 0
+
+----------------------------
+
+PLUGIN_DISABLED = false -- Just for making a noobs live simpler
+PLUGIN_ENABLED = true
 
 ----------------------------
 PRIORITY_NONE = 1

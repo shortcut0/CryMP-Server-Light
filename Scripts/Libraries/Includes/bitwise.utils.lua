@@ -132,6 +132,24 @@ bit.Next = function(x)
 end
 
 ---------------------------
+-- bit.Step
+
+bit.Step = function(start)
+	if (start and start ~= 0) then
+		bit.bit_step = start
+		return start
+	end
+
+	if (bit.bit_step == nil) then
+		error("bit_step is null")
+	end
+
+	local next = (bit.bit_step * 2)
+	bit.bit_step = start ~= 0 and next
+	return next
+end
+
+---------------------------
 -- bit.Next
 
 bit.GetAll = function(x, get)
@@ -153,6 +171,9 @@ BitShift = bit.RightShift
 BitLeftShift = bit.LeftShift
 BitNext = bit.Next
 BitGetAll = bit.GetAll
+
+BitStep = bit.Step
+BitStop = function() return BitStep(0)  end
 
 -------------------
 return bit

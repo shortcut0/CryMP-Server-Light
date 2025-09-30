@@ -16,6 +16,10 @@ Server:CreateComponent({
             { Name = "test_chat", FunctionName = "TestAll", Description = "Tests all possible Chat-Type Scenarios"}
         },
 
+        Config = {
+            LoggingStyle = ConsoleLogStyle_Modern
+        },
+
         Properties = {
 
             -- The Class used when spawning new chat entities
@@ -65,19 +69,19 @@ Server:CreateComponent({
         ConsoleLogClasses = {
             [ServerLogEvent_ScriptDebug] = {
                 Class = "System",
-                Tag = "Script-Debug",
+                Tag = "Debug",
             },
             [ServerLogEvent_ScriptError] = {
                 Class = "System",
-                Tag = "Script-Error",
+                Tag = "Error",
             },
             [ServerLogEvent_ScriptFatal] = {
                 Class = "System",
-                Tag = "Script-Error",
+                Tag = "FatalError",
             },
             [ServerLogEvent_ScriptWarning] = {
                 Class = "System",
-                Tag = "Script-Warning",
+                Tag = "Warning",
                 TagColor = CRY_COLOR_YELLOW
             },
             ["Server"] = {
@@ -167,8 +171,12 @@ Server:CreateComponent({
                     iPreCached = iPreCached + 1
                 end
             end
+            for _, sEntity in pairs(ChatEntities) do
+                self:GetChatEntity(sEntity) -- GetEntity will spawn them if they are no present or are invalid
+                iPreCached = iPreCached + 1
+            end
 
-            self:Log("Precached %d Chat-Entities", iPreCached)
+            self:LogV(LogVerbosity_High, "Precached %d Chat-Entities", iPreCached)
         end,
 
         OnReset = function(self)
@@ -264,6 +272,8 @@ Server:CreateComponent({
             hEntity.IS_CHAT_ENTITY = true
             self.SpawnedChatEntities[sNameLower] = hEntity
             self:Log("Spawned new Chat Entity with Name '%s' (Id: '%s')", sName, sNameLower)
+            self.IgnoreCurrentChatMessage = true
+            self:ChatMessage(hEntity, Server:GetEntity(), "Hello Server!")
             return hEntity
         end,
 
@@ -284,7 +294,7 @@ Server:CreateComponent({
                 return self:SpawnChatEntity(sName)
             end
 
-            self:Log("Found entity with name '%s' (%s)", sName, hEntity:GetName())
+            self:LogV(LogVerbosity_Higher, "Found entity with name '%s' (%s)", sName, hEntity:GetName())
             return hEntity
         end,
 
@@ -342,7 +352,7 @@ Server:CreateComponent({
             end
         end,
 
-        TextMessage = function(self, iType, pTarget, sMessage, tFormat)
+        TextMessage = function(self, iType, pTarget, sMessage, tFormat, ...)
 
             local iTeamId = ((IsString(pTarget) or (IsAny(pTarget, GameTeam_Neutral, GameTeam_NK, GameTeam_NK))) and Server.Utils:GetTeam_Number(pTarget))
             if (not iTeamId and pTarget == ChatType_ToTeam) then
@@ -350,10 +360,10 @@ Server:CreateComponent({
             end
 
             if (iTeamId) then
-                return self:SendTextMessageToTeam(iType, iTeamId, sMessage, tFormat)
+                return self:SendTextMessageToTeam(iType, iTeamId, sMessage, tFormat, ...)
 
             elseif (pTarget == ChatType_ToAll or pTarget == ALL_PLAYERS) then
-                return self:SendTextMessageToAll(iType, sMessage, tFormat)
+                return self:SendTextMessageToAll(iType, sMessage, tFormat, ...)
 
             end
             local aTargetList = pTarget
@@ -365,8 +375,32 @@ Server:CreateComponent({
             end
 
             for _, hTarget in pairs(aTargetList) do
-                self:SendTextMessageToTarget(iType, hTarget, sMessage, tFormat)
+                self:SendTextMessageToTarget(iType, hTarget, sMessage, tFormat, ...)
             end
+        end,
+
+        AbbreviateTag = function(self, sTag)
+            sTag = sTag:upper()
+            local tSpecials = {
+                DEBUG = "DBG",
+                ERROR = "ERR",
+                CHAT  = "CHT",
+                PUNISH= "PUN"
+            }
+            if (tSpecials[sTag]) then
+                return tSpecials[sTag]
+            end
+
+            local sFirst = sTag:sub(1,1)
+            local sRest  = sTag:sub(2):gsub("[AEIOU]", "") -- Vowels
+
+            -- Trim suffixes
+            sRest = sRest:gsub("(ING)$", "")
+                       :gsub("(ION)$", "")
+                       :gsub("(ISH)$", "")
+                       :gsub("(ATE)$", "")
+
+            return ("%s%s"):format(sFirst, sRest:sub(1,2))
         end,
 
         -- pClass = System(Network)
@@ -419,19 +453,26 @@ Server:CreateComponent({
 
             if (pClass) then
 
-
                 local aClassInfo = (IsTable(pClass) and pClass) or self:GetConsoleLogClass(pClass) or self.DefaultConsoleLogClass
                 local sClassColor   = (aMessageInfo.ClassColor or aClassInfo.ClassColor or self.Properties.ConsoleLogClassColor)
                 local sTagColor     = (aMessageInfo.TagColor or aClassInfo.TagColor or self.Properties.ConsoleLogTagDefaultColor)
+                local sTag          = (aMessageInfo.Tag or aClassInfo.Tag)
                 local sMessageColor = (aMessageInfo.MessageColor or aClassInfo.MessageColor or self.Properties.ConsoleLogMessageColor)
 
-                local sClass = string.format("%s%s(%s%s%s) {Gray}: %s", sClassColor, aClassInfo.Class, sTagColor, (aMessageInfo.Tag or aClassInfo.Tag), sClassColor, sMessageColor)
+                local iStyle = self:GetLogStyle()
+                if (iStyle == ConsoleLogStyle_Modern) then
+                    local sClass = string.format("%s%s(%s%s%s) {Gray}: %s", sClassColor, aClassInfo.Class, sTagColor, sTag, sClassColor, sMessageColor)
+                    local iClassOffset = self.Properties.ConsoleLogClassOffset
+                    sClass = Server.Logger:FormatTags(sClass)
+                    sClass = string.lspace(sClass, iClassOffset, string.COLOR_CODE)
+                    sMessage = string.format("%s%s", sClass, sMessage)
 
-                local iClassOffset = self.Properties.ConsoleLogClassOffset
+                elseif (iStyle == ConsoleLogStyle_CryFire) then
+                    local sClass = self:AbbreviateTag(sTag)
+                    sMessage = string.format("{Gray}[%s%s{Gray}]%s%s", sTagColor, sClass, sMessageColor, sMessage)
+                end
 
-                sClass = Server.Logger:FormatTags(sClass)
-                sClass = string.lspace(sClass, iClassOffset, string.COLOR_CODE)
-                sMessage = string.format("%s%s", sClass, sMessage)
+
           --  else
             end
 
@@ -489,7 +530,7 @@ Server:CreateComponent({
             end
         end,
 
-        SendTextMessageToTarget = function(self, iType, hClient, sMessage, tFormat)
+        SendTextMessageToTarget = function(self, iType, hClient, sMessage, tFormat, ...)
             if (not hClient.IsPlayer) then
                 self:LogDirect("Invalid Recipient for SendTextMessageToTarget(): %s", hClient:GetName())
                 return
@@ -499,7 +540,14 @@ Server:CreateComponent({
             if (iType ~= TextMessageConsole) then
                 sMessage = Server.Logger:RidColors(sMessage)
             end
-            g_gameRules.game:SendTextMessage(iType, sMessage, TextMessageToClient, hClient.id)
+            g_gameRules.game:SendTextMessage(iType, sMessage, TextMessageToClient, hClient.id, ...)
+        end,
+
+        GetLogStyle = function(self, iCheck)
+            if (iCheck) then
+                return self.Config.LoggingStyle == iCheck
+            end
+            return self.Config.LoggingStyle
         end,
 
         LogChatMessage = function(self, aLogInfo)
@@ -543,17 +591,30 @@ Server:CreateComponent({
                     bShow = aLogInfo.HideLog ~= hRecipient.id
                 end
                 if (bShow) then
+
                     local sTagLocalized = Server.LocalizationManager:LocalizeForPlayer(hRecipient, sTag, {})
                     local sFinalMessage = ("%s%s%s"):format(aLogInfo.SenderColor or aProperties.ConsoleChatMessageSenderColor, hSender:GetName(), sTagLocalized)
-                    sFinalMessage = string.lspace(sFinalMessage, aProperties.ConsoleChatOffset - 3, string.COLOR_CODE)
-                    sFinalMessage = ("%s {Gray}: %s%s"):format(sFinalMessage, aLogInfo.MessageColor or aProperties.ConsoleChatMessageColor, sMessage)
-                    local sMessageLocalized = Server.LocalizationManager:LocalizeForPlayer(hRecipient, sFinalMessage, {})
 
-                    self:ConsoleMessage({
-                        Type = ChatType_Console,
-                        Message = sMessageLocalized,
-                        Recipients = { hRecipient },
-                    })
+                    if (self:GetLogStyle(ConsoleLogStyle_CryFire)) then
+                        sFinalMessage = ("[%s] %s%s"):format(self:AbbreviateTag("Chat"), sFinalMessage, aLogInfo.MessageColor or aProperties.ConsoleChatMessageColor, sMessage)
+                        local sMessageLocalized = Server.LocalizationManager:LocalizeForPlayer(hRecipient, sFinalMessage, {})
+
+                        self:ConsoleMessage({
+                            Type = ChatType_Console,
+                            Message = sMessageLocalized,
+                            Recipients = { hRecipient },
+                        })
+                    else
+                        sFinalMessage = string.lspace(sFinalMessage, aProperties.ConsoleChatOffset - 3, string.COLOR_CODE)
+                        sFinalMessage = ("%s {Gray}: %s%s"):format(sFinalMessage, aLogInfo.MessageColor or aProperties.ConsoleChatMessageColor, sMessage)
+                        local sMessageLocalized = Server.LocalizationManager:LocalizeForPlayer(hRecipient, sFinalMessage, {})
+
+                        self:ConsoleMessage({
+                            Type = ChatType_Console,
+                            Message = sMessageLocalized,
+                            Recipients = { hRecipient },
+                        })
+                    end
                 end
             end
         end,
@@ -611,7 +672,7 @@ Server:CreateComponent({
             CheckTagList(tOr, true)
 
             if (#aTags == 0 and self.Properties.ChatMessageTags.ShowPlayerRank) then
-                if (Server.PlayerRanks:IsEnabled()) then
+                if (Server.PlayerRanks:IsComponentEnabled()) then
                     aTags = { ("%s"):format(Server.PlayerRanks:GetRankName(hPlayer)) }
                 else
                     return
@@ -762,6 +823,7 @@ Server:CreateComponent({
         end,
 
         FilterMessage = function(self, hSender, hTarget, sMessage, iType, bSentByServer, aInfo)
+
 
             local bOk = true
             local bLogMessage = true
@@ -917,6 +979,11 @@ Server:CreateComponent({
             local hSender = Server.Utils:GetEntity(hSenderID)
             local hTarget = Server.Utils:GetEntity(hTargetID)
 
+            if (self.IgnoreCurrentChatMessage) then
+                self.IgnoreCurrentChatMessage = nil
+                return
+            end
+
             -- This info gets sent back to the DLL
             local aInfo = { Ok = true, NewMessage = sMessage, NewType = iType, NewTarget = hTarget }
 
@@ -929,6 +996,10 @@ Server:CreateComponent({
                     elseif (not Server.Punisher:CheckChatMessage(hSender, sMessage, iType)) then
                         aInfo.Ok = false
 
+                        -- check for Flood/Spam after checking for mutes
+                    elseif (not Server.AntiCheat:CheckMessage(hSender, sMessage, iType)) then
+                        aInfo.Ok = false
+
                     elseif (not self:FilterMessage(hSender, hTarget, sMessage, iType, bSentByServer, aInfo)) then
                         aInfo.Ok = false
 
@@ -938,15 +1009,29 @@ Server:CreateComponent({
                         Server.PlayerRanks:XPEvent(hSender, XPEvent_ChatMessage)
                     end
                 end
+            end
 
-                return aInfo
+            if (aInfo.Ok) then
+                local sTo = hTarget and ("%s %s"):format((hTarget.IsPlayer and "Player" or "Entity"), hTarget:GetName())
+                local iTeam = Server.Utils:GetTeamId(hSender)
+                if (iType == ChatToTeam) then
+                    local sTeam = "<Unknown>"
+                    if (iTeam) then
+                        sTeam = Server.Utils:GetTeam_String(iType)
+                    end
+                    sTo = ("Team %s"):format(sTeam)
+                elseif (iType == ChatToAll) then
+                    sTo = "ALL"
+                end
+                local sFrom = ("%s %s"):format((hSender.IsPlayer and "Player" or "Entity"), hSender:GetName())
+                SystemLog(("[CHAT] %s to %s"):format(sFrom, sTo))
+                SystemLog(("       %s"):format(aInfo.NewMessage))
             end
 
             return aInfo
         end,
 
         SendWelcomeMessage = function(self, hPlayer, bShowAlways)
-
 
             local sAccessName = hPlayer:GetAccessName()
             local sAccessColor = hPlayer:GetAccessColor()
@@ -1013,6 +1098,8 @@ Server:CreateComponent({
                 local sLine = (" {Gray}%s {Gray}| %s {Gray}| %s"):format(sLeft, sCenterLine, sRight)
                 self:ConsoleMessage(hPlayer, sLine)
             end
+
+            -- TODO: Error Count Log
 
             -- Chat
             self:ChatMessage(ChatEntity_Server, hPlayer, "@welcome_toTheServer, " .. sAccessName .. " " .. sPlayerName, {})

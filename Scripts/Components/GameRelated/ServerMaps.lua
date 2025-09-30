@@ -133,8 +133,11 @@ Server:CreateComponent({
                         System.RemoveEntity(hEntity.id)
                     end
                 end
-                self:Log("Deleted %d Client-Side Entities", iDeletedCount)
-                self:Log("Classes: %s", table.concat(aDeletedClasses, ", "))
+
+                if (iDeletedCount > 0) then
+                    self:LogV(LogVerbosity_Low, "Deleted %d Client-Side Entities", iDeletedCount)
+                    self:LogV(LogVerbosity_Low, "Classes: %s", table.concat(aDeletedClasses, ", "))
+                end
             end
         end,
 
@@ -252,7 +255,7 @@ Server:CreateComponent({
 
             aRotation.Last = #aRotation.List
             aRotation:Reset()
-            self:Log("Initialized Map Rotation with %d Maps", aRotation.Last)
+            self:LogV(LogVerbosity_Low, "Initialized Map Rotation with %d Maps", aRotation.Last)
             return aRotation
         end,
 

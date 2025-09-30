@@ -43,13 +43,6 @@ Server:CreateComponent({
             return self.Plugins[sName]
         end,
 
-        CreateLogAbstract = function(self, tPlugin)
-
-            tPlugin.Log = (tPlugin.Log or function(this, sMessage, ...)
-
-            end)
-        end,
-
         CreatePlugin = function(self, sName, tBody)
 
             local sNameLower = (sName or ""):lower()
@@ -66,6 +59,10 @@ Server:CreateComponent({
             if (not tBody) then
                 self:LogError("No body provided for Plugin '%s'", sName)
                 return
+            end
+
+            tBody.IsEnabled = tBody.IsEnabled or function(this)
+                return this.PluginStatus ~= false and this.PluginStatus ~= 0 and this.PluginStatus ~= PLUGIN_DISABLED
             end
 
             tBody.PluginName = tBody.PluginName or sName
@@ -95,13 +92,14 @@ Server:CreateComponent({
             local tData = self.PluginData[sName]
             if (tData) then
                 for sKey in pairs(tBody.Protected or {}) do
-                    self:Log("Restore Data Key %s", sKey)
+                    self:LogV(LogVerbosity_Low, "Restored Data Key %s", sKey)
                     tBody[sKey] = tData[sKey]
                 end
             else
                 self.PluginData[sName] = {}
                 for sKey, hDefault in pairs(tBody.Protected or {}) do
-                    self:Log("Create Protected Data Key %s", sKey)
+                    self:LogV(LogVerbosity_Low, "Create Protected Data Key %s", sKey)
+                    tBody[sKey] = hDefault
                     self.PluginData[sName][sKey] = hDefault
                 end
             end
@@ -113,7 +111,7 @@ Server:CreateComponent({
 
             -- Dirty little hacks
             Server:CreateLogAbstract(tBody, ("%s] [%s"):format(self:GetName(), tBody:GetName()))
-            if (Server:LoadComponentExternal(tBody, sName, false) == false) then
+            if (aExternalData and Server:LoadComponentExternalFiles(tBody, sName, false, aExternalData) == false) then
                 return false
             end
 
@@ -149,24 +147,47 @@ Server:CreateComponent({
 
             for _, tInfo in pairs(tPluginConfig) do
 
-                local sConfigNest = ("Plugins.%s.%s"):format(sPluginName, tInfo.Config)
-                if (tInfo.Config:sub(1, 1) == "$") then
-                    sConfigNest = tInfo.Config:sub(2)
-                end
+                local bLogNotFound = true
+                if (tInfo.Config and tInfo.Key) then
+                    local sConfigNest = ("Plugins.%s.%s"):format(sPluginName, tInfo.Config)
+                    if (tInfo.Config:sub(1, 1) == "$") then
+                        sConfigNest = tInfo.Config:sub(2)
 
-                local sPluginNest = ("Config.%s"):format(tInfo.Key)
-                if (tInfo.Key:sub(1, 1) == "$") then
-                    sPluginNest = tInfo.Key:sub(2)
-                end
+                    else
+                        local iBacktrack = string.len(string.match(tInfo.Config, "^(%.+)") or "")
+                        if (iBacktrack > 0) then
+                            sConfigNest = ("Plugins.%s.%s"):format(sPluginName, string.gsub(tInfo.Config, "^%.+", ""))
+                            for i = 1, iBacktrack do
+                                if (string.count(sConfigNest, "%.") >= 1) then
+                                    sConfigNest = sConfigNest:gsub("^(%w+%.)", "")
+                                else
+                                    self:LogWarning("Plugin '%s': Config Branch backtracking too far!", sPluginName)
+                                    self:LogWarning("Config '%s' for Key '%s'", tInfo.Config, tInfo.Key)
+                                    bLogNotFound = false
+                                    break
+                                end
+                            end
+                        end
+                    end
 
-                --self:Log("%s TO %s",sConfigNest,sPluginNest)
+                    local sPluginNest = ("Config.%s"):format(tInfo.Key)
+                    if (tInfo.Key:sub(1, 1) == "$") then
+                        sPluginNest = tInfo.Key:sub(2)
+                    end
 
-                local hConfigValue, bIsDefault = pConfig:Get(sConfigNest, tInfo.Default, tInfo.Type)
-                table.Assign(tPlugin, sPluginNest, hConfigValue)
-                iAssignments = iAssignments + 1
-                if (bIsDefault) then
-                    self:LogWarning("Unable to locate Configuration '%s' for Key '%s' for Plugin '%s'", sConfigNest, sPluginNest, sPluginName)
-                    iDefaults = iDefaults + 1
+                    --self:Log("%s TO %s",sConfigNest,sPluginNest)
+
+                    local hConfigValue, bIsDefault = pConfig:Get(sConfigNest, tInfo.Default, tInfo.Type)
+                    table.Assign(tPlugin, sPluginNest, hConfigValue)
+                    iAssignments = iAssignments + 1
+                    if (bIsDefault) then
+                        if (bLogNotFound) then
+                            self:LogWarning("Cannot find Config '%s' for Key '%s' for Plugin '%s'", sConfigNest, sPluginNest, sPluginName)
+                        end
+                        iDefaults = iDefaults + 1
+                    end
+                else
+                    self:LogWarning("Plugin '%s': Bad configuration entry found on Index %s. Missing Config or Key field!", sPluginName, tostring(_))
                 end
             end
 
@@ -195,17 +216,19 @@ Server:CreateComponent({
                 end
             end
 
-            self:Log("Exported %d Keys from %d Plugins (Size %s)", table.countRec(self.PluginExternal, nil, 1), table.count(self.PluginExternal), Server.Utils:ByteSuffix(iTotalSize))
+            self:LogV(LogVerbosity_Low, "Exported %d Keys from %d Plugins (Size %s)", table.countRec(self.PluginExternal, nil, 1), table.count(self.PluginExternal), Server.Utils:ByteSuffix(iTotalSize))
         end,
 
         PluginEvent = function(self, sEvent, ...)
             for sPlugin, tPlugin in pairs(self.Plugins) do
-                local fEvent = tPlugin[sEvent]
-                if (fEvent) then
-                    local bOk, sError = pcall(fEvent, tPlugin, ...)
-                    if (not bOk) then
-                        self:LogError("Event %s Failed on Plugin %s (%s)", sEvent, sPlugin, tPlugin:GetName())
-                        self:LogError("Error: %s", (sError or "<Null>"))
+                if (tPlugin:IsEnabled()) then
+                    local fEvent = tPlugin[sEvent]
+                    if (fEvent) then
+                        local bOk, sError = pcall(fEvent, tPlugin, ...)
+                        if (not bOk) then
+                            self:LogError("Event %s Failed on Plugin %s (%s)", sEvent, sPlugin, tPlugin:GetName())
+                            self:LogError("Error: %s", (sError or "<Null>"))
+                        end
                     end
                 end
             end
@@ -216,6 +239,10 @@ Server:CreateComponent({
 
         Event_OnActorSpawn = function(self, hActor)
             self:PluginEvent("Event_OnActorSpawn", hActor)
+        end,
+
+        Event_OnActorTick = function(self, hActor)
+            self:PluginEvent("Event_OnActorTick", hActor)
         end,
 
         Event_TimerSecond = function(self)

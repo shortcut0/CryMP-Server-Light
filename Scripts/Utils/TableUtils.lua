@@ -9,6 +9,140 @@
 -- ===================================================================================
 
 ----------------------------------
+table.Find_Value = function(this, find_these)
+    find_these = table.ToTable(find_these, {})
+    if (#find_these == 0) then
+        return
+    end
+    for k, v in pairs(this) do
+        for kk, vv in pairs(find_these) do
+            if (v == vv) then
+                return v
+            end
+        end
+    end
+end
+
+----------------------------------
+table.Find_ValueAll = function(this, find_these)
+    find_these = table.ToTable(find_these, {})
+    if (#find_these == 0) then
+        error("nothing to find")
+    end
+    local found = 0
+    for k, v in pairs(this) do
+        for kk, vv in pairs(find_these) do
+            if (v == vv) then
+                found = found + 1
+            end
+        end
+    end
+    return (found == #find_these)
+end
+
+----------------------------------
+--- Use recursion with caution!
+table.Destroy = function(this, recursive)
+    for k, v in pairs(this) do
+        if (type(v) == "table" and recursive) then
+            if (v == _G) then
+                error("attempt to destroy _G, check the table you are trying to destroy")
+            end
+            table.Destroy(v, true)
+        end
+        this[k] = nil
+    end
+    return this
+end
+
+----------------------------------
+table.ShiftLeft = function(this, start, in_place)
+
+    local removed = this[start]
+    if (in_place) then
+        for i = start, #this - 1 do
+            this[i] = this[i + 1]
+        end
+        return removed
+    end
+    local t = {}
+    for i = start, #this - 1 do
+        t[i] = this[i + 1]
+    end
+    return t, removed
+end
+
+----------------------------------
+table.GetIndex = function(t, value, default)
+    for k, v in pairs(t) do
+        if (value == v) then
+            return k
+        end
+    end
+    return default
+end
+
+table.GetIndexRecursive = function(t, value, full_stack, __info, sOrigin)
+    t = t or _G
+    if (value == _G) then
+        return "_G"
+    end
+    __info  = __info  or { Processed = {}, Stack = table.GetIndexRecursive(_G, t) }
+    if (__info.Processed[t]) then
+        return
+    end
+    __info.Processed[t] = true
+    sOrigin = (sOrigin or __info.Stack)
+
+    for k, v in pairs(t) do
+        local path = sOrigin .. "." .. tostring(k)
+        if v == value then
+            return k, path
+        elseif type(v) == "table" then
+            local _k, _path = table.GetIndexRecursive(v, value, full_stack, __info, path)
+            if _k then
+                return _k, _path
+            end
+        end
+    end
+    return
+end
+
+----------------------------------
+table.Size = function(this)
+    if (type(this) ~= "table") then
+        error("Size() but it's not a table")
+    end
+    local count = 0
+    for _ in pairs(this) do
+        count = (count + 1)
+    end
+    return count
+end
+
+----------------------------------
+table.Copy = function(t)
+    local n = {}
+    for k, v in pairs(t or{}) do
+        n[k] = v
+    end
+    return n
+end
+
+----------------------------------
+table.DeepCopy = function(t)
+    local n = {}
+    for k, v in pairs(t or{}) do
+        if (type(v) == "table" and v ~= t) then
+            n[k] = table.DeepCopy(v)
+        else
+            n[k] = v
+        end
+    end
+    return n
+end
+
+----------------------------------
 --- Checks if a table is recursive
 --- { {1} }             ---> true
 --- { {1}, [5] = {} }   ---> true
@@ -18,7 +152,6 @@ table.IsRecursive = function(this)
     if (type(this) ~= "table") then
         return
     end
-
     local count = 0
     for _, v in pairs(this) do
         count = (count + 1)
@@ -100,9 +233,7 @@ table.Reverse = function(tbl, in_place)
         reversed[#reversed + 1] = tbl[i]
     end
     if in_place then
-        for k in pairs(tbl) do
-            tbl[k] = nil
-        end
+        table.Destroy(tbl)
         for i, value in ipairs(reversed) do
             tbl[i] = value
         end
@@ -208,11 +339,11 @@ table.ToString = function(tbl, tInfo)
 
     local iTbl = table.size(tbl)
     local iCurr = 0
-    for sKey, hValue in pairs(tbl) do
+    for _, hValue in pairs(tbl) do
         local sElement
+        local sKey = tostring(_)
         local sType = type(hValue)
-        local sKeyType = type(sKey)
-        local bKeyNumber = (sKeyType == "number")
+
         iCurr = (iCurr + 1)
         if (sType == "table") then
             if (tInfo.Processed[hValue]) then
@@ -284,8 +415,9 @@ end
 --- table.Assign(x, "a", "hello world")
 --- -- Result: x = { a = "hello world" }
 ---
+--- local x = { a = "not_a_table" }
 --- table.Assign(x, "a.b", 42, true)
---- -- Raises an error if 'a' is not a table
+--- -- Raises an error because 'a' is not a table
 ---
 ---@param tbl table         The table to assign the value into.
 ---@param nest string       The nested key path (dot-separated), e.g., "foo.bar.baz".

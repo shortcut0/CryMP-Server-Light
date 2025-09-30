@@ -6,6 +6,7 @@
 --         \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|     --
 --                    |___/          by: shortcut0                                  --
 --                          This file Contains Chat-Commands
+-- MODERATOR
 -- ===================================================================================
 
 Server.ChatCommands:Add({
@@ -31,7 +32,7 @@ Server.ChatCommands:Add({
     -- !Mute <Player> <Duration> <Reason>
     {
         Name = "Mute",
-        Access = ServerAccess_Admin,
+        Access = ServerAccess_Moderator,
         Arguments = {
             { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, NotSelf = false },
             { Name = "@time",   Desc = "@arg_time_desc",   Required = true, Type = CommandArg_TypeTimeRaw, AcceptInvalidTime = true },
@@ -49,7 +50,7 @@ Server.ChatCommands:Add({
     -- !UnMute <Player> <Reason>
     {
         Name = "UnMute",
-        Access = ServerAccess_Admin,
+        Access = ServerAccess_Moderator,
         Arguments = {
             { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, NotSelf = false },
             { Name = "@reason", Desc = "@reason_desc", Default = "@admin_decision", Type = CommandArg_TypeMessage },

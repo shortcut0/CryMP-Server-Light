@@ -865,6 +865,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "on_chatKill",
+        Languages = {
+            English = "{Shooter} :: SHAMEFULLY KiLLED {Victim} who was CHATTING!"
+        }
+    },
+    {
         String = "first_blood_instantAction",
         Languages = {
             English = "{Shooter} SCORED FIRST:BLOOD ( +{XP} XP )"
@@ -1007,14 +1013,14 @@ Server.LocalizationManager:Add({
     {
         String = "kill_assist",
         Languages = {
-            -- KiLL:ASSiSTANCE 53.11% ( +60 PP, +30 CP )
+            -- KiLL:ASSiSTANCE 53.11% ( +60 PP, +30 XP )
             English = "KiLL:ASSiSTANCE"
         }
     },
     {
         String = "item_invest_reward",
         Languages = {
-            English = "Item Share"
+            English = "Item Purchase Share"
         }
     },
     {
@@ -1796,6 +1802,18 @@ Server.LocalizationManager:Add({
             English = "All Players"
         }
     },
+    {
+        String = "new_scriptErrors_occurred",
+        Languages = {
+            English = "Check Error Log! {Count} New or Unread Script Errors Occurred!"
+        }
+    },
+    {
+        String = "errorLog_empty",
+        Languages = {
+            English = "Error Log is Empty"
+        }
+    },
 })
 
 
@@ -1869,6 +1887,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "your_vehicle_wasStolen",
+        Languages = {
+            English = "Your {Class} Has been Stolen"
+        }
+    },
+    {
         String = "bouncy_vehicles",
         Languages = {
             English = "BOUNCY:VEHICLES"
@@ -1878,6 +1902,12 @@ Server.LocalizationManager:Add({
         String = "developerMode",
         Languages = {
             English = "Developer Mode"
+        }
+    },
+    {
+        String = "serverConsole",
+        Languages = {
+            English = "Server Console"
         }
     },
     {

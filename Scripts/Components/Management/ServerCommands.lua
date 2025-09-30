@@ -17,11 +17,9 @@ Server:CreateComponent({
             { Name = "", NamePattern = "%.lua$", Path = (SERVER_DIR_COMMANDS), Recursive = true, ReadOnly = true }
         },
 
-        Properties = {
-
+        Config = {
             -- send a sound feedback when executing commands
             SendSoundFeedback = true,
-
             CommandPrefixList = {
                 ".",
                 "!",
@@ -111,8 +109,10 @@ Server:CreateComponent({
         },
 
         Initialize = function(self)
-            self:RegisterCommands()
+        end,
 
+        PostInitialize = function(self)
+            self:RegisterCommands()
             local iCommandsLoaded = table.size(self.CommandMap)
             self:LogEvent({
                 Event = self:GetName(),
@@ -122,18 +122,22 @@ Server:CreateComponent({
             })
         end,
 
-        PostInitialize = function(self)
-
-        end,
-
         Add = function(self, aInfo)
+            if (table.IsRecursive(aInfo)) then
+                for _, tInfo in pairs(aInfo) do
+                    self:Add(tInfo)
+                end
+                return true, #aInfo
+            end
             table.insert(self.CollectedCommands, aInfo)
+            return true, 1
         end,
 
         RegisterCommands = function(self)
             for _, aInfo in pairs(self.CollectedCommands) do
                 self:RegisterCommand(aInfo)
             end
+            return true, #self.CollectedCommands
         end,
 
         RegisterCommand = function(self, aInfo)
@@ -142,7 +146,7 @@ Server:CreateComponent({
                 for _, tInfo in pairs(aInfo) do
                     self:RegisterCommand(tInfo)
                 end
-                return
+                return true, #aInfo
             end
 
             local sName         = aInfo.Name
@@ -171,6 +175,7 @@ Server:CreateComponent({
             end
 
             self:BuildCommand(sName, aArguments, tProperties, hFunction, aInfo.Access)
+            return true, 1
         end,
 
         BuildCommand = function(self, sName, aArguments, tProperties, hFunction, iAccessLevel)
@@ -390,7 +395,7 @@ Server:CreateComponent({
                 end
 
                 local sErrorFeedback = "Sounds/interface:menu:buy_error"
-                if (self.Properties.SendSoundFeedback) then
+                if (self.Config.SendSoundFeedback) then
                     if (g_gameRules.IS_PS) then
                         g_gameRules.onClient:ClBuyError(hPlayer:GetChannel(), "nnn")
                     else
@@ -469,7 +474,7 @@ Server:CreateComponent({
 
             local bPrefixOk = false
             local sDetectedPrefix
-            for _, sPrefix in pairs(self.Properties.CommandPrefixList) do
+            for _, sPrefix in pairs(self.Config.CommandPrefixList) do
 
                 local sPrefixEscaped = sPrefix:gsub("(%W)", "%%%1")
                 if (string.sub(sMessage, 1, #sPrefix) == sPrefix) then
@@ -513,7 +518,7 @@ Server:CreateComponent({
 
         SendHelp = function(self, hPlayer, aCommand)
             -- Misc
-            local sAllPrefixes = CRY_COLOR_WHITE .. table.concat(self.Properties.CommandPrefixList, "$9, $1")
+            local sAllPrefixes = CRY_COLOR_WHITE .. table.concat(self.Config.CommandPrefixList, "$9, $1")
             local sSpace = "      "
 
             -- Cmd
@@ -1077,7 +1082,7 @@ Server:CreateComponent({
             local sReply = aResponse[3]
 
             -- Sound Response!
-            local bSoundFeedback = self.Properties.SendSoundFeedback
+            local bSoundFeedback = self.Config.SendSoundFeedback
             local sFeedback      = "sounds/interface:hud:pda_update"
 
             if (bOk == false) then

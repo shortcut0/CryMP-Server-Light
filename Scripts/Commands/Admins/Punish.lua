@@ -27,8 +27,6 @@ Server.ChatCommands:Add({
             return self:Command_BanPlayer(hPlayer, hTarget, sDuration, sReason)
         end
     },
-
-    -- TODO: !UnBan
     -- ================================================================
     -- !UnBan <Identifier> <Reason>
     {

@@ -12,14 +12,14 @@ Server.Plugins:CreatePlugin("PersistentScore", {
 
     -- Used for console logging // "Plugin(PersistentScore) : Test Message"
     PluginName = "PersistentScore", -- If empty, will use the plugin identifier as name
-    PluginFriendlyName = "Score", -- A shorter, more user-friendly name which will be used instead of the PluginName field
+    PluginFriendlyName = "Score", -- A shorter, more user-friendly name which will be used instead of the PluginName field for logging
     
     -- Disable/Enable the plugin here
     PluginStatus = true,
 
     -- External Data
     ExternalData = {
-        { Key = "PermaScore", Name = "PermaScore.lua", Path = (SERVER_DIR_DATA .. "Users\\") },
+        { Key = "PermaScore",      Name = "PermaScore.lua",      Path = (SERVER_DIR_DATA .. "Users\\") },
         { Key = "PersistentScore", Name = "PersistentScore.lua", Path = (SERVER_DIR_DATA .. "Users\\") },
     },
 
@@ -37,11 +37,32 @@ Server.Plugins:CreatePlugin("PersistentScore", {
 
         --- Config Values default to 'Plugins.<PluginName>.', to use global values, you can put a '$' at the start of the Config Value
         --- Like so:
-        --- { Config = "$Network.CVars"             Key = "$Direct_Member_Key_Not_Inside_Config_Table"
+        ---   { Config = "$Network.CVars"             Key = "$Direct_Member_Key_Not_Inside_Config_Table"
+        ---
+        --- To go back one Configuration branch, you can put one (or more) "."-dots at the start of the Config
+        --- Like so:
+        ---   { Config = ".SomeOtherPlugin.SomeConfig", ... }
+        ---   The resulting nest would then be
+        ---               "UserPlugins.SomeOtherPlugin.SomeConfig"
+        ---    Instead of "UserPlugins.PersistentScore.SomeOtherPlugin.SomeConfig"
+        ---    The more dots, the more backtracking
 
         { Config = "SaveScoreForEachMap",        Key = "SaveScoreForEachMap",           Default = false },
         { Config = "DeletePersistentScoreAfter", Key = "DeletePersistentScoreAfter",    Default = ONE_WEEK },
         { Config = "ResetScoreOnMapEnd",         Key = "ResetScoreOnMapEnd",            Default = true },
+        { Config = "ResetScoreOnMapEnd",         Key = "ResetScoreOnMapEnd",            Default = true },
+        { Config = "Restore.BlockPrestigeDuping",Key = "BlockPrestigeDuping",           Default = true },
+        { Config = "Restore.Prestige",           Key = "RestorePrestige",               Default = true },
+        { Config = "Restore.Rank",               Key = "RestoreRank",                   Default = true },
+        { Config = "Restore.XP",                 Key = "RestoreXP",                     Default = true },
+
+        { Config = "Restore.PowerStruggle.Kills",       Key = "RestoreKills_PS",        Default = true },
+        { Config = "Restore.PowerStruggle.Deaths",      Key = "RestoreDeaths_PS",       Default = true },
+        { Config = "Restore.PowerStruggle.Headshots",   Key = "RestoreHeadshots_PS",    Default = true },
+
+        { Config = "Restore.InstantAction.Kills",       Key = "RestoreKills",           Default = true },
+        { Config = "Restore.InstantAction.Deaths",      Key = "RestoreDeaths",          Default = true },
+        { Config = "Restore.InstantAction.Headshots",   Key = "RestoreHeadshots",       Default = true },
     },
 
     -- Called when the plugin is being loaded
@@ -85,10 +106,10 @@ Server.Plugins:CreatePlugin("PersistentScore", {
         local tScore = self.PersistentScore.Global
         if (self.Config.SaveScoreForEachMap) then
             local sMapPath = Server.MapRotation:GetMapPath():lower()
-            if (not self.PersistentScore[sMapPath]) then
-                self.PersistentScore[sMapPath] = {}
+            if (not self.PersistentScore.MapSpecific[sMapPath]) then
+                self.PersistentScore.MapSpecific[sMapPath] = {}
             end
-            tScore = self.PersistentScore[sMapPath]
+            tScore = self.PersistentScore.MapSpecific[sMapPath]
         end
 
         if (hId) then
@@ -139,18 +160,17 @@ Server.Plugins:CreatePlugin("PersistentScore", {
 
         self:Log("Resetting Scores..")
         for _, pActor in pairs(Server.Utils:GetPlayers()) do
-            self:ResetScore(pActor, nil, true) -- No Reason, Quiet
+            self:ResetScore(pActor, nil, true) -- No Reason + Quiet
         end
     end,
 
     -- Called every second
-    Event_TimerSecond = function(self)
-
-    end,
+    --Event_TimerSecond = function(self)
+    --end,
 
     -- Called when a player gets initialized (spawned)
-    Event_OnActorSpawn = function(self, pActor)
-    end,
+    --Event_OnActorSpawn = function(self, pActor)
+    --end,
 
     -- Called when a player disconnects
     Event_OnClientDisconnect = function(self, pClient)
@@ -178,6 +198,7 @@ Server.Plugins:CreatePlugin("PersistentScore", {
         tUserScore.Kills = pGR:GetKills(pClient.id)
         tUserScore.Deaths = pGR:GetDeaths(pClient.id)
         tUserScore.Headshots = pGR:GetHeadshots(pClient.id)
+        tUserScore.Timestamp = (Date:GetTimestamp() + self.Config.DeletePersistentScoreAfter)
 
         local sMap = ""
         if (self.Config.SaveScoreForEachMap) then
@@ -204,7 +225,16 @@ Server.Plugins:CreatePlugin("PersistentScore", {
             return -- Don't restore an empty score
         end
 
+        local iScoreTS = tUserScore.Timestamp
+        local iCurrentTS = Date:GetTimestamp()
+        if (self.Config.DeletePersistentScoreAfter > 0 and iScoreTS and iCurrentTS >= iScoreTS) then
+            tScore[sProfile] = self:GetEmptyScore(sProfile)
+            self:Log("Discarding Expired Score for '%s' for '%s' (Expired %s ago)", sProfile, pActor:GetName(), Date:Format(iCurrentTS - iScoreTS))
+            return -- Sorry, this score has expired^^
+        end
+
         local pGR = g_gameRules
+        local bAnyRestored
         if (pGR.IS_PS) then
             local iPP = tUserScore.PP
             local iXP = tUserScore.XP
@@ -215,23 +245,51 @@ Server.Plugins:CreatePlugin("PersistentScore", {
                 sPrefix = ("%s: "):format(Server.MapRotation:GetMapName():upper())
             end
             pGR:SetPlayerRank(pActor.id, iRank)
-            pGR:PrestigeEvent(pActor, { iPP, iXP }, sPrefix .. "@score_Restored")
+
+            local bNoRankXP = true
+            if (self.Config.RestorePrestige and self.Config.RestoreXP) then
+                pGR:PrestigeEvent(pActor, { iPP, iXP }, sPrefix .. "@score_Restored", nil, nil, bNoRankXP) --< Format, CryFormat, bNoRankXP
+                bAnyRestored = true
+
+            elseif (self.Config.RestorePrestige) then
+                pGR:PrestigeEvent(pActor, iPP, sPrefix .. "@score_Restored")
+                bAnyRestored = true
+
+            elseif (self.Config.RestoreXP) then
+                pGR:XPEvent(pActor, iXP, sPrefix, nil, nil, bNoRankXP) --< Format, CryFormat, bNoRankXP
+                bAnyRestored = true
+            end
+
+            -- This will effectively block the 'repeated connecting and transferring prestige'-duping method
+            if (self.Config.BlockPrestigeDuping) then
+                tUserScore.PP = 0
+            end
         end
 
         local iKills = tUserScore.Kills
         local iDeaths = tUserScore.Deaths
         local iHeadshots = tUserScore.Headshots
-        pGR:SetKills(pActor.id, iKills)
-        pGR:SetDeaths(pActor.id, iDeaths)
-        pGR:SetHeadshots(pActor.id, iHeadshots)
 
-        self:LogEvent({
-            Message = "@scoreRestored",
-            MessageFormat = {
-                Name = pActor:GetName(),
-                Extra = "" -- TODO
-            }
-        })
+        local bRestoreKills     = ((self.Config.RestoreKills_PS     and pGR.class == GameMode_PS) or (pGR.class == GameMode_IA and self.Config.RestoreKills))
+        local bResetDeaths      = ((self.Config.RestoreDeaths_PS    and pGR.class == GameMode_PS) or (pGR.class == GameMode_IA and self.Config.RestoreDeaths))
+        local bResetHeadshots   = ((self.Config.RestoreHeadshots_PS and pGR.class == GameMode_PS) or (pGR.class == GameMode_IA and self.Config.RestoreHeadshots))
+
+        if (bRestoreKills) then pGR:SetKills(pActor.id, iKills) bAnyRestored = true end
+        if (bResetDeaths) then pGR:SetDeaths(pActor.id, iDeaths) bAnyRestored = true end
+        if (bResetHeadshots) then pGR:SetHeadshots(pActor.id, iHeadshots) bAnyRestored = true end
+
+        if (bAnyRestored) then
+            self:LogEvent({
+                Message = "@scoreRestored",
+                MessageFormat = {
+                    Name = pActor:GetName(),
+                    Extra = "" -- TODO
+                }
+            })
+        else
+            self:LogWarning("No Scores have been Restored due to Configuration Settings.)")
+            self:LogWarning("Consider disabling the Plugin to save performance instead.")
+        end
     end,
 
     -- Add new plugin-related chat commands
@@ -264,7 +322,7 @@ Server.Plugins:CreatePlugin("PersistentScore", {
 
                 if (bResetAll) then
                     pGR:SetPlayerCP(hUser.id, 0)
-                    pGR:SetPlayerPP(hUser.id, 100) -- FIXME: function to get actual spawn-prestige
+                    pGR:SetPlayerPP(hUser.id, pGR:GetSpawnPrestigeCount(GameRank_PVT, hUser:IsPremium())) -- done: function to get actual spawn-prestige
                     pGR:SetPlayerRank(hUser.id, GameRank_PVT)
                 end
 

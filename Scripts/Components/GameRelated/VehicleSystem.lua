@@ -13,6 +13,33 @@ Server:CreateComponent({
     FriendlyName = "Vehicles",
     Body = {
 
+        MovementTypes = {
+            Sea = "sea",
+            Air = "air",
+            Land = "land",
+            Amphibious = "amphibious",
+        },
+
+        Initialize = function(self)
+          --  self:Test()
+        end,
+
+       --[[
+        Test = function(self)
+            self:Log(LogVerbosity_Highest, "LogVerbosity_Highest")
+            self:LogWarning(LogVerbosity_High, "LogVerbosity_High")
+            self:LogError(LogVerbosity_Higher, "LogVerbosity_Higher")
+            self:LogDebug(LogVerbosity_Low, "LogVerbosity_Low")
+            self:Log(LogVerbosity_Lowest, "LogVerbosity_Lower")
+
+            self:LogV(LogVerbosity_Highest, "2 LogVerbosity_Highest")
+            self:LogWarningV(LogVerbosity_High, "2 LogVerbosity_High")
+            self:LogErrorV(LogVerbosity_Higher, "2 LogVerbosity_Higher")
+            self:LogFatalV(LogVerbosity_Low, "2 LogVerbosity_Low")
+            self:LogV(LogVerbosity_Lower, "2 LogVerbosity_Lower")
+        end,
+       ]]
+
         Message = function(self, hUser, sMessage, tFormat)
             Server.Chat:TextMessage(ChatType_Error, hUser, sMessage, tFormat)
         end,
@@ -39,6 +66,31 @@ Server:CreateComponent({
             end
         end,
 
+        OnStartStealVehicle = function(self, hVehicle, hThief)
+            DebugLog("car alarm...!!")
+            hVehicle.vehicle:StartAbandonTimer(true, 7)
+            Script.SetTimer(6500, function()
+                if (not hVehicle) then
+                    return
+                end
+                hVehicle.vehicle:KillAbandonTimer()
+            end)
+        end,
+
+        OnVehicleStolen = function(self, hVehicle, hThief)
+
+            local pUtils = Server.Utils
+            local hBuildBy = pUtils:GetEntity(hVehicle:GetTempInfo("BuildBy"))
+            if (hBuildBy) then
+                local iTeam1 = pUtils:GetTeamId(hBuildBy)
+                local iTeam2 = pUtils:GetTeamId(hThief)
+
+                if (iTeam1 ~= iTeam2) then
+                    Server.Chat:TextMessage(ChatType_Error, hBuildBy, "@your_vehicle_wasStolen", { Class = "%1" }, hVehicle:GetLocaleType())
+                end
+            end
+        end,
+
         OnVehicleBuild = function(self, hVehicle, hOwner, tItemDef)
 
             if (not hVehicle) then
@@ -52,7 +104,7 @@ Server:CreateComponent({
 
             hVehicle:SetTempInfo("BuildBy", hOwner.id)
             hVehicle:SetTempInfo("OwnerFirstEnter", false)
-            --hVehicle:SetInfo("DoomsdayMachine", g_gameRules:IsDoomsdayVehicle(hVehicle.class)) -- moved to Init in vehiclebase
+            --hVehicle:SetInfo("DoomsdayMachine", g_gameRules:IsDoomsdayVehicle(hVehicle.class)) -- moved to Init in VehicleBase
 
             g_gameRules.game:SetSynchedEntityValue(hVehicle.id, GlobalKeys.VehicleLocked, NULL_ENTITY)
             g_gameRules.game:SetSynchedEntityValue(hVehicle.id, GlobalKeys.VehicleReserved, hOwnerId)
@@ -158,6 +210,23 @@ Server:CreateComponent({
 
         CanEnterVehicle = function(self, hUser, hVehicle)
 
+            -- Check for pushing Boats
+            DebugLog(hVehicle.vehicle:GetMovementType())
+            if (hVehicle.vehicle:GetMovementType() == self.MovementTypes.Sea and not hVehicle.vehicle:IsSubmerged()) then
+                local tHitInfo = hUser:GetHitPos(hUser:GetPos(), Vector.Down(), 1.75)
+                -- We are not standing on the vehicle, so push it
+                if (not tHitInfo or tHitInfo.entity ~= hVehicle) then
+                    Server.Utils:AddImpulse(hVehicle, hVehicle:GetCenterOfMassPos(), Server.Utils:GetDir(hUser, hVehicle), hVehicle:GetMass() * (hUser:GetSuitMode(NANOMODE_STRENGTH) and 5 or 2.5))
+                    return false
+                end
+                DebugLog("sea and not submerged")
+            end
+
+            -- Test Mode exception
+            if (hUser:IsInTestMode()) then
+                return true
+            end
+
             local tLock = hVehicle:GetTempInfo("Lock")
             if (tLock) then
                 if (tLock.LockedBy ~= hUser.id) then
@@ -168,7 +237,7 @@ Server:CreateComponent({
 
             local bOwnerEntered = hVehicle:GetTempInfo("OwnerFirstEnter")
             local hBuildBy = hVehicle:GetTempInfo("BuildBy")
-            if (hBuildBy) then
+            if (hBuildBy and Server.Utils:GetEntity(hBuildBy)) then
                 if (hBuildBy ~= hUser.id and not bOwnerEntered) then
                     self:Message(hUser, "@vehicle_ownerNotEntered")
                     return false
@@ -177,6 +246,54 @@ Server:CreateComponent({
 
             return true
         end,
+
+        -- DISABLED: WHAT IS THIS??
+        X_Event_TimerSecond = function(self)
+
+            local aVehicles = Server.Utils:GetEntities({ ByMember = "vehicle" })
+            if (#aVehicles == 0 or #Server.Utils:GetPlayers() == 0) then
+                return
+            end
+
+            local function SetSync(hVehicle, iKey, hValue)
+                hVehicle.SyncTemp = hVehicle.SyncTemp or {}
+                if (hVehicle.SyncTemp[iKey] == hVehicle) then
+                    return
+                end
+                hVehicle.SyncTemp[iKey] = hVehicle
+                g_gameRules.game:SetSynchedEntityValue(hVehicle, iKey, hValue)
+                DebugLog(iKey,hValue,"ok")
+            end
+
+            for _, hVehicle in pairs(aVehicles) do
+
+                local bDestroyed = hVehicle.vehicle:IsDestroyed()
+                local bSubmerged = hVehicle.vehicle:IsSubmerged()
+                if (hVehicle.vehicle:GetMovementType() == self.MovementTypes.Sea) then
+                    if (not bDestroyed) then
+                        if (not bSubmerged) then
+                            SetSync(hVehicle, GlobalKeys.EntityUsabilityMessage, "PUSH")
+                        else
+                            SetSync(hVehicle, GlobalKeys.EntityUsabilityMessage, nil)
+                        end
+                    end
+                end
+            end
+        end,
+
+        Event_OnActorSpawn = function(self, hActor)
+
+            for _, hVehicle in pairs(Server.Utils:GetEntities({ ByMember = "vehicle" })) do
+                local tBuyZone = hVehicle:GetInfo("BuyZone")
+                if (tBuyZone) then
+                    local hFactory = Server.Utils:GetEntity(tBuyZone.FactoryID)
+                    if (hFactory and hFactory.class == "Factory") then
+                        hFactory.onClient:ClSetBuyFlags(hActor:GetChannel(), hVehicle.id, tBuyZone.Flags)
+                        DebugLog("sync zone???",hVehicle:GetName())
+                    end
+                end
+            end
+        end
 
     }
 })

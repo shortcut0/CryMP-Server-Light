@@ -12,12 +12,17 @@ Server:CreateComponent({
     Name = "ClientMod",
     Body = {
 
-        Properties = {
-            ClientScriptURL = "http://nomad.nullptr.one/~finch/CryMP-ServerClient.lua",
-            MaxInstallAttempts = 999,
-
+        Config = {
             -- Not in config please
             ObfuscateStackIds = false, -- edit: no reason to use this, can cause duped ids. let clients fake it, who cares.
+        },
+
+        ComponentConfig = {
+            { Config = "IsEnabled",                           Key = "$ComponentStatus",   Default = true },
+            { Config = "RemoteScript.URL",                    Key = "ClientScriptURL",    Default = "" },
+            { Config = "RemoteScript.MaximumInstallAttempts", Key = "MaxInstallAttempts", Default = 3 },
+            { Config = "RemotePAK.URL",                       Key = "ClientPAKURL",       Default = "" }, -- TODO
+            { Config = "ObfuscateStackIds",                   Key = "ObfuscateStackIds",  Default = false },
         },
 
         CCommands = {
@@ -159,13 +164,14 @@ Server:CreateComponent({
             Headless    = { ID = 45, Name = "Headless",          Model = "Objects/characters/nomad/headless.cdf" },
         },
 
-        Responses = {
+        Requests = {
             ClientInstalled = 10,
+
+            OpenChat = 11,
+            OpenTeamChat = 12,
         },
 
         Initialize = function(self)
-            self.Properties.ClientScriptURL = Server.Config:Get("Network.RemoteClientScript.URL", self.Properties.ClientScriptURL, ConfigType_String)
-            self.Properties.MaxInstallAttempts = Server.Config:Get("Network.RemoteClientScript.MaxInstallAttempts", self.Properties.MaxInstallAttempts, ConfigType_Number)
         end,
 
         PostInitialize = function(self)
@@ -175,9 +181,9 @@ Server:CreateComponent({
             self:ClearGlobalQueue()
         end,
 
-        IsComponentEnabled = function(self)
-            return true
-        end,
+        --IsComponentEnabled = function(self)
+        --    return true
+        --end,
 
         ClearGlobalQueue = function(self)
 
@@ -223,7 +229,7 @@ Server:CreateComponent({
 
         PrepCode = function(self, sCode)
             local hId = (self.CodeStack.LastId + 1)
-            if (self.Properties.ObfuscateStackIds) then
+            if (self.Config.ObfuscateStackIds) then
                 hId = hId + math.random(66666, 77777)
             end
             self.CodeStack.LastId = hId
@@ -266,10 +272,11 @@ Server:CreateComponent({
             tGlobalStorage[hBoundID][hSyncID] = {
                 Client = tInfo.Code,
                 Server = tInfo.Server,
-                Predicate = tInfo.Predicate
+                Predicate = tInfo.Predicate,
+                SyncedOn  = {},
             }
 
-            DebugLog("index=",hSyncID)
+            --DebugLog("index=",hSyncID)
         end,
 
         FindStackedCode = function(self, hId)
@@ -282,22 +289,20 @@ Server:CreateComponent({
 
         OnRemoteError = function(self, hClient, hId, sError)
 
-            self:LogError("Client %s{Red} Encountered a Script Error", hClient:GetName())
-            self:LogError("> %s", sError or "<Null>")
+            self:LogError("Client %s{Red} Encountered a Script Error!", hClient:GetName())
+            self:LogError("%s", sError or "<Null>")
 
             local tCode = self:FindStackedCode(hId)
             if (not tCode) then
                 self:LogError("Failed to find Stack for Code %d")
-                self:LogError("%s", sError or "<Null>")
+                --self:LogError("%s", sError or "<Null>")
                 return
             end
 
-            self:LogError("Stack ID: %d", tCode.ID)
-            self:LogError("Source: %s", tCode.Source)
+            self:LogError("Stack ID: %d, Source: %s", tCode.ID, tCode.Source)
         end,
 
         ExecuteCodeOnClient = function(self, hClient, sCode, bSkipQueuing)
-
 
             if (hClient.ClientMod.InstallFailed) then
                 self:LogError("Ignoring Client %s", hClient:GetName())
@@ -358,6 +363,12 @@ Server:CreateComponent({
             else
                 hClient.ClientMod.DataSyncQueued = true
             end
+
+            if (hClient:IsDeveloper() and not hClient.ClientMod.LocalFileInstalled) then
+                self:Log("Loading local file on %s", hClient:GetName())
+                self:ExecuteCode({ Client = hClient, Code = "_S.ExecuteCommand('crymp_lload')"})
+                hClient.ClientMod.LocalFileInstalled = true
+            end
         end,
 
         SyncData = function(self, hClient)
@@ -400,18 +411,19 @@ Server:CreateComponent({
                         self:Log("Synchronizing Stack for Entity '%s'", sBoundEntityName)
                         for hSyncID, tCode in pairs(tStack) do
 
-                            tCode.SyncedOn = (tCode.SyncedOn or {})
+                            --tCode.SyncedOn = (tCode.SyncedOn or {})
                             if (not tCode.SyncedOn[hClient.id]) then
                                 tCode.SyncedOn[hClient.id] = true
 
                                 local fPredicate = tCode.Predicate
                                 local bPredicateOk = true
+                                local tParams = {}
+                                if (hBoundEntity) then
+                                    tParams = { hBoundEntity }
+                                end
+                                table.insert(tParams, hClient)
+
                                 if (fPredicate ~= nil) then
-                                    local tParams = {}
-                                    if (hBoundEntity) then
-                                        tParams = { hBoundEntity }
-                                    end
-                                    table.insert(tParams, hClient)
                                     local bOk, hReturnOrError = pcall(fPredicate, unpack(tParams))
                                     if (not bOk) then
                                         self:LogError("Failed to Execute Predicate for Entity '%s' for SyncID '%s'", sBoundEntityName, tostring(hSyncID))
@@ -426,7 +438,17 @@ Server:CreateComponent({
                                     iSyncedCount = iSyncedCount + 1
                                     self:ExecuteCodeOnClient(hClient, tCode.Client)
                                     if (tCode.Server) then
-                                        error("implementation missing.")
+
+                                        -- FIXME: Test this?
+                                        if (type(tCode.Server) == "function") then
+                                            local bOk, sError = pcall(tCode.Server, unpack(tParams))
+                                            if (not bOk) then
+                                                self:LogError("Failed to Execute Server Function for Entity '%s' for SyncID '%s'", sBoundEntityName, tostring(hSyncID))
+                                                self:LogError("%s", (sError or "<Null>"))
+                                            end
+                                        else
+                                            error("implementation missing.")
+                                        end
                                     end
                                 end
                             else
@@ -448,6 +470,11 @@ Server:CreateComponent({
                 return
             end
 
+            local sURL = self.Config.ClientScriptURL
+            if (string.empty(sURL)) then
+                return self:Log("No Remote Script URL")
+            end
+
             local iAttempt = hClient.ClientMod.InstallAttempts
             if (bResetAttempts) then
                 iAttempt = 0
@@ -455,7 +482,7 @@ Server:CreateComponent({
 
             self:Log("Installing on '%s'", hClient:GetName())
             self:LogEvent({
-                Message = "@clientMod_installingOn" .. (iAttempt > 0 and (" (@attempt $4%d$9 \\ $4%d$9)"):format(iAttempt, self.Properties.MaxInstallAttempts) or ""),
+                Message = "@clientMod_installingOn" .. (iAttempt > 0 and (" (@attempt $4%d$9 \\ $4%d$9)"):format(iAttempt, self.Config.MaxInstallAttempts) or ""),
                 MessageFormat = { Client = hClient:GetName() },
                 Recipients = ServerAccess_Admin,
             })
@@ -464,7 +491,7 @@ Server:CreateComponent({
             hClient.ClientMod.InstallAttempts = (iAttempt + 1)
             hClient.ClientMod.LastInstall.Refresh()
 
-            RPC:OnPlayer(hClient, "Execute", { url = self.Properties.ClientScriptURL });
+            RPC:OnPlayer(hClient, "Execute", { url = sURL });
         end,
 
         Event_OnActorSpawn = function(self, hClient)
@@ -482,11 +509,11 @@ Server:CreateComponent({
             self:InstallMod(hClient)
         end,
 
-        Event_TimerSecond = function(self)
+        --[[Event_TimerSecond = function(self)
 
             for _, hClient in pairs(Server.Utils:GetPlayers()) do
                 if (not hClient.ClientMod.IsInstalled) then
-                    if (hClient.ClientMod.InstallAttempts <= self.Properties.MaxInstallAttempts) then
+                    if (hClient.ClientMod.InstallAttempts <= self.Config.MaxInstallAttempts) then
                         if (hClient.ClientMod.LastInstall.Expired()) then
                             self:InstallMod(hClient)
                         end
@@ -503,6 +530,23 @@ Server:CreateComponent({
 
             --test stack finder
             --self:ExecuteCode({Code = "ERROR()"})
+        end,]]
+
+        Event_OnActorTick = function(self, hClient)
+            if (not hClient.ClientMod.IsInstalled) then
+                if (hClient.ClientMod.InstallAttempts <= self.Config.MaxInstallAttempts) then
+                    if (hClient.ClientMod.LastInstall.Expired()) then
+                        self:InstallMod(hClient)
+                    end
+                else
+                    hClient.ClientMod.InstallFailed = true
+                end
+            else
+                if (hClient:IsValidated() and hClient.ClientMod.DataSyncQueued) then
+                    self:SyncData(hClient)
+                    hClient.ClientMod.DataSyncQueued = false
+                end
+            end
         end,
 
         Event_RequestSpectatorTarget = function(self, hClient, iRequest)
@@ -511,13 +555,64 @@ Server:CreateComponent({
                 return true
             end
 
-            local tResponses = self.Responses
-            if (iRequest == tResponses.ClientInstalled) then
+            local tRequests = self.Requests
+            if (iRequest == tRequests.ClientInstalled) then
                 self:OnInstalled(hClient)
+
+            elseif (iRequest == tRequests.OpenChat or iRequest == tRequests.OpenTeamChat) then
+               self:OnOpenChat(hClient, true, (iRequest == tRequests.OpenTeamChat))
+
             else
-                return true
+                self:LogWarning("{Gray}Unhandled Request from {Red}%s{Gray} ({Red}%d{Gray}: {Red}%s{Gray})", hClient:GetName(), iRequest, self:GetRequestID(iRequest))
             end
+
+            -- Always false, else bugs or messed up scripts might place the innocent into spectator mode
             return false
+        end,
+
+        Event_OnChatMessage = function(self, hSenderId, hTargetId, sMessage, iType, iForcedTeam, bSentByServer)
+
+            local hSender = Server.Utils:GetEntity(hSenderId)
+            local hTarget = Server.Utils:GetEntity(hTargetId)
+            if (not bSentByServer and hSender.IsPlayer) then
+                self:OnOpenChat(hSender, false)
+            end
+        end,
+
+        Event_OnActorTick = function(self, hClient)
+            local tCM = hClient.ClientMod
+            if (tCM and tCM.ChatOpen ~= nil) then
+                if (Vector.Distance3d(hClient:GetPos(), tCM.ChatPosition) > 1.5) then
+                    self:OnOpenChat(hClient, false) -- Moved away!
+                end
+            end
+        end,
+
+        GetRequestID = function(self, iRequest)
+            return (table.GetIndex(self.Requests, iRequest) or "<Unknown>")
+        end,
+
+        OnOpenChat = function(self, hClient, bEnable, bTeamChat)
+
+            local tCM = hClient.ClientMod
+            if (not bEnable) then
+                if (tCM.ChatOpen ~= nil) then
+                    g_gameRules.game:SetSynchedEntityValue(hClient.id, GlobalKeys.PlayerChattingStatus, 0)
+                end
+                tCM.ChatOpen = nil
+                hClient.Info.IsChatting = false
+                hClient.Timers.ChatTimer.Expire()
+                return
+            end
+
+            if (tCM.ChatOpen ~= bTeamChat) then
+                DebugLog("on")
+                g_gameRules.game:SetSynchedEntityValue(hClient.id, GlobalKeys.PlayerChattingStatus, 1 + (bTeamChat and 1 or 0))
+            end
+            tCM.ChatPosition = hClient:GetPos()
+            tCM.ChatOpen = bTeamChat
+            hClient.Info.IsChatting = true
+            hClient.Timers.ChatTimer.Refresh()
         end,
 
         FindModelById = function(self, iCM)

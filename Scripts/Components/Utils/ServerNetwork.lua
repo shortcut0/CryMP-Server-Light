@@ -143,6 +143,8 @@ Server:CreateComponent({
                 WarningLimit = Server.Config:Get("Network.PingControl.WarningLimit", 5, ConfigType_Number),
                 WarningDelay = Server.Config:Get("Network.PingControl.WarningDelay", 10, ConfigType_Number),
                 ResetWarnings = Server.Config:Get("Network.PingControl.ResetWarnings", false, ConfigType_Boolean),
+                BanPlayers = Server.Config:Get("Network.PingControl.BanPlayers", false, ConfigType_Boolean),
+                BanDuration = Server.Config:Get("Network.PingControl.BanDuration", FIVE_MINUTES, ConfigType_Number, function(Value) if (Value <= 1) then return 1 end return Value end),
                 IssuedWarnings = {}, -- Internal data
             }
 
@@ -463,7 +465,7 @@ Server:CreateComponent({
 
             -- Assumable an NPC
             if (self.FailedQueries[iChannel] or iChannel == 0 or sIPAddress == "127.0.0.1") then
-                self:Log("[%d, %s] Invalid IP-Address, Skipping Query", iChannel, sIPAddress)
+                self:LogV(LogVerbosity_Higher, "[%d, %s] Invalid IP-Address, Skipping Query", iChannel, sIPAddress)
                 return table.copy(self.DefaultGeoData), true
             end
 
@@ -630,16 +632,16 @@ Server:CreateComponent({
             return (string.match(sMessage, "^<<Cookie>>(.*)<<$"))
         end,
 
-        Event_TimerSecond = function(self)
-
-            for _, hPlayer in pairs(Server.Utils:GetPlayers()) do
-                if (not hPlayer.Info.UniqueIDAssigned) then
-                    if (hPlayer.Timers.Connection.Diff() >= self.Properties.UUIDAwaitTimeout) then
-                        Server.AccessHandler:AssignUniqueID(hPlayer, Server.AccessHandler:GetUniqueID(hPlayer))
-                        self:DestroyUUIDCheck(hPlayer)
-                    end
+        Event_OnActorTick = function(self, hPlayer)
+            if (not hPlayer.Info.UniqueIDAssigned) then
+                if (hPlayer.Timers.Connection.Diff() >= self.Properties.UUIDAwaitTimeout) then
+                    Server.AccessHandler:AssignUniqueID(hPlayer, Server.AccessHandler:GetUniqueID(hPlayer))
+                    self:DestroyUUIDCheck(hPlayer)
                 end
             end
+        end,
+
+        Event_TimerSecond = function(self)
 
             if (not self.Initialized) then
                 return
@@ -1067,6 +1069,15 @@ Server:CreateComponent({
             --)
         end,
 
+        GetPingLimit = function(self)
+            local aPingControl = self.PingControl
+            if (not aPingControl.Enabled) then
+                return 99999
+            end
+
+            return aPingControl.Tolerance
+        end,
+
         UpdatePingControl = function(self, hPlayer, iPing)
 
             local aPingControl = self.PingControl
@@ -1086,7 +1097,14 @@ Server:CreateComponent({
                 if (tWarning.Timer.expired_refresh()) then
                     tWarning.Count = math.min(aPingControl.WarningLimit, (tWarning.Count + 1))
                     if (tWarning.Count >= aPingControl.WarningLimit) then
-                        Server.Punisher:KickPlayer(Server:GetEntity(), hPlayer, ("Ping Limit (%d \\ %d)"):format(iPing, iTolerance))
+
+                        local sReason = ("Ping Limit (%d \\ %d)"):format(iPing, iTolerance)
+                        if (aPingControl.BanPlayers) then
+                            local iBanDuration = (aPingControl.BanDuration or FIVE_MINUTES)
+                            Server.Punisher:BanPlayer(Server:GetEntity(), hPlayer, iBanDuration, sReason)
+                        else
+                            Server.Punisher:KickPlayer(Server:GetEntity(), hPlayer, sReason)
+                        end
                         return
                     else
                         Server.Chat:ChatMessage(ChatEntity_Server, hPlayer, "@ping_warning", { Count = tWarning.Count, Limit = aPingControl.WarningLimit, Ping = iPing, PingLimit = iTolerance })

@@ -16,7 +16,15 @@ Server.Patcher:HookClass({
             Name = "SpawnEntity",
             Backup = true,
             Value = function(tParams, ...)
-                return System.SpawnEntity_Backup(tParams, ...)
+                --if (not tParams) then
+                --    error("empty spawn params")
+                --     return
+                -- end
+                --if (tParams.IsServerSpawn) then
+                local hEntity = System.SpawnEntity_Backup(tParams, ...)
+                return hEntity
+                --end
+                --return Server.Utils:SpawnEntity(tParams)
             end,
         },
         {

@@ -6,7 +6,7 @@
 --         \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|     --
 --                    |___/          by: shortcut0                                  --
 -- Contains the Server Punisher Component
--- Handling Kicks, Bans & HardBans and Mutes
+-- Handling Kicks, Bans & HardBans, and Mutes
 -- ===================================================================================
 
 Server:CreateComponent({
@@ -34,7 +34,7 @@ Server:CreateComponent({
         PostInitialize = function(self)
         end,
 
-        Event_OnTimerSecond = function(self)
+        Event_TimerSecond = function(self)
             self:RefreshMutes()
             self:RefreshBans()
         end,
@@ -490,10 +490,10 @@ Server:CreateComponent({
             for _, tBan in pairs(self.BanList) do
 
                 -- First, check names
-                if (tBan.Name:lower():find(sIdentifierLower)) then
+                if (tBan.Name:lower():find(sIdentifierLower) or tBan.Name:lower():find(sIdentifierLower, true)) then
                     table.insert(tFound.ByName, tBan)
 
-                -- Then, check if unique IDs
+                -- Then, check if unique IDs match
                 elseif (tBan.UniqueID:lower() == sIdentifierLower) then
                     table.insert(tFound.ByUniqueID, tBan)
                 else
@@ -524,7 +524,6 @@ Server:CreateComponent({
         IndexBan = function(self, hAdmin, tBan, sAction)
 
             --[[
-            -- TODO: Finish, or change
             ==== [ BAN:INFO ] ===============================================================
             [                                                                               ]
             [   Name        : Nomad.CV (#1008858     |   Banned By : CryMP-Server           ]
@@ -543,7 +542,7 @@ Server:CreateComponent({
             local bIsManager = hAdmin:HasAccess(ServerAccess_SuperAdmin)
             if (string.emptyN(sActionLower)) then
                 if (IsAny(sActionLower, "del", "erase", "remove", "unban", "flush")) then
-                    if (not bIsManager) then
+                    if (not bIsManager or tBan.Access > hAdmin:GetAccess()) then
                         return false, "@insufficientAccess"
                     end
 
@@ -622,7 +621,6 @@ Server:CreateComponent({
             table.insert(aMessageList, ("[ %s ]"):format(string.rep(" ", 105)))
             table.insert(aMessageList, ("[ %s ]"):format(sIdentifiersT))
 
-            -- TODO
             local iStep = 0
             local iStepMax = 1
             local iIdentifiers = #tBan.Identifiers

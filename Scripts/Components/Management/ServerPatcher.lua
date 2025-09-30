@@ -12,7 +12,7 @@ Server:CreateComponent({
     Name = "Patcher",
     Body = {
 
-        Properties = {
+        Config = {
 
             EntityUpdateRates = {
             },
@@ -34,13 +34,54 @@ Server:CreateComponent({
         Initialize = function(self)
 
 
-            self.EntityUpdateRates = {
+            local LOW = (1 / 8)
+            local NONE = (1 / 1)
+
+            -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            -- Important note: entity update functions that do mathematical
+            -- operations using the frameTime from their Update() function
+            -- WILL NOT WORK CORRECTLY with a LOWER update rate!!
+            -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+            self.Config.EntityUpdateRates = {
+
+                PowerStruggle     = 0, -- FIXME
+                InstantAction     = 0, -- FIXME
+                Factory           = 0,
+
+                Default           = (1 / 25), -- FIXME: bad idea?
                 AutoTurret        = (1 / 15),
                 AutoTurretAA      = (1 / 15),
-                Player            = (1 / 40),
+                Player            = 0,
                 GUI               = (1 / 20),
-                BasicEntity       = (1/ 30),
+                BasicEntity       = (1 / 30),
                 DestroyableObject = (1 / 30),
+                Vehicle           = (1 / 15), -- Any vehicle..
+                CustomAmmoPickup  = (1 / 20),
+
+                -- Client entities
+                Light             = LOW,
+                Cloud             = LOW,
+                AnimObject        = LOW,
+                SoundSpot         = LOW,
+                SoundEventSpot    = LOW,
+                SoundExclusive    = LOW,
+                SoundMoodVolume   = LOW,
+                SoundSupressor    = LOW,
+                SoundExclusivePreset= LOW,
+                TeamSoundSpot     = LOW,
+                ReverbVolume      = LOW,
+                MusicThemeSelector= LOW,
+                MusicLogicTrigger = LOW,
+                MusicMoodSelector = LOW,
+                MusicPlayPattern  = LOW,
+                MusicStinger      = LOW,
+                PrecacheCamera    = LOW,
+                FogVolume         = LOW,
+                Fog               = LOW,
+                Boids             = NONE, -- any BOIDS
+                -- Internal..
+                __Logged = {},
             }
 
             self:LogEvent({
@@ -49,6 +90,10 @@ Server:CreateComponent({
                 Recipients = ServerAccess_GetAdmins()
             })
 
+            -- test
+            --for _,ht in pairs(Server.Utils:GetEntities({ByClass="AutoTurret"})) do
+            --    DebugLog("up=",ht.Server.OnUpdate)
+            --end
             if (Server:WasInitialized()) then
                 for sClass, tHookInfo in pairs(self.ActiveHooks) do
                     for _, hEntity in pairs(Server.Utils:GetEntities({ ByClass = sClass })) do
@@ -61,8 +106,7 @@ Server:CreateComponent({
             end
         end,
 
-        PostInitialize = function(self)
-
+        PostInitialize = function()
         end,
 
         SnapshotEnvironment = function(self, sId)
@@ -85,9 +129,21 @@ Server:CreateComponent({
 
         OnEntitySpawned = function(self, hEntity)
             local sClass = hEntity.class
-            local iUpdateRate = (self.Properties.EntityUpdateRates[sClass])
+
+            local sSpecialClass
+            if (hEntity.type == "Boids") then sSpecialClass = "Boids"
+            elseif (hEntity.vehicle) then sSpecialClass = "Vehicle" end
+
+            local tRates = self.Config.EntityUpdateRates
+            local iUpdateRate = (tRates[sSpecialClass or sClass] or tRates.Default)
             if (iUpdateRate) then
                 ServerDLL.SetEntityScriptUpdateRate(hEntity.id, iUpdateRate)
+
+                -- debug
+                if (not tRates.__Logged[sClass]) then
+                    tRates.__Logged[sClass] = true
+                    self:LogV(LogVerbosity_Highest, "[%s] Update Rate: %f", sClass, iUpdateRate)
+                end
             end
         end,
 
@@ -97,7 +153,7 @@ Server:CreateComponent({
 
         OnScriptLoaded = function(self, sPath)
 
-            -- Track changes per-script, combine any possilbe new pollutions
+            -- Track changes per-script, combine any possible new pollutions
             local tChange = table.Combine_Values(self.EnvironmentChanges[sPath] or {}, self:CompareEnvironment(sPath))
             if (table.emptyN(tChange)) then
                 for _, sKey in pairs(tChange) do
@@ -130,8 +186,8 @@ Server:CreateComponent({
         HookObject = function(self, hClass, sClass, aBody)
 
             local function Log(...)
-                if (1) then
-                    return
+                if (sClass~="") then
+                   return
                 end
                 self:Log(...)
             end
@@ -143,7 +199,7 @@ Server:CreateComponent({
             local function Table(tArray, tParent, sStack)
                 for i, v in pairs(tArray) do
                     if (type(v) == "table") then
-                        if (tParent[i]) then
+                        if (tParent[i] ~= nil) then
                             if (type(tParent[i]) ~= "table") then
                                 error("mismatching types in Table() <stack:" .. Stack(sStack, i) .. ">")
                             end
@@ -161,7 +217,9 @@ Server:CreateComponent({
             local function Body(tBody, tParent, sStack)
                 for sKey, aInfo in pairs(tBody) do
                     Log("%s.%s=", sStack,sKey)
-                    if (aInfo.Value and aInfo.Name) then
+                    --Log(table.Size(aInfo))
+                    local iInfo = table.Size(aInfo)
+                    if (aInfo.Value and aInfo.Name and (iInfo == 2 or (iInfo == 3 and aInfo.Backup ~= nil))) then
                         if (type(aInfo.Value) == "table") then
                             Log("Value is table")
                             if (tParent[aInfo.Name]) then
@@ -186,7 +244,7 @@ Server:CreateComponent({
                     else
                         if (tParent[sKey]) then
                             if (type(tParent[sKey]) ~= "table") then
-                                error("mismatching types")
+                                error(("mismatching types (%s is not table (stack: %s))"):format(sKey, Stack(sStack, sKey)))
                             end
                         else
                             tParent[sKey] = {}
@@ -259,6 +317,11 @@ Server:CreateComponent({
 
         InsertHook = function(self, sClass, sMember, hValue, bCreateBackup)
             local hIndex = self.ActiveHooks[sClass].Body
+            if (string.MatchesAny(sMember, { "(%.%.+)", "^%.", "%.$" })) then
+                self:LogFatal("malformed target for hooking")
+                self:LogFatal("class = %s, member = %s", sClass, sMember)
+                error("bad hook info, check your sources")
+            end
             local aParts = string.split(sMember, ".")
             for i = 1, #aParts do
                 local sPart = aParts[i]
@@ -287,9 +350,11 @@ Server:CreateComponent({
 
             local sClass = (aInfo.Class)
             local sParent = (aInfo.Parent)
-            local aEvents = (aInfo.Events or {})
-            local bHookNow = (aInfo.HookNow)
+            local iChildren = 1
+            --local aEvents = (aInfo.Events or {})
+            --local bHookNow = (aInfo.HookNow)
             if (IsArray(sClass)) then
+                iChildren = #sClass
                 for _, tClass in pairs(sClass) do
                     self:HookClass({
                         Class   = tClass,
@@ -303,11 +368,11 @@ Server:CreateComponent({
             end
 
 
-            local aClassEntities = Server.Utils:GetEntities({ ByClass = sClass })
-            local aBody = aInfo.Body
+            --local aClassEntities = Server.Utils:GetEntities({ ByClass = sClass })
+            --local aBody = aInfo.Body
             if (sParent) then
                 if (not self.ActiveHooks[sParent]) then
-                    self:Log("Creating new Parent Class '%s'",sParent)
+                    self:LogV(LogVerbosity_Low, "Creating new Parent Class '%s' with %d Children", sParent, iChildren)
                     self:HookBody(table.Merge(aInfo, {
                         Class = sParent,
                     }))
@@ -320,7 +385,7 @@ Server:CreateComponent({
                 --    self:Log("Hook Entity %s (%s)", hEntity:GetName(), hEntity.class)
                 --end
 
-                self:Log("Linked Class '%s' to Parent Class '%s'",sClass,sParent)
+                self:LogV(LogVerbosity_High, "Linked Class '%s' to Parent Class '%s'", sClass, sParent)
                 return
             end
 
@@ -349,18 +414,18 @@ Server:CreateComponent({
 
         FixRMIFlags = function(self, tInfo)
 
-            if (not self.Properties.FixDangerousRMIFlags) then
+            if (not self.Config.FixDangerousRMIFlags) then
                 return
             end
 
             local iFixedCount = 0
-            for sFunction, aMethodParams in pairs(tInfo.ClientMethods) do
+            for _, aMethodParams in pairs(tInfo.ClientMethods) do
                 if (aMethodParams[2] == POST_ATTACH) then
                     aMethodParams[2] = NO_ATTACH
                     iFixedCount = (iFixedCount + 1)
                 end
             end
-            for sFunction, aMethodParams in pairs(tInfo.ServerMethods) do
+            for _, aMethodParams in pairs(tInfo.ServerMethods) do
                 if (aMethodParams[2] == POST_ATTACH) then
                     aMethodParams[2] = NO_ATTACH
                     iFixedCount = (iFixedCount + 1)

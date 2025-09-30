@@ -53,7 +53,7 @@ Server:CreateComponent({
             return ConfigType_Any
         end,
 
-        Get = function(self, sValue, hDefault, iType)
+        Get = function(self, sValue, hDefault, iType, fPredicate)
 
             local hValue = LuaUtils.CheckGlobal("Server.Config.ActiveConfiguration.Body." .. sValue)--, hDefault)
             local bIsDefault = true
@@ -85,6 +85,12 @@ Server:CreateComponent({
                 end
             end
 
+            if (fPredicate) then
+                local hValuePredicated = fPredicate(hValue)
+                if (hValuePredicated ~= nil) then
+                    return hValuePredicated
+                end
+            end
             return hValue
         end,
 
@@ -124,7 +130,7 @@ Server:CreateComponent({
                 Body = aBody
             }
 
-            self:Log("Created new Configuration with Name '%s' (Enabled: %s)", sName, (bStatus and "Yes" or "No"))
+            self:LogV(LogVerbosity_Low, "Created new Configuration with Name '%s' (Enabled: %s)", sName, (bStatus and "Yes" or "No"))
             if (bStatus) then
                 self:Activate(sName)
             end

@@ -22,11 +22,13 @@ FIVE_MINUTES     = 300       -- 60 * 5
 ONE_MINUTE       = 60        -- 60
 ONE_SECOND       = 1         -- 1
 
-DateFormat_Days = 2
-DateFormat_Hours = 4
-DateFormat_Minutes = 8
-DateFormat_Cramped = 16
-DateFormat_Comma = 32
+DateFormat_Days = BitStep(2)
+DateFormat_Hours = BitStep()
+DateFormat_Minutes = BitStep()
+DateFormat_Highest = BitStep()
+DateFormat_Cramped = BitStep()
+DateFormat_Comma = BitStop()
+
 
 --------------
 Date = {
@@ -45,7 +47,14 @@ Date.Init = function(self)
 
     ServerLog("Max Safe Non-Scientific Integer: %f", self.MaxNonScientificInteger)
 
+
     --[[
+    ServerLog("%s",Date:Format(math.random(1,180000), DateFormat_Highest))
+    ServerLog("%s",Date:Format(math.random(1,18000), DateFormat_Highest))
+    ServerLog("%s",Date:Format(math.random(1,1800), DateFormat_Highest))
+    ServerLog("%s",Date:Format(math.random(1,180), DateFormat_Highest))
+    ServerLog("%s",Date:Format(math.random(1,10), DateFormat_Highest))
+    error(1)
     local sometime = math.random(1000,99999)
     local future = math.random(1000,99999)
 
@@ -147,7 +156,7 @@ Date.New = function(self, hTime)
     hDate.Diff = function(this, hDiff)
         local iDiff = hDiff
         if (Date:IsDate(hDiff)) then
-            iDiff = os.time(hDiff.__date)
+            iDiff = hDiff:ToSeconds()
         end
         return (os.time(this.__date) - iDiff)
     end
@@ -234,6 +243,24 @@ Date.Format = function(self, iTime, iType, iUnitLimit)
 
     elseif (BitAND(iType, DateFormat_Minutes) ~= 0) then
         table.remove(aUnits,#aUnits)
+
+        -- 86400 ==> 1d
+        -- 3600  ==> 1h
+        -- 3601  ==> 1h (instead of 1h: 0m: 1s)
+    elseif (BitAND(iType, DateFormat_Highest) ~= 0) then
+        local bOk = true
+        repeat
+            local tUnit = aUnits[1]
+            if (tUnit) then
+                if (iTime < tUnit.Value) then
+                    table.remove(aUnits, 1)
+                else
+                    -- Keep the current one, but remove all before that
+                    aUnits = { tUnit }
+                    bOk = false
+                end
+            end
+        until (not bOk or (#aUnits == 1))
     end
 
     local iUnits = table.size(aUnits)

@@ -14,6 +14,9 @@ Server:CreateComponent({
     Body = {
 
         Initialize = function(self)
+            self.EntityClasses  = ServerDLL.GetEntityClasses()
+            self.ItemClasses    = ServerDLL.GetItemClasses()
+            self.VehicleClasses = ServerDLL.GetVehicleClasses()
         end,
 
         PostInitialize = function(self)
@@ -32,6 +35,17 @@ Server:CreateComponent({
             self.Counters[hId] = iCounter
 
             return iCounter
+        end,
+
+        FrameTime = function(self, hEntity)
+
+            local iFrameTime = System.GetFrameTime()
+            if (hEntity.LastUpdateTime) then
+                iFrameTime = _time - hEntity.LastUpdateTime
+            end
+
+            hEntity.LastUpdateTime = _time
+            return iFrameTime
         end,
 
         ListToConsole = function(self, aParams)
@@ -66,7 +80,7 @@ Server:CreateComponent({
                     sItem = v
                 end
                 if (sColorFilter) then
-                    local iStart, iEnd = string.find(sItem, ("^" .. sColorFilter))
+                    local iStart, iEnd = string.find(sItem:lower(), ("^" .. sColorFilter:lower()))
                     if (iStart) then
                         local sBefore = sItem:sub(1, iStart - 1) or ""
                         local sPiece = sItem:sub(iStart, iEnd)
@@ -84,7 +98,88 @@ Server:CreateComponent({
             Server.Chat:ConsoleMessage(hPlayer, string.format("$9%s", string.rep("=", iBoxWidth)))
         end,
 
+        FindInList = function(self, tInfo)
+
+            local sValueToFind = tInfo.Find
+            local sClassTitle = tInfo.ClassTitle or "Items"
+            local hPlayer = tInfo.Player
+            local aList = tInfo.List
+            local iList = table.Size(aList)
+
+            DebugLog("l",#aList)
+            if (iList == 0) then
+                return false, nil, (hPlayer and hPlayer:LocalizeText("@noClassToDisplay", { Class = sClassTitle }))
+            end
+
+            local aFound
+            if (sValueToFind) then
+                aFound = table.it(aList, function(x, i, v)
+                    local t = x
+                    local a = string.lower(v)
+                    local b = string.lower(sValueToFind)
+                    if (a == b) then
+                        return { v }, 1
+                    elseif (string.len(b) > 0 and string.match(a, "^" .. b)) then
+                        if (t) then
+                            table.insert(t, v)
+                            return t
+                        end
+                        return { v }
+                    end
+                    return t
+                end)
+
+                if (table.count(aFound) == 0) then
+                    --aFound = nil
+                    return false, nil, (hPlayer and hPlayer:LocalizeText("@noClassToDisplay", { Class = sClassTitle }))
+                end
+            end
+
+            local iFound = table.count(aFound)
+            if (sValueToFind == nil or (not aFound or iFound > 1)) then
+                if (hPlayer) then
+                    local iElementsPerLine = 3
+                    if (iFound < 50) then
+                        iElementsPerLine = 1
+                    elseif (iFound < 80) then
+                        iElementsPerLine = 2
+                    end
+                    self:ListToConsole({
+                        Client      = hPlayer,
+                        List        = (aFound or aList),
+                        Title       = hPlayer:LocalizeText("@classList", { Class = sClassTitle }),
+                        ItemWidth   = 96 / iElementsPerLine,
+                        PerLine     = iElementsPerLine,
+                        Value       = 1,
+                        ItemColorFilter = sValueToFind
+                    })
+                    --Server.Chat:ChatMessage(Server:GetEntity(), hPlayer, "@entitiesListedInConsole", { Class = "CVars", Count = table.size((aFound or aCVars)) })
+                end
+                return false, aFound, (hPlayer and hPlayer:LocalizeText("@entitiesListedInConsole", { Class = sClassTitle, Count = table.Size((aFound or aList)) }))
+            end
+
+            return true, aFound[1]
+        end,
+
+        FindClassByName = function(self, hPlayer, sClass)
+
+            return self:FindInList({
+                Player = hPlayer,
+                Find = sClass,
+                ClassTitle = "Entities",
+                List = self:GetEntityClasses()
+            })
+        end,
+
         FindCVarByName = function(self, sCVar, hPlayer)
+
+            return self:FindInList({
+                Player = hPlayer,
+                Find = sCVar,
+                ClassTitle = "CVars",
+                List = ServerDLL.GetVars()
+            })
+            --[[
             local aCVars = ServerDLL.GetVars()
             local iCVars = table.size(aCVars)
             if (iCVars == 0) then
@@ -142,18 +237,56 @@ Server:CreateComponent({
             end
 
             return true, aFound[1]
+            ]]
         end,
 
         IsPointInDoors = function(self, vPoint)
-           return ( System.IsPointIndoors(vPoint))
+           return (System.IsPointIndoors(vPoint))
         end,
 
-        GetTeamId = function(self, pEntity)
+        IsPointOutDoors = function(self, vPoint)
+           return not (System.IsPointIndoors(vPoint))
+        end,
+
+        IsPointUnderwater = function(self, vPoint, iAdjust)
+           local iLevel = CryAction.GetWaterInfo(vPoint)
+            if (not iLevel) then
+                return false
+            end
+            return ((iLevel + (iAdjust or 0)) >= vPoint.z)
+        end,
+
+        IsPointUnderGround = function(self, vPoint, iAdjust)
+           local iLevel = System.GetTerrainElevation(vPoint)
+            if (not iLevel) then
+                return true -- ???
+            end
+            return ((iLevel + (iAdjust or 0)) >= vPoint.z)
+        end,
+
+        FollowTerrain = function(self, vPoint, iAdjust)
+
+            iAdjust = iAdjust or 0
+
+            local iGround = System.GetTerrainElevation(vPoint)
+            local iWater = CryAction.GetWaterInfo(vPoint)
+            if (iWater and iWater > iGround) then
+                return Vector.ModifyZ(vPoint, iWater + iAdjust, 1)
+            end
+
+            return Vector.ModifyZ(vPoint, iGround + iAdjust, 1)
+        end,
+
+        GetTeamId = function(self, pEntity, iCompare)
             local hEntity = self:GetEntity(pEntity)
             if (not hEntity) then
                 return
             end
-            return self.Game:GetTeam(hEntity.id)
+            local iTeam = g_gameRules.game:GetTeam(hEntity.id)
+            if (iCompare) then
+                return (iTeam == iCompare)
+            end
+            return iTeam
         end,
 
         GetTeam_Number = function(self, sId)
@@ -320,8 +453,44 @@ Server:CreateComponent({
             return Vector.Distance3d(vPos1, vPos2)
         end,
 
+        GetDistance2d = function(self, vPos1, vPos2)
+
+            if (self:IsEntity(vPos1)) then
+                vPos1 = vPos1:GetPos()
+            end
+            if (self:IsEntity(vPos2)) then
+                vPos2 = vPos2:GetPos()
+            end
+
+            return Vector.Distance2d(vPos1, vPos2)
+        end,
+
+        GetDistanceZ = function(self, vPos1, vPos2)
+
+            if (self:IsEntity(vPos1)) then
+                vPos1 = vPos1:GetPos()
+            end
+            if (self:IsEntity(vPos2)) then
+                vPos2 = vPos2:GetPos()
+            end
+
+            return Vector.DistanceZ(vPos1, vPos2)
+        end,
+
         IsEntity = function(self, pEntity)
             return self:GetEntity(pEntity, true) ~= nil
+        end,
+
+        GetDir = function(self, hId1, hId2)
+            local hEntity1 = self:GetEntity(hId1)
+            local hEntity2 = self:GetEntity(hId2)
+
+            if (not (hEntity1 and hEntity2)) then
+                error("one entity not found")
+            end
+
+            -- FIXME: always normalized and not scaled!
+            return Vector.Direction(hEntity1:GetPos(), hEntity2:GetPos())
         end,
 
         AddImpulse = function(self, hEntity, vPos, vDir, fImpulse)
@@ -381,10 +550,16 @@ Server:CreateComponent({
                     bOk = (bOk and (aInfo.NotById ~= hEntity.id))
                 end
 
-                if (aInfo.ByTeam) then
-                    bOk = (bOk and (self:GetTeamId(hEntity.id) == aInfo.ByTeam))
-                elseif (aInfo.NotByTeam) then
-                    bOk = (bOk and (self:GetTeamId(hEntity.id) ~= aInfo.NotByTeam))
+                if (bOk) then
+                    if (aInfo.ByTeam) then
+                        bOk = (bOk and (self:GetTeamId(hEntity.id) == aInfo.ByTeam))
+                    elseif (aInfo.NotByTeam) then
+                        bOk = (bOk and (self:GetTeamId(hEntity.id) ~= aInfo.NotByTeam))
+                    end
+                end
+
+                if (bOk and aInfo.ByMember) then
+                    bOk = (hEntity[aInfo.ByMember] ~= nil)
                 end
 
                 if (bOk and aInfo.FromPos) then
@@ -415,8 +590,24 @@ Server:CreateComponent({
             return
         end,
 
+        IsVehicleClass = function(self, sClass)
+            return table.FindAny(self:GetVehicleClasses(), sClass) ~= nil
+        end,
+
+        IsItemClass = function(self, sClass)
+            return table.FindAny(self:GetItemClasses(), sClass) ~= nil
+        end,
+
         GetVehicleClasses = function(self)
-            return ServerDLL.GetVehicleClasses()
+            return (self.VehicleClasses or ServerDLL.GetVehicleClasses())
+        end,
+
+        GetItemClasses = function(self)
+            return (self.EntityClasses or ServerDLL.GetEntityClasses())
+        end,
+
+        GetEntityClasses = function(self)
+            return (self.EntityClasses or ServerDLL.GetEntityClasses())
         end,
 
         RemoveEntitiesByClass = function(self, sClass)
@@ -425,7 +616,19 @@ Server:CreateComponent({
             end
         end,
 
+        AwakeEntity = function(self, hId)
+            local hEntity = self:GetEntity(hId)
+            if (hEntity) then
+                hEntity:AwakePhysics(1)
+                hEntity:AddImpulse(-1, hEntity:GetPos(), Vector.Up(), 1, 1)
+            end
+        end,
+
         RemoveEntity = function(self, hId)
+            if (type(hId) == "table") then
+                System.RemoveEntity(hId.id)
+                return
+            end
             System.RemoveEntity(hId) -- FIXME: accept tables
         end,
 
@@ -546,7 +749,7 @@ Server:CreateComponent({
         end,
 
         GetPlayerByChannel = function(self, iChannel)
-            return self.Game:GetPlayerByChannelId(iChannel)
+            return g_gameRules.game:GetPlayerByChannelId(iChannel)
         end,
 
         GetPlayers = function(self, aInfo)

@@ -271,12 +271,12 @@ table.lookupRec = function(t, val, o, tf)
 			return k 
 		else
 			if (table.isarray(v) and (o ~= v and o ~= _G)) then
-				local t = table.lookupRec(v, val, t)
-				if (t) then
+				local tt = table.lookupRec(v, val, t)
+				if (tt) then
 					if (tf) then
 						return true
 					end
-					return t
+					return tt
 				end
 			end
 		end 

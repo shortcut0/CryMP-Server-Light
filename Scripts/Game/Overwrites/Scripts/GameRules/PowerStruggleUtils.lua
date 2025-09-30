@@ -1,3 +1,13 @@
+-- ===================================================================================
+--          ____            __  __ ____            ____                             --
+--         / ___|_ __ _   _|  \/  |  _ \          / ___|  ___ _ ____   _____ _ __   --
+--        | |   | '__| | | | |\/| | |_) |  _____  \___ \ / _ \ '__\ \ / / _ \ '__|  --
+--        | |___| |  | |_| | |  | |  __/  |_____|  ___) |  __/ |   \ V /  __/ |     --
+--         \____|_|   \__, |_|  |_|_|             |____/ \___|_|    \_/ \___|_|     --
+--                    |___/  changes by: shortcut0                                  --
+-- Modified and Fixed some functions
+-- ===================================================================================
+
 --------------------------------------------------------------------------
 --	Crytek Source File.
 -- 	Copyright (C), Crytek Studios, 2001-2006.
@@ -102,8 +112,10 @@ function MakeCapturable(entity)
 	
 	-- OnUpdate
 	entity.Server.OnUpdate=replace_post(entity.Server.OnUpdate, function(self, frameTime)
+
+		local iFrameTime = Server.Utils:FrameTime(self)
 		if (self.capturable) then
-			self:UpdateCapture(frameTime);
+			self:UpdateCapture(iFrameTime)--frameTime);
 		end
 	end);
 
@@ -257,6 +269,12 @@ function MakeCapturable(entity)
 	
 	-- StartUncapture
 	entity.StartUncapture=replace_post(entity.StartUncapture, function(self, teamId)
+
+		if (not g_gameRules:CanUncapture(self, teamId, self.inside)) then
+			--Log("Cannot uncapture")
+			return
+		end
+
 		self.uncapturing=true;
 		self.uncapturingTeamId=teamId;
 		
@@ -341,6 +359,12 @@ function MakeCapturable(entity)
 	
 	-- StartCapture
 	entity.StartCapture=replace_post(entity.StartCapture, function(self, teamId)
+
+		if (not g_gameRules:CanCapture(self, teamId, self.inside)) then
+			--Log("Cannot uncapture")
+			return
+		end
+
 		self.capturing=true;
 		self.capturingTeamId=teamId;
 		self.capturingTimer=tonumber(self.Properties.captureTime);
@@ -412,12 +436,7 @@ function MakeCapturable(entity)
 		
 		local players=self.inside;
 		if (players) then
-			local value=0;
-			if (g_gameRules.captureValue) then
-				local idx=self:GetCaptureIndex();
-				value=g_gameRules.captureValue[idx] or 0;
-			end
-		
+			local value = g_gameRules:GetCapturePP(self, players, teamId)
 			g_gameRules:AwardCapturePP(self, players, value, teamId)
 		end
 		

@@ -9,7 +9,9 @@
 -- ===================================================================================
 
 ---@class Vector
-Vector = {}
+Vector = {
+    __type = { "vector" }
+}
 
 -- ======================================
 Vector.New = function(x, y, z)
@@ -51,6 +53,92 @@ Vector.Copy = function(vec_a)
 end
 
 -- ======================================
+Vector.IsVecAny = function(vec)
+    return (Vector.Is3D(vec) or Vector.Is2D(vec) or Vector.Is1D(vec))
+end
+
+-- ======================================
+Vector.Is3D = function(vec)
+    return (table.Size(vec) == 3 and vec.x and vec.y and vec.z)
+end
+
+-- ======================================
+Vector.Is2D = function(vec)
+    return (table.Size(vec) == 2 and vec.x and vec.y)
+end
+
+-- ======================================
+Vector.Is1D = function(vec)
+    return (table.Size(vec) == 1 and vec.x)
+end
+
+-- ======================================
+Vector.Direction = function(source, target, normalize, scale)
+    if (normalize == nil) then normalize = 1 end
+    if (scale == nil) then scale = 1 end
+
+    -- for direction from source to target, we need to subtract source from target
+    local direction = Vector.Sub(target, source)
+    local in_place = true
+    if (normalize) then
+        Vector.Normalize(direction, in_place)
+    end
+    if (scale) then
+        Vector.Scale(direction, scale, in_place)
+    end
+    return direction
+end
+
+-- ======================================
+Vector.Normalize = function(vec, in_place)
+    local len = Vector.Length(vec)
+    if (len == 0) then
+        return vec
+    end
+
+    if (in_place) then
+        vec.x, vec.y, vec.z =
+        vec.x / len, vec.y / len, vec.z / len
+        return vec
+    end
+
+    return {
+        x = vec.x / len,
+        y = vec.y / len,
+        z = vec.z / len
+    }
+end
+
+
+-- ======================================
+Vector.Length = function(vec)
+    local x = (vec.x)
+    local y = (vec.y)
+    local z = (vec.z)
+    return math.sqrt(x * x + y * y + z * z)
+end
+
+-- ======================================
+Vector.Length2D = function(vec)
+    local x = (vec.x)
+    local y = (vec.y)
+    return math.sqrt(x * x + y * y)
+end
+
+-- ======================================
+Vector.Length1D = function(vec)
+    local x = (vec.x)
+    local y = (vec.y)
+    return math.sqrt(x * x)
+end
+
+-- ======================================
+Vector.LengthZ = function(vec)
+    local z = (vec.z)
+    return math.sqrt(z * z)
+end
+
+-- ======================================
 Vector.Distance3d = function(vec_a, vec_b)
     local x = (vec_a.x - vec_b.x)
     local y = (vec_a.y - vec_b.y)
@@ -69,6 +157,44 @@ end
 Vector.Distance1d = function(vec_a, vec_b)
     local x = (vec_a.x - vec_b.x)
     return math.sqrt(x * x)
+end
+
+-- ======================================
+Vector.DistanceZ = function(vec_a, vec_b)
+    local z = (vec_a.z - vec_b.z)
+    return math.sqrt(z * z)
+end
+
+-- ======================================
+Vector.Align3D_100 = function(vec_a, vec_b)
+    -- 0<=>100
+    return (Vector.Align3D(vec_a, vec_b) + 1) / 2
+end
+
+-- ======================================
+Vector.Align3D = function(vec_a, vec_b)
+    -- Compute lengths (magnitudes)
+    local a_len = Vector.Length(vec_a)
+    local b_len = Vector.Length(vec_b)
+
+    -- Avoid division by zero
+    if (a_len == 0 or b_len == 0) then
+        return 0
+    end
+
+    -- Normalize vectors
+    local ax, ay, az = vec_a.x, vec_a.y, vec_a.z
+    local bx, by, bz = vec_b.x, vec_b.y, vec_b.z
+    local nax, nay, naz = ax / a_len, ay / a_len, az / a_len
+    local nbx, nby, nbz = bx / b_len, by / b_len, bz / b_len
+
+    local dot = nax * nbx + nay * nby + naz * nbz
+
+    if dot > 1 then dot = 1 end
+    if dot < -1 then dot = -1 end
+
+    -- -1<=>1
+    return dot
 end
 
 -- ======================================
@@ -106,6 +232,11 @@ Vector.Negative = function(vec_a, in_place)
 end
 
 -- ======================================
+Vector.NegativeInPlace = function(vec_a)
+    return Vector.Scale(vec_a, -1, true)
+end
+
+-- ======================================
 Vector.Add = function(vec_a, vec_b, in_place)
     if (in_place) then
         vec_a.x = vec_a.x + vec_b.x
@@ -118,6 +249,22 @@ Vector.Add = function(vec_a, vec_b, in_place)
     vec_new.x = vec_a.x + vec_b.x
     vec_new.y = vec_a.y + vec_b.y
     vec_new.z = vec_a.z + vec_b.z
+    return vec_new
+end
+
+-- ======================================
+Vector.Sub = function(vec_a, vec_b, in_place)
+    if (in_place) then
+        vec_a.x = vec_a.x - vec_b.x
+        vec_a.y = vec_a.y - vec_b.y
+        vec_a.z = vec_a.z - vec_b.z
+        return vec_a
+    end
+
+    local vec_new = {}
+    vec_new.x = vec_a.x - vec_b.x
+    vec_new.y = vec_a.y - vec_b.y
+    vec_new.z = vec_a.z - vec_b.z
     return vec_new
 end
 

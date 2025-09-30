@@ -132,6 +132,8 @@ Server:CreateComponent({
             if (string.emptyN(hPlayer:GetHardwareId()) and not hPlayer.Info.UniqueIDAssigned) then
                 self:AssignUniqueID(hPlayer, self:GetUniqueID(hPlayer))
             end
+
+            Server.Events:Call(ServerScriptEvent_OnValidationFinished, hPlayer, hPlayer:GetProfileId())
         end,
 
         GetPlayerByUniqueID = function(self, hId)
@@ -549,6 +551,8 @@ Server:CreateComponent({
                     hUser.Data.HasToxicityPass = true -- Automatically enable this on Admins
                 end
             end
+
+            g_gameRules.game:SetSynchedEntityValue(hUser.id, GlobalKeys.PlayerAccessName, sAccessName)
         end,
 
         GetAccessName = function(self, iAccessLevel)

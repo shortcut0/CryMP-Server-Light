@@ -204,11 +204,14 @@ Server:CreateComponent({
 
         Add = function(self, tLocaleInfo)
 
+            local bOk = true
+            local iRegistered = 0
+
             if (table.IsRecursive(tLocaleInfo)) then
                 for _, aInfo in pairs(tLocaleInfo) do
-                    self:Add(aInfo)
+                    iRegistered = (iRegistered + ({ self:Add(aInfo) })[2])
                 end
-                return
+                return bOk, iRegistered
             end
 
             local sId = string.lower(tLocaleInfo.String)
@@ -222,11 +225,12 @@ Server:CreateComponent({
             if (tExistingLocale) then
                 tExistingLocale.Languages = table.Merge(tExistingLocale.Languages, aLanguages or {})
                 self:LogWarning("Duplicated Locale Information for '%s'! Merging Languages", sId)
-                return
+                return true, 0
             end
 
             tLocaleInfo.Languages = aLanguages
             self.LocalizationList[sId] = tLocaleInfo
+            return true, 1
         end
     }
 })

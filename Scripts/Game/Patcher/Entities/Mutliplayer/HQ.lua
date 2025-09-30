@@ -229,6 +229,42 @@ Server.Patcher:HookClass({
 
                 return bDestroyed
             end
-        }
+        },
+        {
+            Name = "Server.OnEnterArea",
+            Value = function(self, entity, areaId)
+                DebugLog("Enter area for",entity:GetName(),"id=",areaId,"periId",self.Properties.perimeterAreaId)
+                if (entity.actor and areaId == self.Properties.perimeterAreaId) then
+                    if (g_gameRules.Server.OnPerimeterBreached) then
+                        g_gameRules.Server.OnPerimeterBreached(g_gameRules, self, entity);
+                    end
+                end
+            end
+        },
+        {
+            Name = "Server.OnEnterAread.y.z.x",
+            Value = function(self, entity, areaId)
+                --[[
+                local dim=2*radius;
+
+	local trigger=System.SpawnEntity{
+		class="ProximityTrigger",
+		flags=ENTITY_FLAG_SERVER_ONLY,
+		position={x=0, y=0, z=0},
+		name=vehicle:GetName().."_service_zone_trigger",
+
+
+		properties={
+			DimX=dim,
+			DimY=dim,
+			DimZ=dim,
+			bOnlyPlayer=0,
+		},
+	};
+	vehicle:AttachChild(trigger.id, 0);
+	trigger:ForwardTriggerEventsTo(vehicle.id);
+                ]]
+            end
+        },
     }
 })

@@ -10,19 +10,40 @@
 -- 'PersistentScore' Key for the Server Plugin: 'PersistentScore' 
 -- ===================================================================================
 return {
- ["MapSpecific"] = {
- },
  ["Global"] = {
  },
- ["multiplayer/ps/mesa"] = {
-  ["1073450"] = {
-   ["Kills"] = 0,
-   ["PP"] = 0,
-   ["Deaths"] = 0,
-   ["ID"] = "1073450",
-   ["Headshots"] = 0,
-   ["XP"] = 0,
-   ["Rank"] = 1,
+ ["MapSpecific"] = {
+  ["multiplayer/ps/mesa"] = {
+   ["1073450"] = {
+    ["Kills"] = 437,
+    ["Deaths"] = 787,
+    ["XP"] = 164.250000,
+    ["Timestamp"] = 1761618530,
+    ["ID"] = "1073450",
+    ["Headshots"] = 12,
+    ["PP"] = 0,
+    ["Rank"] = 2,
+   },
+   ["1011669"] = {
+    ["Kills"] = 0,
+    ["Deaths"] = 0,
+    ["PP"] = 0,
+    ["Timestamp"] = 1761697243,
+    ["ID"] = "1011669",
+    ["Headshots"] = 0,
+    ["XP"] = 0,
+    ["Rank"] = 1,
+   },
+   ["ip10001"] = {
+    ["Kills"] = 9,
+    ["Deaths"] = 3,
+    ["PP"] = 1822,
+    ["Timestamp"] = 1761699245,
+    ["ID"] = "ip10001",
+    ["Headshots"] = 9,
+    ["XP"] = 99,
+    ["Rank"] = 3,
+   },
   },
  },
 }

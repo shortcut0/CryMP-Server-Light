@@ -61,3 +61,12 @@ LuaUtils.TraceSource = function(nSkip)
     local sMostRecent = sTb:match("stack traceback:\n([^\n]*)")
     return (sMostRecent or "Unknown.Lua:0"):gsub("^%s%.+", "")
 end
+
+LuaUtils.TraceFunction = function(nSkip)
+    local sTb = debug.traceback("", (1 + (nSkip or 0)))--nil, (0 + (nSkip or 0))) or ""--"", 2 + (nSkip or 0)) -- skip this functio
+    local sMostRecent = (sTb or "<null>"):match("stack traceback:\n([^\n]*)")
+
+    ServerLog(sMostRecent)
+    sMostRecent = sMostRecent:match("in function '(.-)'") or ServerLFS.FileGetName(sMostRecent:match("in function <(.-)>") or "")
+    return (sMostRecent or "Unknown_Function"):gsub("^%s%.+", "")
+end

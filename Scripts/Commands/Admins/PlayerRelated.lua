@@ -143,9 +143,9 @@ Server.ChatCommands:Add({
     },
 
     -- ================================================================
-    -- !Spec <Target>
+    -- !Spectate <Target>
     {
-        Name = "Spec",
+        Name = "Spectate",
         Access = ServerAccess_Admin,
         Arguments = {
             { Name = "@target", Desc = "@arg_target_desc", Required = false, Type = CommandArg_TypePlayer },
@@ -161,6 +161,11 @@ Server.ChatCommands:Add({
             end
 
             -- Start
+            if (g_gameRules.IS_PS) then-- and not self.Info.TeamSelected) then
+                if (self:GetTeam() == GameTeam_Neutral) then
+                    self:SetTeam(GameTeam_US) -- Not racially motivated
+                end
+            end
             self:SetTemp("SpectatorEquip", self:GetEquipment())
             self:Spectate(1, hTarget)
             return true

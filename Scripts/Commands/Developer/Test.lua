@@ -9,6 +9,21 @@
 -- ===================================================================================
 
 Server.ChatCommands:Add({
+    -- ==========================================================================================
+    -- !ClTest <Target>
+    {
+        Name = "ClTest",
+        Access = ServerAccess_Highest,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", Required = true, Default = "self", AcceptSelf = true, Type = CommandArg_TypePlayer },
+        },
+        Function = function(self, hTarget, sCode)
+            Server.ClientMod:ExecuteCode({
+                Client = hTarget,
+                Code = ("CryMP_Client:FP_ANIM(%d,'%s')"):format(hTarget:GetChannel(),sCode or "nnn")
+            })
+        end
+    },
     {
         Name = "mmmm1",
         Access = ServerAccess_Highest,
@@ -42,12 +57,13 @@ Server.ChatCommands:Add({
         },
         Function = function(self, hTarget)
 
+            -- I changed it to the 'Data' to make this mode persistent between connects.
             local sStatus = "@enabled_on"
-            if (hTarget.Info.IsInTestMode) then
-                hTarget.Info.IsInTestMode = false
+            if (hTarget.Data.IsInTestMode) then
+                hTarget.Data.IsInTestMode = false
                 sStatus = "@disabled_on"
             else
-                hTarget.Info.IsInTestMode = true
+                hTarget.Data.IsInTestMode = true
             end
 
             return CmdResp_RawMessage, self:LocalizeText("@developerMode " .. sStatus, {{}, { Name = (self == hTarget and "@yourself" or hTarget:GetName()) }})

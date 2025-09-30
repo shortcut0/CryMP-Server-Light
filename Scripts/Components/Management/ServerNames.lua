@@ -169,6 +169,9 @@ Server:CreateComponent({
                 return false, hPlayer:LocalizeText("@name_in_use")
             end
 
+            -- For saving last used name
+            hPlayer.Info.HasRenamed = true
+
             Server.Utils:RenamePlayer(hPlayer, sNewName)
             self:LogEvent({
                 Message = "@user_renamed",

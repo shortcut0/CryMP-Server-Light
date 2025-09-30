@@ -26,6 +26,9 @@ timer.new = function(expiry)
 			hNew.expiry = i
 		end
 	end
+	hNew.GetSetExpiry = function()
+		return hNew.expiry
+	end
 	--------
 	hNew.refresh = function(i)
 		hNew.timer = timer.init()
@@ -78,6 +81,7 @@ timer.new = function(expiry)
 	hNew.Diff = hNew.diff
 	hNew.Refresh = hNew.refresh
 	hNew.Expired = hNew.expired
+	hNew.Expire = hNew.expire
 	hNew.Expired_Refresh = hNew.expired_refresh
 	hNew.GetExpiry = hNew.getexpiry
 	hNew.SetExpiry = hNew.setexpiry

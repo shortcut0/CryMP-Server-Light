@@ -21,6 +21,12 @@ Server:CreateComponent({
             Statistics = {}
         },
 
+        Config = {
+            StatisticsGoals = {
+
+            }
+        },
+
         Initialize = function(self)
         end,
 
@@ -49,9 +55,19 @@ Server:CreateComponent({
                     -- record WallJump
                     { StatisticsEvent_OnWallJumped, { self.AddValue, self, StatisticsValue_TotalWallJumps, 1 }},
 
-                    -- data transfer
+                    -- data transferred to a client
                     { StatisticsEvent_ClientDataSent, { self.AddValue, self, StatisticsValue_ClientDataSent, hValue }}
             )
+        end,
+
+        OnValueChanged = function(self, hStat, hValue, hPreviousValue)
+            if (hStat == StatisticsValue_PlayerRecord) then
+                self:LogEvent({
+                    Message = "@stats_playerRecordReached",
+                    MessageFormat = { Count = hValue },
+                    Recipients = ServerAccess_Developer,
+                })
+            end
         end,
 
         GetValue = function(self, hStat, hDefault)
@@ -67,7 +83,7 @@ Server:CreateComponent({
         end,
 
         AddValue = function(self, hStat, iAdd)
-            self:ModifyStat(hStat, (self.Statistics[hStat] or 0) + iAdd)
+            self:ModifyStat(hStat, self:GetValue(hStat, 0) + iAdd)
         end,
 
         IncreaseValue = function(self, hStat, iNewValue)
@@ -78,7 +94,18 @@ Server:CreateComponent({
         end,
 
         ModifyStat = function(self, hStat, hValue)
+            local hPreviousValue = self:GetValue(hStat)
+            self:OnValueChanged(hStat, hValue, hPreviousValue)
             self.Statistics[hStat] = hValue
         end,
-    }
+
+        Localization = {
+            {
+                String = "stats_playerRecordReached",
+                Languages = {
+                    English = "Reached new Player Record {Red}{Count}{Gray}!"
+                }
+            },
+        },
+    },
 })

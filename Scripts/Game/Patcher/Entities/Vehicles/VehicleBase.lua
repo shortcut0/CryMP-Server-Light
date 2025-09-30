@@ -19,7 +19,6 @@ Server.Patcher:HookClass({
             Name = "InitCryMP",
             Value = function(self)
 
-
                 self.Properties.ServerInfo = (self.Properties.ServerInfo or {})
                 self.ServerInfo = self.Properties.ServerInfo -- Persistent info staying even after respawns
                 self.ServerInfo_Temp = {} -- Temporary data not passed down to respawns
@@ -31,8 +30,27 @@ Server.Patcher:HookClass({
                 local sModification = self.Properties.Modification
                 self:SetInfo("DoomsdayMachine", IsAny(sModification, "TACCannon", "Singularity"))
 
+                -- HAX
+                --Server.Patcher:OnEntitySpawned(self, { class = "Vehicle" })
                 --ServerLog("Is machine: %s",tostring(self:GetInfo("DoomsdayMachine")))
                 --ServerLog("VehicleBase.InitCryMP on '%s'. Is Child %s", self:GetName(), (self.IsOriginalSpawn and "No" or "Yes"))
+            end,
+        },
+        {
+            -------------------------------
+            ---        GetLocaleType
+            -------------------------------
+            Name = "GetLocaleType",
+            Value = function(self)
+
+                local sType = self.class
+                local tBuildDef = self:GetInfo("BuildDef")
+                if (tBuildDef) then
+                    sType = (tBuildDef.name or sType)
+                end
+
+                -- FIXME
+                return sType
             end,
         },
         {
@@ -324,6 +342,12 @@ Server.Patcher:HookClass({
             -------------------------------
             Name = "Server.OnHit",
             Value = function(self, aHitInfo)
+
+                -- !! AntiCheat
+                if (not Server.AntiCheat:ProcessVehicleHit(aHitInfo)) then
+                    aHitInfo.damage = 0
+                    return false
+                end
 
                 local explosion = aHitInfo.explosion or false
                 local targetId = (explosion and aHitInfo.impact) and aHitInfo.impact_targetId or aHitInfo.targetId;

@@ -90,6 +90,11 @@ Server.Patcher:HookClass({
                     return
                 end
 
+                -- !! Anti-Cheat
+                if (not Server.AntiCheat:CanOpenDoor(hUser, self)) then
+                    return
+                end
+
                 local bMode = DOOR_TOGGGLE
                 if (bOpen) then
                     bMode = DOOR_OPEN

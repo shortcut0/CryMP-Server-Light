@@ -34,6 +34,10 @@ Server:CreateComponent({
                 Server.Events:CheckComponentEvents("OnProfileValidated", hPlayer, sProfile)
             end,
 
+            OnValidationFinished = function(this, hPlayer, sProfile)
+                Server.Events:CheckComponentEvents("OnValidationFinished", hPlayer, sProfile)
+            end,
+
             OnActorSpawn = function(this, hPlayer)
                 return Server.Events:CheckComponentEvents("OnActorSpawn", hPlayer)
             end,
@@ -69,6 +73,10 @@ Server:CreateComponent({
 
                 if (iTimerID == 1) then
                     Server.Events:CheckComponentEvents("TimerSecond")
+                    for _, hPlayer in pairs(Server.Utils:GetPlayers()) do
+                        Server.Events:CheckComponentEvents("OnActorTick", hPlayer)
+                    end
+
                     --FIXME
                     Server.Events:SafeCall(g_gameRules, "Event_TimerSecond")
                     Server.Events:CallEvent(ServerEvent_OnTimerSecond, iTimerID)
@@ -82,33 +90,103 @@ Server:CreateComponent({
                 end
             end,
 
-            OnCheat                 = function()
+            OnCheat = function(self, hPlayerId, sCheat, sDescription, ...)
+
+                local hPlayer = Server.Utils:GetEntity(hPlayerId)
+                if (not hPlayer or not hPlayer.IsPlayer) then
+                    return
+                end
+                local tInfo = {
+                    Player      = hPlayer,
+                    Cheat       = sCheat,
+                    Description = sDescription,
+                    Params      = { ... }
+                }
+                Server.AntiCheat:OnCheatCallback(tInfo)
             end,
             RequestDropWeapon       = function(self, pActorId, pItemId)
                 DebugLog("Request DROP WEAPON")
                 return true
             end,
             RequestPickWeapon       = function(self, pActorId, pItemId)
+
+                local hPlayer = Server.Utils:GetEntity(pActorId)
+                local hItem = Server.Utils:GetEntity(pItemId)
+
+                if (not Server.AntiCheat:CanUseOrPickupItem(hPlayer, hItem)) then
+                    return false
+                end
+
                 DebugLog("Request PICK WEAPON")
                 return true
             end,
             RequestPickObject       = function(self, pActorId, pItemId)
+
+                local hPlayer = Server.Utils:GetEntity(pActorId)
+                local hItem = Server.Utils:GetEntity(pItemId)
+
+                if (not Server.AntiCheat:CanUseOrPickupItem(hPlayer, hItem)) then
+                    return false
+                end
+
                 DebugLog("Request PICK OBJECT")
                 return true
             end,
             RequestUseWeapon        = function(self, pActorId, pItemId)
+
+                local hPlayer = Server.Utils:GetEntity(pActorId)
+                local hItem = Server.Utils:GetEntity(pItemId)
+
+                if (not Server.AntiCheat:CanUseOrPickupItem(hPlayer, hItem)) then
+                    return false
+                end
+
                 DebugLog("Request USE ITEM")
                 return true
             end,
             OnWeaponDropped         = function() end,
             OnShoot                 = function(self, hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
+
+                -- !! AntiCheat
+                if (not Server.AntiCheat:ProcessShot(hShooter, hWeapon, {
+                    Ammo = hAmmo,
+                    AmmoClass = sAmmo,
+                    Pos = vPos,
+                    Dir = vDir,
+                    Hit = vHit,
+                })) then
+                    return false
+                end
+
                 Server.PlayerEquipment:OnWeaponFired(hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
                 Server.Events:SafeCall(g_gameRules, "Event_OnWeaponFired", hShooter, hWeapon, hAmmo, sAmmo, vPos, vHit, vDir)
             end,
             OnStartReload           = function() end,
             OnEndReload             = function() end,
             OnMelee                 = function(self, hShooterId, hWeaponId)
+                local hPlayer = Server.Utils:GetEntity(hShooterId)
+                local hWeapon = Server.Utils:GetEntity(hWeaponId)
+                if (not hPlayer) then
+                    return false
+                end
+                if (not Server.AntiCheat:ProcessMelee(hPlayer, hWeapon)) then
+                    return false
+                end
                 Server.PlayerEquipment:OnWeaponMelee(hShooterId, hWeaponId)
+                return true
+            end,
+            OnRadio                 = function(self, iChannel, hSenderId, iMsg)
+
+                local hChannel = g_gameRules.game:GetPlayerByChannelId(iChannel)
+                local hPlayer = Server.Utils:GetEntity(hSenderId)
+                if (not (hChannel and hPlayer)) then
+                    return false
+                end
+
+                if (not Server.AntiCheat:ProcessRadio(hChannel, hPlayer, iMsg)) then
+                    return false
+                end
+                return true
             end,
             OnObjectPicked          = function() end,
             OnExplosivePlaced       = function() end,
@@ -140,8 +218,10 @@ Server:CreateComponent({
                     end
                 end
             end,
-            OnChatMessage           = function(self, hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
-                return Server.Chat:OnChatMessage(hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
+            OnChatMessage = function(self, hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
+                local hRet = Server.Chat:OnChatMessage(hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
+                Server.Events:CheckComponentEvents("OnChatMessage", hSender, hTarget, sMessage, iType, iForcedTeam, bSentByServer)
+                return hRet
             end,
             OnEntityCollision       = function() end,
             OnSwitchAccessory       = function() end,

@@ -13,8 +13,8 @@ Server.Config:Create({
     Name = "Default",
     Body = {
 
-        ------------------------------------------
-        --- Console Variables
+        --- ==========================================================
+        --- Network Configuration
         Network = {
 
             -- A list of CVars which will be forced to specified value
@@ -98,9 +98,23 @@ Server.Config:Create({
                 mp_C4StrengthThrowMult = 3.0,
 
                 -- Server Only CVars
-                SERVER_USE_HIT_QUEUE = 0,
-                SERVER_USE_EXPLOSION_QUEUE = 0,
-                SERVER_PROJECTILES_SPAWNBEHIND = 0,
+                Server_DisableHitQueue = 1,
+                Server_DisableExplosionQueue = 0,
+                Server_DisableShotValidator = 1,
+                Server_DisablePlayerMovementResetting = 1,
+
+                Server_EnableTurretIdleState = 1,
+
+                Server_ProcessZombieHits = 1,
+                Server_ProcessZombieHitsTimeout = 0.75,
+
+                Server_AllowScanCloakedPlayers = 0,
+
+                Server_C4_Limit = 12,
+                Server_C4_MakeHitable = 1,
+                Server_C4_SticksToPlayers = 1,
+                Server_C4_SticksToAllSpecies = 1,
+                Server_C4_StickEntityLimit = 10, -- TODO: C++
 
             }, ---< ForcedCVars
 
@@ -161,7 +175,7 @@ Server.Config:Create({
 
         }, ---< Network
 
-        ------------------------------------------
+        --- ==========================================================
         --- General Server Configuration
         Server = {
 
@@ -174,7 +188,7 @@ Server.Config:Create({
 
         }, ---< Server
 
-        ------------------------------------------
+        --- ==========================================================
         --- Anti-Cheat Configuration
         AntiCheat = {
 
@@ -185,20 +199,21 @@ Server.Config:Create({
 
         }, ---< AntiCheat
 
-        ------------------------------------------
+        --- ==========================================================
         --- Game Configuration
         GameConfig = {
 
-            -- Some immersive game options
+            --- ==========================================================
+            --- Some immersive game options
             Immersion = {
 
-                -- Will pick a random one of these models for InstantAction games (the selected model is persistent)
+                -- Will pick a random one of these models for InstantAction games (the selected model is persistent between respawns)
                 InstantActionPlayerModels = {
                     "objects/characters/human/us/nanosuit/nanosuit_us_multiplayer.cdf",
                     "objects/characters/human/asian/nanosuit/nanosuit_asian_multiplayer.cdf",
                 },
 
-                -- Will LOCK Spawn Base Doors for other teams
+                -- Will LOCK Spawn Base Doors for other teams (unable to open a door if it's CLOSED)
                 LockSpawnBaseDoors = true,
 
                 -- Will use different player models based on their rank (for PS games only)
@@ -217,10 +232,14 @@ Server.Config:Create({
                 AllowDestroyFriendlyExplosives = true,
 
                 -- Will delete ALL forbidden areas during map start
-                DeleteForbiddenAreas = true,
+                DeleteForbiddenAreas = false,
+
+                -- Will Disable ALL forbidden areas during map start
+                DisableForbiddenAreas = true,
 
             }, ---< Immersion
 
+            --- ==========================================================
             --- Gun Turret Configuration
             Buying = {
 
@@ -234,10 +253,11 @@ Server.Config:Create({
                 -- Now, when someone buys something inside one of those buildings, the shareholders will receive a .. share
                 -- A Value of 0 will disable this feature
                 AwardItemInvestPrestige = 0.25,
-                AwardVehicleInvestPrestige = 0.15,
+                AwardVehicleInvestPrestige = 0.15, -- the same, but for vehicles
 
             }, ---< Buying
 
+            --- ==========================================================
             --- Gun Turret Configuration
             TurretConfig = {
 
@@ -258,6 +278,7 @@ Server.Config:Create({
 
             }, ---< TurretConfig
 
+            --- ==========================================================
             --- Prestige Configuration
             Prestige = {
 
@@ -284,7 +305,8 @@ Server.Config:Create({
             -- After this amount of time of being dead, players will be put into spectator mode
             AutoSpectateTimer = 30,
 
-            -- Configuration for Hits
+            --- ==========================================================
+            --- Configuration for Hits
             HitConfig = {
 
                 HQs = {
@@ -316,6 +338,9 @@ Server.Config:Create({
 
                 FriendlyFire = {
 
+                    -- Team killing System ignores NPCs
+                    IgnoreNPCs = true,
+
                     -- Friendly fire damage ratio (0 to disable)
                     Ratio = 0,
 
@@ -326,10 +351,13 @@ Server.Config:Create({
                     TeamKillLimit = 10,
                 }, ---< FriendlyFire
 
+                -- Disables factory garage kills when building vehicles
+                DisableFactoryGarageKills = true,
 
             }, ---< HitConfig
 
-            -- Configuration for Kills
+            --- ==========================================================
+            --- Configuration for Kills
             KillConfig = {
 
                 --- Will Split the kill reward among all players who assisted in the kill (the actual killer will receive the full reward)
@@ -376,6 +404,12 @@ Server.Config:Create({
 
                     -- Status of this feature
                     Enabled = true,
+
+                    -- The list of Items treated as sniper rifles
+                    SniperClasses = {
+                        "DSG1",
+                        "GaussRifle", -- FIXME
+                    },
 
                     -- The Minimum Distance for a kill to be considered special
                     MinimumDistance = 200,
@@ -478,7 +512,7 @@ Server.Config:Create({
 
             }, ---< KillConfig
 
-            ------------------------------
+            --- ==========================================================
             --- The Spawn Equipment Config
             SpawnEquipment = {
 
@@ -582,7 +616,7 @@ Server.Config:Create({
 
         }, ---< GameConfig
 
-        ------------------------------------------
+        --- ==========================================================
         --- Map Configuration
         MapConfig = {
 
@@ -636,7 +670,7 @@ Server.Config:Create({
             },
         }, ---< MapConfig
 
-        ------------------------------------------
+        --- ==========================================================
         --- Chat Censoring Configuration
         ChatConfig = {
 
@@ -749,6 +783,7 @@ Server.Config:Create({
             },
         },
 
+        --- ==========================================================
         ------------------------------------------
         --- Player Name Configuration
         PlayerNames = {
@@ -785,9 +820,11 @@ Server.Config:Create({
 
         }, ---< PlayerNames
 
+        --- ==========================================================
         --- Configurations for User-Plugins
         Plugins = {
 
+            --- ==========================================================
             --- Configuration for the 'PersistentScore' Plugin
             PersistentScore = {
 
@@ -800,10 +837,88 @@ Server.Config:Create({
                 -- Resets the saved scores for the current map (or global) once a map ends (by command or naturally)
                 ResetScoreOnMapEnd = true,
 
+                --- Settings for what properties should be restored
+                Restore = {
+
+                    Prestige  = true, -- Prestige Points
+                    XP        = true, -- Experience Points (will not count towards Rank or Level XP!
+                    Rank      = true, -- Player rank (CPT, GEN, ...)
+
+                    --- For PS Games
+                    PowerStruggle = {
+                        Kills     = true, -- Kill Count
+                        Deaths    = true, -- Death count
+                        Headshots = true, -- Headshots Count
+                    },
+
+                    --- For IA Games
+                    InstantAction = {
+                        Kills     = true, -- Kill Count
+                        Deaths    = true, -- Death count
+                        Headshots = true, -- Headshots Count
+                    },
+
+                    --- This will effectively block the 'repeated connecting and transferring prestige'-duping method
+                    BlockPrestigeDuping = true,
+
+                }, ---< Restore
+
             }, ---< PersistentScore
 
         }, ---< Plugins
 
+        --------------------------------------
+        --- Server Feature Config (Components)
+        ServerFeatures = {
+
+            ---========================================
+            --- Client Mod
+            ClientMod = {
+
+                -- Enables or Disables the component
+                IsEnabled = true,
+
+                RemotePAK = {
+                    -- the HTTP link to your remote pak file (blank to skip the process)
+                    URL = "",
+                },
+
+                -- Config for the The remote Script to install on the Client
+                RemoteScript = {
+
+                    -- the HTTP Url for your Script (blank to skip the process)
+                    -- this Script should follow a certain process, which is explained in detail elsewhere.
+                    URL = "http://nomad.nullptr.one/~finch/CryMP-ServerClient.lua",
+                    MaximumInstallAttempts = 999,
+                },
+
+                -- Will obfuscate stack IDs for tracing Errors (to prevent clients from using the command and sending false reports)
+                -- It is recommended to just leave this disabled.
+                ObfuscateStackIds = false,
+            },
+
+            ---========================================
+            --- Ranking
+            PlayerRanks = {
+
+                -- Enables or disables this Component
+                IsEnabled = true,
+
+                -- Enable Ranking System
+                EnableRanking = true,
+
+                -- allow Down-Ranking
+                AllowDownRanking = false,
+
+                -- Enable Levelling System
+                EnableLevelling = true,
+
+                -- allow Down-Levelling
+                AllowDownLevelling = true,
+
+            },
+
+        },
 
     }, ---< !!BODY!!
 })

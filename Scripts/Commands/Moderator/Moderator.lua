@@ -81,7 +81,7 @@ Server.ChatCommands:Add({
     -- ================================================================
     -- !RENAME <Target> <Name, ...>
     {
-        Name = "rename",
+        Name = "Rename",
         Access = ServerAccess_Moderator,
         Arguments = {
             { Name = "@target", Desc = "@arg_target_desc", Required = true, Type = CommandArg_TypePlayer, AcceptAll = true },
@@ -123,7 +123,7 @@ Server.ChatCommands:Add({
             end
 
             hTarget:SetTeam(iTeam)
-            if ( hTarget ~= self) then
+            if (hTarget ~= self) then
                 Server.Chat:ChatMessage(ChatEntity_Server, hTarget, "@you_were_movedToTeam", { TeamName = sTeamName })
                 return true, self:LocalizeText("@movedToTeam", { Target = hTarget:GetName(), TeamName = sTeamName })
             end
