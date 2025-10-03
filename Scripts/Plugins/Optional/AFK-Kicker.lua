@@ -27,7 +27,7 @@ Server.Plugins:CreatePlugin("AFK-Kicker", {
     end,
 
     Event_OnActorTick = function(self, tPlayer)
-        if (tPlayer.Timers.LastAction.Expired(FIVE_MINUTES)) then
+        if (tPlayer.Timers.LastAction:Expired(FIVE_MINUTES)) then
             Server.Punisher:KickPlayer(Server:GetEntity(), tPlayer, "afk too long")
         end
     end,

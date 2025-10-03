@@ -323,7 +323,7 @@ Server:CreateComponent({
             local tMeleeTimer = tAC.MeleeTimer
             local bOk = true
 
-            if (not tMeleeTimer.Expired(iMeleeTime)) then
+            if (not tMeleeTimer:Expired(iMeleeTime)) then
                 tAC.MeleeSeq = (tAC.MeleeSeq + 1)
                 if (tAC.MeleeSeq >= self:GetThreshold("MeleeAttacks")) then
                     self:LogWarning("Detected Melee Speed on %s{Gray} (%d Melee attacks with in %0.2fs)", tPlayer:GetName(), iMeleeTime)
@@ -393,13 +393,13 @@ Server:CreateComponent({
         CanPurchaseVehicle = function(self, tPlayer, tVehicleDef)
 
             local tAC = tPlayer.AntiCheat
-            local bExpired = tAC.LastVehiclePurchase.Expired()
+            local bExpired = tAC.LastVehiclePurchase:Expired()
             tAC.LastVehiclePurchase:Refresh()
 
             if (not bExpired) then
                 tAC.VehicleBuySpam = (tAC.VehicleBuySpam + 1)
                 if (tAC.VehicleBuySpam > self:GetThreshold("VehicleBuySpam", tPlayer)) then
-                    self:LogWarning("Detected Vehicle Buy Flood on %s{Gray} (%d Requests within %0.2f Second)", tPlayer:GetName(), tAC.VehicleBuySpam, tAC.LastVehiclePurchase.GetSetExpiry())
+                    self:LogWarning("Detected Vehicle Buy Flood on %s{Gray} (%d Requests within %0.2f Second)", tPlayer:GetName(), tAC.VehicleBuySpam, tAC.LastVehiclePurchase:GetSetExpiry())
                 end
                 return false
             end
@@ -411,13 +411,13 @@ Server:CreateComponent({
         CanPurchaseItemOrAmmo = function(self, tPlayer, tItemDef)
 
             local tAC = tPlayer.AntiCheat
-            local bExpired = tAC.LastItemPurchase.Expired()
+            local bExpired = tAC.LastItemPurchase:Expired()
             tAC.LastItemPurchase:Refresh()
 
             if (not bExpired) then
                 tAC.ItemBuySpam = (tAC.ItemBuySpam + 1)
                 if (tAC.ItemBuySpam > self:GetThreshold("ItemBuySpam", tPlayer)) then
-                    self:LogWarning("Detected Item Buy Flood on %s{Gray} (%d Requests within %0.2f Second)", tPlayer:GetName(), tAC.ItemBuySpam, tAC.LastItemPurchase.GetSetExpiry())
+                    self:LogWarning("Detected Item Buy Flood on %s{Gray} (%d Requests within %0.2f Second)", tPlayer:GetName(), tAC.ItemBuySpam, tAC.LastItemPurchase:GetSetExpiry())
                 end
                 return false
             end

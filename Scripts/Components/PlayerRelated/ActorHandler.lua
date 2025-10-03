@@ -78,7 +78,7 @@ Server:CreateComponent({
 
         Event_OnActorTick = function(self, hActor)
 
-            if (hActor.Timers.Initialized.diff() >= self.Properties.AwaitProfileTimeout) then
+            if (hActor.Timers.Initialized:Diff() >= self.Properties.AwaitProfileTimeout) then
                 -- We never received a profile
                 if (not hActor.Info.ProfileReceived) then
                     -- So we treat it as failed
@@ -191,7 +191,7 @@ Server:CreateComponent({
 
                     OnHit   = function(this) this:Refresh(1) this.Hits = ((this.Hits or 0) + 1)  end,
                     OnShot  = function(this) this:Refresh(1) this.Shots = ((this.Shots or 0) + 1)  end,
-                    Expired = function(this) return (this.Timer.expired())  end,
+                    Expired = function(this) return (this.Timer:Expired())  end,
                     Refresh = function(this, keep) this.Timer:Refresh() if (not keep) then this.Shots = 0 this.Hits = 0 end  end,
                     Get     = function(this) if (this.Shots + this.Hits <= 0) then return 0 end return math.min(100, math.max(0, (this.Hits / this.Shots) * 100))  end,
                 }

@@ -213,7 +213,7 @@ Server:CreateComponent({
                 local hPlayer = Server.Utils:GetEntity(hPlayerId)
                 if (hPlayer and hPlayer.IsPlayer) then
                     local sWeaponClass = hPlayer:GetCurrentItemClass()
-                    if (sWeaponClass == "Fists" and hPlayer.Timers.WallJump.expired_refresh()) then
+                    if (sWeaponClass == "Fists" and hPlayer.Timers.WallJump:Expired_Refresh()) then
                         Server.Statistics:Event(StatisticsEvent_OnWallJumped)
                     end
                 end

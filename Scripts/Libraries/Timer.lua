@@ -8,10 +8,7 @@
 -- This file Contains Timer Utilities
 -- ===================================================================================
 
----@class Timer
----@field Creation number      -- Time the timer was created (os.clock)
----@field Timer number         -- Last refresh time (os.clock)
----@field Expiry number        -- Expiry duration in seconds
+--- @class Timer a timer handle
 Timer = {}
 
 -- ==================================
@@ -39,6 +36,7 @@ Timer.New = function(self, iMs)
     for _, sFunction in pairs(tInherit) do
         tTimer[sFunction] = Timer[sFunction]
     end
+
 
     return tTimer
 end
@@ -124,5 +122,5 @@ end
 ---@return number diff seconds since last refresh
 ---@return nil always returns nil as second value (refresh side effect)
 Timer.Diff_Refresh = function(self)
-    return self:Diff(), self:Refresh()
+    return self:Diff() + (self:Refresh() and 0 or 0)
 end

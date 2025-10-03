@@ -209,7 +209,7 @@ Server:CreateComponent({
                 Break       = function(this, bMode) this.m_IsBroken = bMode end,
                 IsQuiet     = function(this) return this.Properties.IsQuiet  end,
                 SetCoolDown = function(this, sId, iTimer) iTimer = iTimer or (this.Properties.CoolDown or 0) if (not this.CoolDowns[sId]) then this.CoolDowns[sId] = Timer:New(iTimer)this.CoolDowns[sId]:Expire() else this.CoolDowns[sId]:Refresh() end end,
-                GetCoolDown = function(this, sId, iTimer) if (not this.CoolDowns[sId]) then this:SetCoolDown(sId, iTimer) end return this.CoolDowns[sId].expired(), this.CoolDowns[sId]:GetExpiry() end,
+                GetCoolDown = function(this, sId, iTimer) if (not this.CoolDowns[sId]) then this:SetCoolDown(sId, iTimer) end return this.CoolDowns[sId]:Expired(), this.CoolDowns[sId]:GetExpiry() end,
                 GetGameRules= function(this, sComp) local sRules = this.Properties.GameRules if (sComp) then return sComp == sRules end return sRules  end
             }
 

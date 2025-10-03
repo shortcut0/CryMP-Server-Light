@@ -11,6 +11,8 @@ timer = {}
 
 timer.new = function(expiry)
 
+	error("do not use this. Use Timer:New() instead")
+
 	-----------
 	local timer = timer
 	local hNew = {}

@@ -164,7 +164,7 @@ Server:CreateComponent({
             -- Upon changing a map, we won't receive a new connection timer
             -- So we "reset" it here
             for iChannel, aInfo in pairs(self.ActiveConnections) do
-                aInfo.Timer.refresh()
+                aInfo.Timer:Refresh()
             end
         end,
 
@@ -379,7 +379,7 @@ Server:CreateComponent({
                     MessageFormat = {
                         Name = sPlayerName,
                         Channel = iChannel,
-                        Time = Date:Format(hPlayer.Timers.Connection.diff()),
+                        Time = Date:Format(hPlayer.Timers.Connection:Diff()),
                         CountryCode = sCountryCode,
                         CountryName = sCountryName,
                     }
@@ -393,12 +393,12 @@ Server:CreateComponent({
                     MessageFormat = {
                         Name = sPlayerName,
                         Channel = iChannel,
-                        Time = Date:Format(hPlayer.Timers.Initialized.diff()),
+                        Time = Date:Format(hPlayer.Timers.Initialized:Diff()),
                         Reason = sReason,
                         ShortReason = sReasonShort
                     }
                 })
-                Server.Chat:ChatMessage(ChatEntity_Server, Server.Utils:GetPlayers(), "@player_disconnectedChat", { Name = sPlayerName, Channel = iChannel, Time = Date:Format(hPlayer.Timers.Initialized.diff()), Reason = sReason, ShortReason = sReasonShort })
+                Server.Chat:ChatMessage(ChatEntity_Server, Server.Utils:GetPlayers(), "@player_disconnectedChat", { Name = sPlayerName, Channel = iChannel, Time = Date:Format(hPlayer.Timers.Initialized:Diff()), Reason = sReason, ShortReason = sReasonShort })
             end
         end,
 
@@ -621,7 +621,7 @@ Server:CreateComponent({
 
         Event_OnActorTick = function(self, hPlayer)
             if (not hPlayer.Info.UniqueIDAssigned) then
-                if (hPlayer.Timers.Connection.Diff() >= self.Config.UUIDAwaitTimeout) then
+                if (hPlayer.Timers.Connection:Diff() >= self.Config.UUIDAwaitTimeout) then
                     Server.AccessHandler:AssignUniqueID(hPlayer, Server.AccessHandler:GetUniqueID(hPlayer))
                     self:DestroyUUIDCheck(hPlayer)
                 end
@@ -636,7 +636,7 @@ Server:CreateComponent({
 
             if (not self.IsRegistered) then
                 if (self.RegisterFailed) then
-                    if (not self.Timers.RegisterFail.expired()) then
+                    if (not self.Timers.RegisterFail:Expired()) then
                         return
                     end
                 end
@@ -648,7 +648,7 @@ Server:CreateComponent({
             end
 
             if (self.UpdateFailed) then
-                self.Timers.UpdateLog:expire() -- So next successful update will correctly show up
+                self.Timers.UpdateLog:Expire() -- So next successful update will correctly show up
                 if (not self.Timers.UpdateFail:Expired()) then
                     return
                 end
@@ -668,7 +668,7 @@ Server:CreateComponent({
             self.RegisterFailed = true
             self.IsRegistering  = false
 
-            self.Timers.RegisterFail.refresh()
+            self.Timers.RegisterFail:Refresh()
 
             if (iCode ~= 200) then
                 return self:LogError("Request failed with Code %d (%s)", CheckNumber(iCode), ToString(sResponse))
@@ -723,7 +723,7 @@ Server:CreateComponent({
             self.UpdateFailed = true
             self.IsUpdating  = false
 
-            self.Timers.UpdateFail.refresh()
+            self.Timers.UpdateFail:Refresh()
 
             if (iCode ~= 200) then
                 return self:LogError("Update Request failed with Code %d (%s)", CheckNumber(iCode), ToString(sResponse))
@@ -734,7 +734,7 @@ Server:CreateComponent({
             end
 
             self.UpdateFailed = false
-            if (self.Timers.UpdateLog.expired_refresh()) then
+            if (self.Timers.UpdateLog:Expired_Refresh()) then
                 self:Log("Successfully Updated!")
             end
         end,
@@ -764,7 +764,7 @@ Server:CreateComponent({
                 self:OnUpdated(...)
             end)
 
-            if (self.Timers.UpdateLog.expired()) then
+            if (self.Timers.UpdateLog:Expired()) then
                 self:Log("Updating Server Info at %s", (self.Config.MasterServerAPI .. self.Config.EndPoints.Updater))
             end
         end,
@@ -1082,7 +1082,7 @@ Server:CreateComponent({
             local iTolerance = aPingControl.Tolerance
 
             if (iPing > iTolerance) then
-                if (tWarning.Timer.expired_refresh()) then
+                if (tWarning.Timer:Expired_Refresh()) then
                     tWarning.Count = math.min(aPingControl.WarningLimit, (tWarning.Count + 1))
                     if (tWarning.Count >= aPingControl.WarningLimit) then
 
@@ -1099,7 +1099,7 @@ Server:CreateComponent({
                     end
                 end
             elseif (aPingControl.ResetWarnings) then
-                if (tWarning.Timer.expired_refresh() and tWarning.Count > 0) then
+                if (tWarning.Timer:Expired_Refresh() and tWarning.Count > 0) then
                     tWarning.Count = (tWarning.Count - 1)
                 end
             end
@@ -1143,7 +1143,7 @@ Server:CreateComponent({
 
         UpdateGamePings = function(self)
 
-            if (self.Timers.PingUpdate.expired_refresh()) then
+            if (self.Timers.PingUpdate:Expired_Refresh()) then
 
                 self:UpdateNetUsage()
 
@@ -1174,7 +1174,7 @@ Server:CreateComponent({
 
                 local iThreshold = self.Config.PingControl.AverageWarningThreshold
                 if (iAveragePing > iThreshold) then
-                    if (self.Timers.PingWarning.expired_refresh()) then
+                    if (self.Timers.PingWarning:Expired_Refresh()) then
                         self:LogEvent({
                             Message = "@average_ping_warning",
                             MessageFormat = { Average = iAveragePing, Threshold = iThreshold },

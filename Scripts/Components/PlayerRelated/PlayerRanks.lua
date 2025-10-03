@@ -134,7 +134,7 @@ Server:CreateComponent({
                     })
 
                     local tPlayerAction = self.XPActions[hEvent][hPlayer.id]
-                    if (tXPEvent.Timeout and tPlayerAction.Last.Expired_Refresh(tXPEvent.Timeout)) then
+                    if (tXPEvent.Timeout and tPlayerAction.Last:Expired_Refresh(tXPEvent.Timeout)) then
                         tPlayerAction.Count = 0
                     else
                         tPlayerAction.Last:Refresh()

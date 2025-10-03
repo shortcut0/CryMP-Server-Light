@@ -373,7 +373,7 @@ Server.OnUpdate = function(self, iFrameTime, iFrameID)
     local iLastCounter = (self.FrameCounters[#self.FrameCounters] or { Clock = iClock }).Clock
     local iFrameDiff = (iClock - iLastCounter)
     if (iRate > iCppIdleRate) then
-        if (iFrameDiff > 0.08 and self.FrameCounterIdleExitTimer.expired()) then
+        if (iFrameDiff > 0.08 and self.FrameCounterIdleExitTimer:Expired()) then
             ServerLogWarning("{Gray}Frame Time {Red}%0.3f{Gray} (Avg: {Red}%0.3f{Gray}) | FPS: {Red}%0.2f{Gray} (Steps/s: {Red}%d{Gray}%s{Gray})", iFrameDiff, iRateAverage, (1 / iFrameDiff), iActualFPS, sActualFPSDiff)
             --self.Network:OnFrameLag(iFrameDiff, iRateAverage, (1 / iFrameDiff), iActualFPS, sActualFPSDiff)
         end

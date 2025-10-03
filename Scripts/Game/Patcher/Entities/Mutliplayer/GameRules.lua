@@ -68,7 +68,7 @@ Server.Patcher:HookClass({
 
 
                 self.LastHQHitTimeExtended = false
-                self.LastHQHitTimer = Timer:New(120) -- two minutes since last HQ hit when calling .Expired()
+                self.LastHQHitTimer = Timer:New(120) -- two minutes since last HQ hit when calling :Expired()
                 self.NoKillMessagePlayers = {}
                 self.TaggedExplosives = {}
                 self.TimedActions = {}
@@ -650,7 +650,7 @@ Server.Patcher:HookClass({
                     hTimer = self.TimedActions[hId]
                 end
 
-                if (hTimer.Expired_Refresh(iSeconds)) then
+                if (hTimer:Expired_Refresh(iSeconds)) then
                     pFunction()
                 end
             end
@@ -797,7 +797,7 @@ Server.Patcher:HookClass({
                 elseif (bIsLimited) then
 
                     if (iTimeLeft <= FIVE_MINUTES) then
-                        if (not self.LastHQHitTimer.Expired()) then
+                        if (not self.LastHQHitTimer:Expired()) then
                             if (not self.LastHQHitTimeExtended) then
                                 Server.Chat:ChatMessage(Server.MapRotation.ChatEntity, ALL_PLAYERS, "@fiveMinutesToDestroyHQ")
                                 Server.MapRotation:SetTimeLimit("10m")
@@ -1569,7 +1569,7 @@ Server.Patcher:HookClass({
                         end
 
                         hShooter.Data.FirstBloodScored = iFirstBloodCount
-                    elseif (hTarget.IsPlayer and hTarget.Info.IsChatting and not hTarget.Timers.ChatTimer.Expired(10)) then
+                    elseif (hTarget.IsPlayer and hTarget.Info.IsChatting and not hTarget.Timers.ChatTimer:Expired(10)) then
                         Server.Chat:ChatMessage(ChatEntity_Server, ALL_PLAYERS, ("@on_chatKill"), {
                             Victim = hTarget:GetName(), Shooter = hShooter:GetName()
                         })
@@ -1691,7 +1691,7 @@ Server.Patcher:HookClass({
                 if (hTarget and hShooter) then
                     if (hShooter.IsPlayer) then
 
-                        if (hShooter.KillMessageTimer.expired_refresh()) then
+                        if (hShooter.KillMessageTimer:Expired_Refresh()) then
                             hShooter.KillMessageCount = 0
                         end
 
@@ -1715,7 +1715,7 @@ Server.Patcher:HookClass({
                     local bShotgunned   = (sWeapon == "Shotgun")
                     local bDrivenOver   = (hWeapon and (hWeapon.VehicleCMParent or hWeapon.vehicle))
                     local bKilledSelf   = (bSuicide and iDamage == 8190)
-                    local bSpawnKill    = (not bSuicide and hTarget.IsPlayer and not hTarget.Timers.Spawn.expired(10))
+                    local bSpawnKill    = (not bSuicide and hTarget.IsPlayer and not hTarget.Timers.Spawn:Expired(10))
 
                     local aMessages = { "%s Killed %s", }
                     if (bFell) then
@@ -2883,7 +2883,7 @@ Server.Patcher:HookClass({
                         if (hPlayerID ~= hTarget.id and Server.Utils:GetEntity(hPlayerID)) then
 
                             -- only add hits from players who actually assisted in the kill
-                            if (not aInfo.Timer.expired()) then
+                            if (not aInfo.Timer:Expired()) then
                                 iTotalHits   = iTotalHits   + aInfo.HitCount
                                 iTotalDamage = iTotalDamage + aInfo.DamageCount
                             end
@@ -2896,7 +2896,7 @@ Server.Patcher:HookClass({
                         if (hPlayerID ~= hShooter.id and hPlayerID ~= hTarget.id and hPlayer and hPlayer.IsPlayer) then
 
                             -- only add hits from players who actually assisted in the kill
-                            if (not aInfo.Timer.expired()) then
+                            if (not aInfo.Timer:Expired()) then
 
                                 -- Divide the rewards by the percentage of hits
                                 iAssistance = (aInfo.HitCount / iTotalHits)
@@ -3432,7 +3432,7 @@ Server.Patcher:HookClass({
 
                         if (bShooterPlayer and (teamId == 0 or (teamId ~= self.game:GetTeam(aHitInfo.shooterId))) and bDestroyed) then
                             self:PrestigeEvent(hShooter, { self.ppList.TURRETKILL, self.cpList.TURRETKILL }, "@turret @destroyed")
-                            hTurret.DestroyedTimer = timernew()
+                            hTurret.DestroyedTimer = Timer:New()
                         end
                     end
                 end

@@ -347,7 +347,7 @@ Server:CreateComponent({
         OnInstalled = function(self, hClient)
             self:LogEvent({
                 Message = "@clientMod_installedOn",
-                MessageFormat = { Client = hClient:GetName(), Time = Date:Colorize(Date:Format(hClient.ClientMod.LastInstall.Diff())) },
+                MessageFormat = { Client = hClient:GetName(), Time = Date:Colorize(Date:Format(hClient.ClientMod.LastInstall:Diff())) },
                 Recipients = ServerAccess_Admin,
             })
             hClient.ClientMod.IsInstalled = true
@@ -514,7 +514,7 @@ Server:CreateComponent({
             for _, hClient in pairs(Server.Utils:GetPlayers()) do
                 if (not hClient.ClientMod.IsInstalled) then
                     if (hClient.ClientMod.InstallAttempts <= self.Config.MaxInstallAttempts) then
-                        if (hClient.ClientMod.LastInstall.Expired()) then
+                        if (hClient.ClientMod.LastInstall:Expired()) then
                             self:InstallMod(hClient)
                         end
                     else
@@ -535,7 +535,7 @@ Server:CreateComponent({
         Event_OnActorTick = function(self, hClient)
             if (not hClient.ClientMod.IsInstalled) then
                 if (hClient.ClientMod.InstallAttempts <= self.Config.MaxInstallAttempts) then
-                    if (hClient.ClientMod.LastInstall.Expired()) then
+                    if (hClient.ClientMod.LastInstall:Expired()) then
                         self:InstallMod(hClient)
                     end
                 else
