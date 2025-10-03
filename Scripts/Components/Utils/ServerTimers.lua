@@ -21,7 +21,7 @@ Server:CreateComponent({
         end,
 
         CreateTimer = function(self, sTimer, iMs)
-            self.ActiveTimers[sTimer] = TimerNew(iMs)
+            self.ActiveTimers[sTimer] = Timer:New(iMs)
             return self.ActiveTimers[sTimer]
         end,
 
@@ -31,7 +31,7 @@ Server:CreateComponent({
                 hTimer = self:CreateTimer(sTimer, iMs)
             end
 
-            return hTimer.expired(iMs)
+            return hTimer:Expired(iMs)
         end,
 
         Expired_Refresh = function(self, sTimer, iMs)
@@ -40,7 +40,7 @@ Server:CreateComponent({
                 hTimer = self:CreateTimer(sTimer, iMs)
             end
 
-            return hTimer.expired_refresh(iMs)
+            return hTimer:Expired_Refresh(iMs)
         end,
     }
 })

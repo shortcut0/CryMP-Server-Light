@@ -411,7 +411,7 @@ Server:CreateComponent({
             table.insert(self.LinkedEvents[hEvent], {
 
                 Active = true,
-                ErrorTimer = TimerNew(),
+                ErrorTimer = Timer:New(),
                 ErrorCount = 0,
 
                 Function = hFunction,

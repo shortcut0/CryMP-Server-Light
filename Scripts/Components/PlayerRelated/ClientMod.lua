@@ -489,7 +489,7 @@ Server:CreateComponent({
 
             hClient.ClientMod.IsInstalled     = false
             hClient.ClientMod.InstallAttempts = (iAttempt + 1)
-            hClient.ClientMod.LastInstall.Refresh()
+            hClient.ClientMod.LastInstall:Refresh()
 
             RPC:OnPlayer(hClient, "Execute", { url = sURL });
         end,
@@ -500,7 +500,7 @@ Server:CreateComponent({
                 IsInstalled     = false,
                 InstallFailed   = false,
                 InstallAttempts = 0,
-                LastInstall     = TimerNew(10),
+                LastInstall     = Timer:New(10),
             }
 
             if (not hClient.IsPlayer) then
@@ -601,7 +601,7 @@ Server:CreateComponent({
                 end
                 tCM.ChatOpen = nil
                 hClient.Info.IsChatting = false
-                hClient.Timers.ChatTimer.Expire()
+                hClient.Timers.ChatTimer:Expire()
                 return
             end
 
@@ -612,7 +612,7 @@ Server:CreateComponent({
             tCM.ChatPosition = hClient:GetPos()
             tCM.ChatOpen = bTeamChat
             hClient.Info.IsChatting = true
-            hClient.Timers.ChatTimer.Refresh()
+            hClient.Timers.ChatTimer:Refresh()
         end,
 
         FindModelById = function(self, iCM)

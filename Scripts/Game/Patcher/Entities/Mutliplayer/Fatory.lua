@@ -22,12 +22,12 @@ Server.Patcher:HookClass({
                 if (hPlayer and hPlayer.IsPlayer) then
                     --[[
                     table.checkM(self, "JobFloods", {})
-                    table.checkM(self.JobFloods, ownerId, { Timer = TimerNew(0.5), Flood = 0 })
+                    table.checkM(self.JobFloods, ownerId, { Timer = Timer:New(0.5), Flood = 0 })
 
                     local aJob = self.JobFloods[ownerId]
-                    local bExpired = aJob.Timer.expired()
+                    local bExpired = aJob.Timer:Expired()
 
-                    aJob.Timer.refresh()
+                    aJob.Timer:Refresh()
                     DebugLog("cspm")
 
                     if (not bExpired) then

@@ -46,7 +46,7 @@ Server:CreateComponent({
             -- The list of different User Access levels
             UserAccessLevels = {
                 {
-                    Name = "Guest", Level = 0, Color = CRY_COLOR_GREEN, Default = true
+                    Name = "Guest", Level = 1, Color = CRY_COLOR_GREEN, Default = true
                 },
                 {
                     Name = "Player", Level = 2, Color = CRY_COLOR_GREEN,
@@ -67,7 +67,7 @@ Server:CreateComponent({
                     Name = "Developer", Level = 7, Color = CRY_COLOR_MAGENTA, Developer = true
                 },
                 {
-                    Name = "Owner", Level = 9, Color = CRY_COLOR_YELLOW
+                    Name = "Owner", Level = 8, Color = CRY_COLOR_YELLOW
                 },
             },
 
@@ -324,14 +324,19 @@ Server:CreateComponent({
             local hIdNumber = (tonumber(hId) or -1)
 
             for _, aInfo in pairs(self.AccessLevelMap) do
-                local sLowerId = string.lower(aInfo.ID)
+
+                --DebugLog(hIdLower,aInfo.Name)
+                --local sLowerId = string.lower(aInfo.Level)
                 local sLowerName = string.lower(aInfo.Name)
-                if (sLowerId == hIdLower or sLowerName == hIdLower or aInfo.Level == hIdNumber) then
+                --if (sLowerId == hIdLower or sLowerName == hIdLower or aInfo.Level == hIdNumber) then
+                if (sLowerName == hIdLower or aInfo.Level == hIdNumber) then
                     hFound = aInfo
                     break -- stop on complete matches
-                elseif (string.match(sLowerId, "^" .. string.escape(hIdLower)) or string.match(sLowerName, "^" .. string.escape(hIdLower))) then
+                --elseif (string.match(sLowerId, "^" .. string.Escape(hIdLower)) or string.match(sLowerName, "^" .. string.Escape(hIdLower))) then
+                elseif (string.match(sLowerName, "^" .. string.Escape(hIdLower))) then
                     if (hFound) then
                         hFound = nil
+                        --DebugLog("found 2?",hFound.Level)
                         break
                     end
                     hFound = aInfo
@@ -439,9 +444,10 @@ Server:CreateComponent({
             })
 
             self.SavedUsers[sProfileId] = nil
+            return true
         end,
 
-        AddRegisteredUser = function(self, sUserName, sProfileId, iAccessLevel, sAdmin)
+        AddRegisteredUser = function(self, sUserName, sProfileId, iAccessLevel, sAdmin, bQuiet)
 
             local aUserInfo = (self.SavedUsers[sProfileId] or self:GetEmptyUser())
 
@@ -452,12 +458,14 @@ Server:CreateComponent({
             local sAccessColor = self:GetAccessColor(iAccessLevel)
             local sAccessName = self:GetAccessName(iAccessLevel)
 
-            sAdmin = (sAdmin or "Server")
-            self:LogEvent({
-                Event = self:GetFriendlyName(),
-                Message = "@user_registered",
-                MessageFormat = { AccessName = sAccessName, AccessColor = sAccessColor, UserName = sUserName, ProfileID = sProfileId, AdminName = sAdmin }
-            })
+            if (not bQuiet) then
+                sAdmin = (sAdmin or "Server")
+                self:LogEvent({
+                    Event = self:GetFriendlyName(),
+                    Message = "@user_registered",
+                    MessageFormat = { AccessName = sAccessName, AccessColor = sAccessColor, UserName = sUserName, ProfileID = sProfileId, AdminName = sAdmin }
+                })
+            end
 
             self.SavedUsers[sProfileId] = aUserInfo
         end,
@@ -533,6 +541,10 @@ Server:CreateComponent({
             local sLocalUser = (string.emptyN(tInfo.Local) and tInfo.Local .. " " or "")
             local bQuiet = tInfo.Quiet
 
+            if (iAccessLevel == nil) then
+                error("no access level")
+            end
+
             local sAccessColor = self:GetAccessColor(iAccessLevel)
             local sAccessName = self:GetAccessName(iAccessLevel)
 
@@ -546,6 +558,8 @@ Server:CreateComponent({
                 })
             end
 
+
+            DebugLog(ServerAccess_Admin)
             if (hUser.Data.HasToxicityPass == nil) then
                 if (hUser:HasAccess(ServerAccess_Admin)) then
                     hUser.Data.HasToxicityPass = true -- Automatically enable this on Admins
@@ -561,6 +575,10 @@ Server:CreateComponent({
                 return
             end
 
+            if (not aInfo:GetName()) then
+                self:LogWarning("Level %s Has no Name assigned", aInfo:GetName())
+                return "<Null>"
+            end
             return aInfo:GetName()
         end,
 
@@ -570,6 +588,10 @@ Server:CreateComponent({
                 return
             end
 
+            if (not aInfo:GetColor()) then
+                self:LogWarning("Level %s Has no Color assigned", aInfo:GetName())
+                return CRY_COLOR_WHITE
+            end
             return aInfo:GetColor()
         end,
 
@@ -587,6 +609,10 @@ Server:CreateComponent({
 
         GetDeveloperLevel = function(self)
             return self.DeveloperAccessLevel
+        end,
+
+        GetModeratorLevel = function(self)
+            return self.ModeratorAccessLevel
         end,
 
         GetAdminLevel = function(self)
@@ -613,6 +639,7 @@ Server:CreateComponent({
                     Premium     = aInfo.Premium,
                     Admin       = aInfo.Admin,
                     Developer   = aInfo.Developer,
+                    Moderator   = aInfo.Moderator,
                     Default     = aInfo.Default,
                     Highest     = false,
                     Lowest      = false,
@@ -651,6 +678,9 @@ Server:CreateComponent({
                 if (aInfo.Developer) then
                     self.DeveloperAccessLevel = iLevel
                 end
+                if (aInfo.Moderator) then
+                    self.ModeratorAccessLevel = iLevel
+                end
                 if (aInfo.Admin) then
                     self.AdministratorAccessLevel = iLevel
                 end
@@ -672,6 +702,70 @@ Server:CreateComponent({
             ServerAccess_Lowest = self.LowestAccessLevel
             ServerAccess_Highest = self.HighestAccessLevel
         end,
+
+        -- ============================================================================
+        -- Commands
+
+        Command_ChangeAccess = function(self, hPlayer, hTarget, iLevel, bDemote, bTemporary, sReason)
+            iLevel = tonumber(iLevel)
+            sReason = sReason or "@admin_decision"
+            if (type(hTarget) == "table") then
+
+                local iTargetAccess = hTarget:GetAccess()
+
+                if (iLevel == -1) then
+                    iLevel = (iTargetAccess + (bDemote and -1 or 1))
+                    iLevel = math.min(self:GetHighestAccess(), iLevel)
+                    iLevel = math.max(self:GetLowestAccess(), iLevel)
+                end
+
+                if (iLevel > self:GetHighestAccess() or iLevel < self:GetLowestAccess()) then
+                    return false, "@command_argNotAccess"
+                end
+
+                local sNewName = self:GetAccessName(iLevel)
+                local sOldName = self:GetAccessName(iTargetAccess)
+                if (iLevel == hTarget:GetAccess()) then
+                    return false, (hPlayer:LocalizeText("@alreadyAccess", { Class = sNewName }))
+                end
+
+                local bLogEvent = true
+                bTemporary = (bTemporary or (not hTarget:IsValidated()))
+                if (not bTemporary) then
+                    bLogEvent = (self:GetRegisteredUser(hTarget:GetProfileId()))
+                    if (iLevel == self:GetLowestAccess()) then
+                        -- 'not' means user does not exist
+                        if (self:DeleteRegisteredUser(hTarget:GetProfileId(), hPlayer:GetName())) then
+                            bLogEvent = false -- so we log the event
+                            return true
+                        end
+                    else
+                        -- Log the "Promoted" (below) only if the user exists already, else show the user registered message
+                        self:AddRegisteredUser(hTarget:GetName(), hTarget:GetProfileId(), iLevel, hPlayer:GetName(), (bLogEvent)) -- Quiet
+                    end
+                else
+                    bLogEvent = nil
+                end
+
+                -- Quiet always
+                self:AssignAccess(hTarget, iLevel, { Quiet = bLogEvent, Temporary = (bTemporary and "@str_temporarily"or "" ) })
+                if (bLogEvent) then
+                    self:LogEvent({
+                        Recipients = math.max(iLevel, self:GetModeratorLevel()),
+                        Message = ("@user_%s"):format((iLevel > iTargetAccess and "promoted" or "demoted")),
+                        MessageFormat = {
+                            Admin = hPlayer:GetName(),
+                            User = hTarget:GetName(),
+                            NewLevel = self:GetAccessColor(iLevel) .. sNewName,
+                            OldLevel = self:GetAccessColor(iTargetAccess) .. sOldName,
+                        }
+                    })
+                end
+                return true
+            end
+            return self:Command_PromoteUser(hPlayer, hTarget, iLevel, sReason)
+        end,
+
 
         Command_ListUsers = function(self, hPlayer, sFilter)
 

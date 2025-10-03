@@ -27,8 +27,11 @@ end
 
 local osclock=os.clock()
 CryMP_Client = {
+    DEBUG_DL={},
     menus={
-      corner_hud="corner_hud_menu"
+      corner_hud="corner_hud_menu",
+      xp_info="xp_info",
+      debug="dg"
     },
     Timers={
      --   Second=osclock-1
@@ -134,6 +137,11 @@ end
 vec_s=function(v,s) return{x=v.x*s,y=v.y*s,z=v.z*s} end
 frnd=randomF
 str_lspc=function(str,spc)return string.rep(" ",spc-#str)..str  end
+-- vec helpers
+
+
+
+
 -- ===================================================================================
 
 CryMP_Client.INSTALL = function(self)
@@ -324,89 +332,116 @@ CryMP_Client.AddMenus=function(self)
 
 
 
-    self:AddMenu(self.menus.corner_hud, {
-        Items = {
-        },
-        DefaultRenderInfo={
-            PosX=590,
-            PosY=65,
-            Width=1.1,
-            Height=1.1,
-            Alpha=1,
-            Color={255,223,0},
-        },
-        Update=function(this)
-            local render_list={}
-            for _,hRnd in pairs(this:GetRenders()) do
-                --disp only 5
-                local rnd_data=hRnd:GetDataValue()
-                --if render_list==nil or #render_list<5 then
-                if (rnd_data) then -- not icon..
-                    if( rnd_data.disp_t and _time>= rnd_data.disp_t+rnd_data.delete) then
-                        local childNum=1
-                        local icon=this:GetRender(hRnd:GetRenderId().."_child_"..childNum)
-                        while icon do
-                            this:DeleteRender(icon:GetRenderId())
-                            childNum=childNum+1
-                            icon=this:GetRender(hRnd:GetRenderId().."_child_"..childNum)
-                        end
-                        this:DeleteRender(hRnd:GetRenderId())
-                    else
-                        table.insert(render_list,{r=hRnd,v=rnd_data and rnd_data.time})
-                    end
+    if (self.DEBUG) then
+        local xpinfo_add=0
+        if (true) then
+            self:AddMenu(self.menus.xp_info, {
+                Items = {
+                    img={Image = "Testing\\" .. "xp_icon_2025.dds", Width=20,Height=20,PosY=65,PosX=  168+590},
+                    xp={Text="0",Color={255,223,0},Width=1.3,Height=1.3,PosX=590-17,PosY=67},
+                },
+                Update=function(this)
+                    local rnd=this:GetRender("xp")
+                    local xp=(rnd:GetDataValue()or 0)--+math.random(1,10)
+                    --self:DLog(xp)
+                    rnd:SetRenderData("Txt",str_lspc(tostring(xp),23))
+                    rnd:Render()
+                   -- rnd:SetDataValue(xp)
                 end
-                --end
-            end
-            --older first, then newer...............
-            table.sort(render_list,function(a,b)return a.v<b.v  end)
-            if(#render_list>0)then
-                local tdel={}
-                local item_c=math.min(10,#render_list)
-                local posy_d=this.DEF_RENDER_INFO.PosY+(item_c*10)
-                for i=1,item_c do
-                    local r=render_list[i]
-                    if (r) then
-                        local rnd=r.r
-
-                        local dv=rnd:GetDataValue()
-                       dv.disp_t=dv.disp_t or _time
-
-                        local posy=posy_d-(i*10)
-
-                        local alpha=1
-                        local f_sT =  dv.disp_t + dv.fadeStart
-                        local endTime =  dv.disp_t + dv.delete
-                        if _time >= endTime then
-                            alpha = 0 --delete next round..
-                        else
-                            local f_p = (_time - f_sT) / (endTime - f_sT)
-                            alpha = 1 - f_p
-                        end
-
-                     --   self:DLog(i)
-                        alpha=math.max(0.05,alpha)
-                        --rnd:SetRenderData("Txt","mod"..i)
-                        rnd:SetRenderData("PosY",posy)
-                        rnd:SetRenderData("A",alpha)
-                        rnd:Render()
-
-                        local childNum=1
-                        local icon=this:GetRender(rnd:GetRenderId().."_child_"..childNum)
-                        while icon do
-                            --icon:SetRenderData("PosY",50)
-                            --icon:SetRenderData("PosX",50)
-                            icon:SetRenderData("A",alpha)
-                            icon:SetRenderData("PosY",posy)
-                            icon:Render()
-                          --  self:DLog("icon on index %d",childNum)
-                            childNum=childNum+1
-                            icon=this:GetRender(rnd:GetRenderId().."_child_"..childNum)
-                        end
-                    end
-                end
-            end
+            })
+            xpinfo_add=25
         end
-    })
+        self:AddMenu(self.menus.debug, {
+            Items = {
+                t1={Box="debug",Width=10,Height=10,Color={255,1,1},PosX=0,PosY=0,}
+            },
+        })
+        self:AddMenu(self.menus.corner_hud, {
+            Items = {
+            },
+            DefaultRenderInfo={
+                PosX=590,
+                PosY=65+xpinfo_add,
+                Width=1.1,
+                Height=1.1,
+                Alpha=1,
+                Color={255,223,0},
+            },
+            Update=function(this)
+                local render_list={}
+                for _,hRnd in pairs(this:GetRenders()) do
+                    --disp only 5
+                    local rnd_data=hRnd:GetDataValue()
+                    --if render_list==nil or #render_list<5 then
+                    if (rnd_data) then -- not icon..
+                        if( rnd_data.disp_t and _time>= rnd_data.disp_t+rnd_data.delete) then
+                            local childNum=1
+                            local icon=this:GetRender(hRnd:GetRenderId().."_child_"..childNum)
+                            while icon do
+                                this:DeleteRender(icon:GetRenderId())
+                                childNum=childNum+1
+                                icon=this:GetRender(hRnd:GetRenderId().."_child_"..childNum)
+                            end
+                            this:DeleteRender(hRnd:GetRenderId())
+                        else
+                            table.insert(render_list,{r=hRnd,v=rnd_data and rnd_data.time})
+                        end
+                    end
+                    --end
+                end
+                --older first, then newer...............
+                table.sort(render_list,function(a,b)return a.v<b.v  end)
+                if(#render_list>0)then
+                    local tdel={}
+                    local item_c=math.min(10,#render_list)
+                    local posy_d=this.DEF_RENDER_INFO.PosY+(item_c*10)
+                    for i=1,item_c do
+                        local r=render_list[i]
+                        if (r) then
+                            local rnd=r.r
+
+                            local dv=rnd:GetDataValue()
+                            dv.disp_t=dv.disp_t or _time
+
+                            local posy=posy_d-(i*10)
+
+                            local alpha=1
+                            local f_sT =  dv.disp_t + dv.fadeStart
+                            local endTime =  dv.disp_t + dv.delete
+                            if _time >= endTime then
+                                alpha = 0 --delete next round..
+                            else
+                                local f_p = (_time - f_sT) / (endTime - f_sT)
+                                alpha = 1 - f_p
+                            end
+
+                            --   self:DLog(i)
+                            alpha=math.max(0.05,alpha)
+                            --rnd:SetRenderData("Txt","mod"..i)
+                            rnd:SetRenderData("PosY",posy)
+                            rnd:SetRenderData("A",alpha)
+                            rnd:Render()
+
+                            local childNum=1
+                            local icon=this:GetRender(rnd:GetRenderId().."_child_"..childNum)
+                            while icon do
+                                --icon:SetRenderData("PosY",50)
+                                --icon:SetRenderData("PosX",50)
+                                icon:SetRenderData("A",alpha)
+                                icon:SetRenderData("PosY",posy)
+                                icon:Render()
+                                --  self:DLog("icon on index %d",childNum)
+                                childNum=childNum+1
+                                icon=this:GetRender(rnd:GetRenderId().."_child_"..childNum)
+                            end
+                        end
+                    end
+                end
+            end
+        })
+
+
+    end
 
 
 
@@ -957,6 +992,16 @@ CryMP_Client.OnUpdate = function(self)
 
     self:UPDATE_FLIPS()
 
+    if (self.DEBUG_DL) then
+       local m_dbg=self:GetMenu(self.menus.debug)
+        if (m_dbg) then
+            local rnd_1 = m_dbg:GetRender("t1")
+            rnd_1:SetRenderData("PosX",self.DEBUG_DL.x or 0)
+            rnd_1:SetRenderData("PosY",self.DEBUG_DL.y or 0)
+            rnd_1:Render()
+        end
+    end
+
     if (g_la) then
         local stats=g_la.actorStats
         local tp=stats.thirdPerson
@@ -1159,7 +1204,7 @@ end
 
 CryMP_Client.CornerMsg = function(self, msg, color, time)
     time=5--time or 5
-    color=color or CryMP_Client.COLORS.grey
+    color={255,255,255}--color or CryMP_Client.COLORS.grey
 
 
 
@@ -1167,7 +1212,7 @@ CryMP_Client.CornerMsg = function(self, msg, color, time)
     if (not menu) then
         return self:DLog("no menu-. .."..tostring(self.menus.corner_hud))
     end
-    local hnd=menu:AddRender({Text=str_lspc(msg, 25),})
+    local hnd=menu:AddRender({Color =color,Text=str_lspc(msg, 25),})
     hnd:SetDataValue({
         time=_time,
         delete=time*0.8,
@@ -1175,9 +1220,9 @@ CryMP_Client.CornerMsg = function(self, msg, color, time)
     })
 
     -- not for now..
-    if (false) then
-        menu:AddRender({ Img = "Testing\\" .. "icon_2.dds", Width=20,Height=20,PosY=500,PosX=  menu:GetDefaultRenderInfo().PosX-25 },hnd:GetRenderId().."_child_1")
-        menu:AddRender({ Img = "Testing\\" .. "icon_3.dds", Width=20,Height=20,PosX=  80+menu:GetDefaultRenderInfo().PosX-25 },hnd:GetRenderId().."_child_2")
+    if (true) then
+        --menu:AddRender({ Img = "Testing\\" .. "icon_2.dds", Width=20,Height=20,PosY=nil,PosX=  menu:GetDefaultRenderInfo().PosX-25 },hnd:GetRenderId().."_child_1")
+     --   menu:AddRender({ Img = "Testing\\" .. "icon_3.dds", Width=20,Height=20,PosX=  168+menu:GetDefaultRenderInfo().PosX-0,PosY=menu:GetDefaultRenderInfo().PosY-10 },hnd:GetRenderId().."_child_1")
     end
 end
 
@@ -1341,6 +1386,8 @@ CryMP_Client.QuickTick = function(self)
 end
 
 CryMP_Client.Tick = function(self)
+
+
 
   --  self:CornerMsg("hi..".._time)
 end

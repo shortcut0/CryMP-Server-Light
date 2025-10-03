@@ -316,6 +316,9 @@ end
 ----------------------------------
 Server.OnUpdate = function(self, iFrameTime, iFrameID)
 
+    if (not self:IsInitialized()) then
+        return
+    end
 
     --[[
     -- Done in C++. thanks C
@@ -364,7 +367,7 @@ Server.OnUpdate = function(self, iFrameTime, iFrameID)
     end
 
     if (not self.FrameCounterIdleExitTimer) then
-        self.FrameCounterIdleExitTimer = TimerNew(5)
+        self.FrameCounterIdleExitTimer = Timer:New(5)
     end
 
     local iLastCounter = (self.FrameCounters[#self.FrameCounters] or { Clock = iClock }).Clock
@@ -375,7 +378,7 @@ Server.OnUpdate = function(self, iFrameTime, iFrameID)
             --self.Network:OnFrameLag(iFrameDiff, iRateAverage, (1 / iFrameDiff), iActualFPS, sActualFPSDiff)
         end
     else
-        self.FrameCounterIdleExitTimer.refresh()
+        self.FrameCounterIdleExitTimer:Refresh()
     end
     table.insert(self.FrameCounters, { Clock = iClock, Rate = iFrameDiff, This = os.clock() - iClock })
 end
@@ -1160,6 +1163,19 @@ Server.Logger = {
             sMessage = string.gsub(sMessage, ("{%s}"):format(sTag), sValue)
         end
         return sMessage
+    end,
+
+    FormatTags_Extended = function(self, sMessage)
+        if (not table.Merge) then
+            return sMessage
+        end
+        local tAppend = {
+            Stat_ServerLifetime = Date:Format(Server.Statistics:GetValue(StatisticsValue_ServerLifetime, 0), DateFormat_Spaced),
+            ServerRuntime = Date:Format(_time, DateFormat_Spaced),
+            ServerMemory = Server.Utils:ByteSuffix(ServerDLL.GetMemUsage() or 0),
+            ServerPeakMemory = Server.Utils:ByteSuffix(ServerDLL.GetMemPeak() or 0),
+        }
+        return self:FormatTags(sMessage, tAppend)
     end,
 
     RidColors = function(self, sMessage)

@@ -208,8 +208,8 @@ Server:CreateComponent({
                 IsBroken    = function(this) return this.m_IsBroken end,
                 Break       = function(this, bMode) this.m_IsBroken = bMode end,
                 IsQuiet     = function(this) return this.Properties.IsQuiet  end,
-                SetCoolDown = function(this, sId, iTimer) iTimer = iTimer or (this.Properties.CoolDown or 0) if (not this.CoolDowns[sId]) then this.CoolDowns[sId] = TimerNew(iTimer)this.CoolDowns[sId].expire() else this.CoolDowns[sId].refresh() end end,
-                GetCoolDown = function(this, sId, iTimer) if (not this.CoolDowns[sId]) then this:SetCoolDown(sId, iTimer) end return this.CoolDowns[sId].expired(), this.CoolDowns[sId].getexpiry() end,
+                SetCoolDown = function(this, sId, iTimer) iTimer = iTimer or (this.Properties.CoolDown or 0) if (not this.CoolDowns[sId]) then this.CoolDowns[sId] = Timer:New(iTimer)this.CoolDowns[sId]:Expire() else this.CoolDowns[sId]:Refresh() end end,
+                GetCoolDown = function(this, sId, iTimer) if (not this.CoolDowns[sId]) then this:SetCoolDown(sId, iTimer) end return this.CoolDowns[sId].expired(), this.CoolDowns[sId]:GetExpiry() end,
                 GetGameRules= function(this, sComp) local sRules = this.Properties.GameRules if (sComp) then return sComp == sRules end return sRules  end
             }
 
@@ -876,13 +876,14 @@ Server:CreateComponent({
 
                 sUserArgLower = sUserArg:lower()
 
+                local aOks = aCmdArg.Oks
                 local sArgIndex = ("<%d>"):format(iArg)
                 local iArgType = aCmdArg.Type
                 local iArgMin = aCmdArg.Minimum
                 local iArgMax = aCmdArg.Maximum
                 local hArgReplacement
 
-                if (iArgType == CommandArg_TypePlayer) then
+                if ((iArgType == CommandArg_TypePlayer or iArgType == CommandArg_TypePlayerOrString)) then
                     hArgReplacement = Server.Utils:FindPlayerByName(sUserArg)
                     if (not hArgReplacement) then
                         -- TODO: Accept mulitple?
@@ -892,6 +893,9 @@ Server:CreateComponent({
                             hArgReplacement = hPlayer
                         elseif ((aCmdArg.AllOk or aCmdArg.AcceptAll) and IsAny(sUserArgLower, "all", "everyone")) then
                             hArgReplacement = ALL_PLAYERS
+                        elseif (iArgType == CommandArg_TypePlayerOrString) then
+                            hArgReplacement = sUserArg
+                            DebugLog("passing literal string..")
                         else
                             SendMessage({
                                 Message = "@command_argPlayerNotFound",
@@ -1016,8 +1020,23 @@ Server:CreateComponent({
                         return
                     end
 
-                elseif (iArgType == CommandArg_TypeAccess) then
-                    hArgReplacement = Server.AccessManager:FindAccessByNameOrId(sUserArgLower)
+                elseif ((iArgType == CommandArg_TypeAccess or iArgType == CommandArg_TypeAccessEqual)) then
+                    hArgReplacement = Server.AccessHandler:FindAccessByNameOrId(sUserArgLower)
+
+                    local bEqual = (iArgType == CommandArg_TypeAccessEqual)
+                    --local bLower = (iArgType == CommandArg_TypeAccessLower)
+                    if (hArgReplacement) then
+                        if (bEqual and hArgReplacement.Level > iPlayerAccess) then
+                            SendMessage(self.Responses.InsufficientAccess, { Name = sCommand })
+                            return
+                        --elseif (bLower and iPlayerAccess > hArgReplacement ) then
+                            -- TODO: difference msg?
+
+                        end
+                    elseif (aOks) then
+                        hArgReplacement = (table.Find_Value(aOks, sUserArgLower))
+                    end
+
                     if (not hArgReplacement) then
                         SendMessage({
                             Message = "@command_argNotAccess"
@@ -1025,7 +1044,9 @@ Server:CreateComponent({
                         return
                     end
 
-                    hArgReplacement = hArgReplacement.Level
+                    if (type(hArgReplacement) == "table") then
+                        hArgReplacement = hArgReplacement.Level
+                    end
 
                 elseif (iArgType == CommandArg_TypeMessage) then
 
@@ -1068,7 +1089,13 @@ Server:CreateComponent({
 
             local sArguments = table.it(tArgs, function(x, i, v) return (x or "") .. (i>0 and ", " or "") .. tostring(v)  end)
             local hFunction = aCommand.Function
-            local aResponse = { pcall(hFunction, unpack(tPushArguments)) }
+            local aResponse
+            local bDebugCommands = false
+            if (bDebugCommands) then
+                aResponse = { true, hFunction(unpack(tPushArguments)) }
+            else
+                aResponse = { pcall(hFunction, unpack(tPushArguments)) }
+            end
             if (not aResponse[1]) then
                 aCommand:Break()
                 SendMessage(self.Responses.ScriptError, { Name = sCommand })

@@ -38,43 +38,27 @@ Server:CreateComponent({
             CurrentChannel = 0,
         },
 
-
-        Properties = {
-
-            -- There is a few servers who clearly do this
-            -- This is just an option for the sake of adding it, using it is something else!
-            PingMultiplier = 1.0,
-            AveragePingWarningThreshold = 200,
-            NetworkUsageWarningThresholds = { Up = 9999, Down = 9999 },
-            PingControl = {},
-            IPFilter = {},
+        Config = {
+            PingControl = {
+                IssuedWarnings = {},
+            },
 
             -- Timeout for waiting on the UUID of a user
             UUIDAwaitTimeout = 15,
-
-
             GeoService = "http://ip-api.com/json/{Query}?fields=3854107",
-
             MasterServerAPI     = ServerDLL.GetMasterServerAPI(),
             MasterServerTimeout = 30, -- timeout for connection attempts
-
             Headers = {
                 Default = { ["Content-Type"] = "application/x-www-form-urlencoded; charset=utf-8" },
                 JSON    = { ["Content-Type"] = "application/json" },
             },
-
             EndPoints = {
                 Register = "/reg.php",
                 Updater  = "/up.php",
                 Validate = "/validate.php",
             },
 
-            -- The info sent to the Master Server
-            ServerInfo = {
-                GameVersion = ServerDLL.GetGameVersion(),
-                Description = "No Description Available.",
-            },
-
+            -- these don't need to be inside config
             UseJSONBody = true,
 
             UpdateInterval = 60, -- The interval between each status update
@@ -83,8 +67,31 @@ Server:CreateComponent({
             MapLinkDir  = (SERVER_DIR_DATA .. "\\"),
             MapLinkFile = "MapLinks\.(txt|json|lua)",
             MapLinkList = {},
+        },
 
-        }, ---< Properties
+        ComponentConfig = {
+
+            { Config = "$Server.ServerDescription", Key = "ServerInfo.Description", Default = "No Description" },
+            { Config = "$Server.GameVersion",       Key = "ServerInfo.GameVersion", Default = ServerDLL.GetGameVersion() },
+
+            { Config = "$Network.ForcedCVars",                   Key = "ForcedCVars", Default = {} },
+            { Config = "$Network.NetworkUsageWarningThresholds", Key = "NetworkUsageWarningThresholds", Default = { Up = 12500, Down = 7500} },
+
+            { Config = "$Network.ConnectionFilter.Enabled",               Key = "IPFilter.Enabled",     Default = true, },
+            { Config = "$Network.ConnectionFilter.Blacklist.Countries",   Key = "IPFilter.Countries",   Default = {}, },
+            { Config = "$Network.ConnectionFilter.Blacklist.IPAddresses", Key = "IPFilter.IPAddresses", Default = {}, },
+            { Config = "$Network.ConnectionFilter.Blacklist.Providers",   Key = "IPFilter.Providers",   Default = {}, },
+
+            { Config = "$Network.PingControl.Enabled",       Key = "PingControl.Enabled",       Default = true, },
+            { Config = "$Network.PingControl.Tolerance",     Key = "PingControl.Tolerance",     Default = 300, },
+            { Config = "$Network.PingControl.WarningLimit",  Key = "PingControl.WarningLimit",  Default = 3, },
+            { Config = "$Network.PingControl.WarningDelay",  Key = "PingControl.WarningDelay",  Default = 10, },
+            { Config = "$Network.PingControl.ResetWarnings", Key = "PingControl.ResetWarnings", Default = false, },
+            { Config = "$Network.PingControl.BanPlayers",    Key = "PingControl.BanPlayers",    Default = false, },
+            { Config = "$Network.PingControl.BanDuration",   Key = "PingControl.BanDuration",   Default = FIVE_MINUTES, },
+            { Config = "$Network.PingControl.Multiplier",    Key = "PingControl.PingMultiplier",Default = 1.0, },
+            { Config = "$Network.PingControl.AverageWarningThreshold", Key = "PingControl.AverageWarningThreshold",    Default = 350, },
+        },
 
         DefaultGeoData = {
             ContinentName = "Lingshan Island",
@@ -111,65 +118,45 @@ Server:CreateComponent({
         UpdateFailed = false,
 
         Timers = {
-            Update = TimerNew(0),
-            UpdateFail = TimerNew(0),
-            UpdateLog = TimerNew(HALF_HOUR),
-            RegisterFail = TimerNew(0),
+            Update = Timer:New(0),
+            UpdateFail = Timer:New(0),
+            UpdateLog = Timer:New(HALF_HOUR),
+            RegisterFail = Timer:New(0),
 
-            PingUpdate = TimerNew(1),
-            PingWarning = TimerNew(32),
+            PingUpdate = Timer:New(1),
+            PingWarning = Timer:New(32),
         },
 
         Initialize = function(self)
 
             local aMapLinks = self:LoadMapLinks()
-            self.Properties.MapLinkList = aMapLinks
+            self.Config.MapLinkList = aMapLinks
             self:Log("Imported %d Map-Links", table.size(aMapLinks))
 
-
-            self.Properties.ServerInfo.Description = Server.Config:Get("Server.ServerDescription", "No Description")
-
-            self.Timers.RegisterFail.setexpiry(self.Properties.RecoveryInterval)
-            self.Timers.UpdateFail.setexpiry(self.Properties.RecoveryInterval)
-            self.Timers.UpdateLog.expire()
-            self.Timers.Update.setexpiry(self.Properties.UpdateInterval)
-            self.Timers.PingUpdate.setexpiry(1)
-
-            self.Properties.PingMultiplier = Server.Config:Get("Network.PingMultiplier", 1, ConfigType_Number)
-            self.Properties.AveragePingWarningThreshold = Server.Config:Get("Network.AveragePingWarningThreshold", 200, ConfigType_Number)
-            self.PingControl = {
-                Enabled = Server.Config:Get("Network.PingControl.Enabled", true, ConfigType_Boolean),
-                Tolerance = Server.Config:Get("Network.PingControl.Tolerance", 300, ConfigType_Number),
-                WarningLimit = Server.Config:Get("Network.PingControl.WarningLimit", 5, ConfigType_Number),
-                WarningDelay = Server.Config:Get("Network.PingControl.WarningDelay", 10, ConfigType_Number),
-                ResetWarnings = Server.Config:Get("Network.PingControl.ResetWarnings", false, ConfigType_Boolean),
-                BanPlayers = Server.Config:Get("Network.PingControl.BanPlayers", false, ConfigType_Boolean),
-                BanDuration = Server.Config:Get("Network.PingControl.BanDuration", FIVE_MINUTES, ConfigType_Number, function(Value) if (Value <= 1) then return 1 end return Value end),
-                IssuedWarnings = {}, -- Internal data
-            }
-
-            self.IPFilter = {
-                Enabled = Server.Config:Get("Network.ConnectionFilter.Enabled", true, ConfigType_Boolean),
-                Countries = Server.Config:Get("Network.ConnectionFilter.Blacklist.Countries", {}, ConfigType_Array),
-                IPAddresses = Server.Config:Get("Network.ConnectionFilter.Blacklist.IPAddresses", {}, ConfigType_Array),
-                Providers = Server.Config:Get("Network.ConnectionFilter.Blacklist.Providers", {}, ConfigType_Array),
-            }
-
-            self.Properties.NetworkUsageWarningThresholds = Server.Config:Get("Network.NetworkUsageWarningThresholds", {Up=0,Down=0}, ConfigType_Array)
-            self.Properties.ForcedCVars = Server.Config:Get("Network.ForcedCVars", {}, ConfigType_Array)
-
+            self:InitTimers()
             self:Log("Initialized")
         end,
 
         PostInitialize = function(self)
 
             local iChanged = 0
-            for sCVar, sValue in pairs(self.Properties.ForcedCVars) do
+            for sCVar, sValue in pairs(self.Config.ForcedCVars) do
                 Server.Utils:FSetCVar(sCVar, tostring(sValue))
                 iChanged = iChanged + 1
             end
 
             self:Log("Changed %d CVars", iChanged)
+        end,
+
+        InitTimers = function(self)
+
+            local tConfig = self.Config
+
+            self.Timers.RegisterFail:SetExpiry(tConfig.RecoveryInterval)
+            self.Timers.UpdateFail:SetExpiry(tConfig.RecoveryInterval)
+            self.Timers.UpdateLog:Expire()
+            self.Timers.Update:SetExpiry(tConfig.UpdateInterval)
+            self.Timers.PingUpdate:SetExpiry(1)
         end,
 
         OnReset = function(self)
@@ -252,14 +239,14 @@ Server:CreateComponent({
             end
 
             ServerDLL.Request({
-                url = (self.Properties.MasterServerAPI .. self.Properties.EndPoints.Validate),
+                url = (self.Config.MasterServerAPI .. self.Config.EndPoints.Validate),
                 method = "GET",
                 body = self.ServerReport:BodyToString({
                     prof = sProfile,
                     uid = sHash
                 }),
-                headers = self.Properties.Headers.Default,
-                timeout = self.Properties.MasterServerTimeout,
+                headers = self.Config.Headers.Default,
+                timeout = self.Config.MasterServerTimeout,
             }, function(...)
                 self:OnProfileValidated(hPlayer, sProfile, ...)
             end)
@@ -286,7 +273,7 @@ Server:CreateComponent({
 
             -- This if kind of redundant, but for the sake of readability we shall step out of Thor's Region here!
             self.ActiveConnections[iChannel] = {
-                Timer    = TimerNew(),
+                Timer    = Timer:New(),
                 NickNick = sNickname,
             }
 
@@ -312,7 +299,7 @@ Server:CreateComponent({
 
         GetConnectionTimer = function(self, iChannel)
             if (not self.ActiveConnections[iChannel]) then
-                return TimerNew()--error("timer not found!")
+                return Timer:New()--error("timer not found!")
             end
             return self.ActiveConnections[iChannel].Timer
         end,
@@ -495,7 +482,7 @@ Server:CreateComponent({
             self:Log("Resolving IP %s for Channel %d", sIPAddress, iChannel)
 
             ServerDLL.Request({
-                url = string.gsub(self.Properties.GeoService, "{Query}", sIPAddress),
+                url = string.gsub(self.Config.GeoService, "{Query}", sIPAddress),
                 method = "GET",
             }, function(...)
                 if (Server.Network:OnGeoDataReceived(sIPAddress, iChannel, ...) == false) then
@@ -634,7 +621,7 @@ Server:CreateComponent({
 
         Event_OnActorTick = function(self, hPlayer)
             if (not hPlayer.Info.UniqueIDAssigned) then
-                if (hPlayer.Timers.Connection.Diff() >= self.Properties.UUIDAwaitTimeout) then
+                if (hPlayer.Timers.Connection.Diff() >= self.Config.UUIDAwaitTimeout) then
                     Server.AccessHandler:AssignUniqueID(hPlayer, Server.AccessHandler:GetUniqueID(hPlayer))
                     self:DestroyUUIDCheck(hPlayer)
                 end
@@ -661,13 +648,13 @@ Server:CreateComponent({
             end
 
             if (self.UpdateFailed) then
-                self.Timers.UpdateLog.expire() -- So next successful update will correctly show up
-                if (not self.Timers.UpdateFail.expired()) then
+                self.Timers.UpdateLog:expire() -- So next successful update will correctly show up
+                if (not self.Timers.UpdateFail:Expired()) then
                     return
                 end
                 return self:UpdateServer()
             end
-            if (self.Timers.Update.expired_refresh()) then
+            if (self.Timers.Update:Expired_Refresh()) then
                 if (self.IsUpdating) then
                     return
                 end
@@ -713,22 +700,22 @@ Server:CreateComponent({
             self.IsRegistering = true
 
             local sBody = self.ServerReport:Get(ServerNetwork_GetRegister)
-            local aHeaders = self.Properties.Headers.Default
-            if (self.Properties.UseJSONBody) then
-                aHeaders = self.Properties.Headers.JSON
+            local aHeaders = self.Config.Headers.Default
+            if (self.Config.UseJSONBody) then
+                aHeaders = self.Config.Headers.JSON
             end
 
             ServerDLL.Request({
-                url = (self.Properties.MasterServerAPI .. self.Properties.EndPoints.Register),
+                url = (self.Config.MasterServerAPI .. self.Config.EndPoints.Register),
                 method = "POST",
                 body = sBody,
                 headers = aHeaders,
-                timeout = self.Properties.MasterServerTimeout,
+                timeout = self.Config.MasterServerTimeout,
             }, function(...)
                 self:OnRegistered(...)
             end)
 
-            self:Log("Registering Server at %s...", (self.Properties.MasterServerAPI .. self.Properties.EndPoints.Register))
+            self:Log("Registering Server at %s...", (self.Config.MasterServerAPI .. self.Config.EndPoints.Register))
         end,
 
         OnUpdated = function(self, sError, sResponse, iCode)
@@ -762,23 +749,23 @@ Server:CreateComponent({
             self.IsUpdating = true
 
             local sBody = self.ServerReport:Get(ServerNetwork_GetUpdater)
-            local aHeaders = self.Properties.Headers.Default
-            if (self.Properties.UseJSONBody) then
-                aHeaders = self.Properties.Headers.JSON
+            local aHeaders = self.Config.Headers.Default
+            if (self.Config.UseJSONBody) then
+                aHeaders = self.Config.Headers.JSON
             end
 
             ServerDLL.Request({
-                url = string.gsub(self.Properties.MasterServerAPI .. self.Properties.EndPoints.Updater, "^https://", "http://"),
+                url = string.gsub(self.Config.MasterServerAPI .. self.Config.EndPoints.Updater, "^https://", "http://"),
                 method = "POST",
                 body = sBody,
                 headers = aHeaders,
-                timeout = self.Properties.MasterServerTimeout,
+                timeout = self.Config.MasterServerTimeout,
             }, function(...)
                 self:OnUpdated(...)
             end)
 
             if (self.Timers.UpdateLog.expired()) then
-                self:Log("Updating Server Info at %s", (self.Properties.MasterServerAPI .. self.Properties.EndPoints.Updater))
+                self:Log("Updating Server Info at %s", (self.Config.MasterServerAPI .. self.Config.EndPoints.Updater))
             end
         end,
 
@@ -807,8 +794,10 @@ Server:CreateComponent({
                 local sPakLink      = self:GetServerPakLink()
                 local sDesc         = self:ConvertFormatTags(self:GetServerDescription())
                 local sLocal        = "localhost"
-                local sVersion      = Server.Network.Properties.ServerInfo.GameVersion
+                local sVersion      = Server.Network.Config.ServerInfo.GameVersion
                 local sPass         = (self:GetServerPassword() == "0" and "0" or "1")
+
+                --DebugLog(sDesc)
 
                 -- Map Config
                 local iDirectX10    = 1
@@ -959,7 +948,7 @@ Server:CreateComponent({
                     end
                 end
 
-                if (Server.Network.Properties.UseJSONReport) then
+                if (Server.Network.Config.UseJSONReport) then
                     return table.append(aPlayers, aPopulation)
                 end
 
@@ -967,7 +956,7 @@ Server:CreateComponent({
             end,
 
             GetServerDescription = function(self)
-                return CheckString(Server.Network.Properties.ServerInfo.Description, "No Description")
+                return CheckString(Server.Network.Config.ServerInfo.Description, "No Description")
             end,
 
             GetServerPassword = function(self)
@@ -988,12 +977,11 @@ Server:CreateComponent({
             end,
 
             GetMapDownloadLink = function(self, sLevel)
-                return (Server.Network.Properties.MapLinkList[string.lower((sLevel or ServerDLL.GetMapName() or ""))] or "")
+                return (Server.Network.Config.MapLinkList[string.lower((sLevel or ServerDLL.GetMapName() or ""))] or "")
             end,
 
             GetServerPakLink = function(self)
-                -- TODO: client-pak
-                return ""
+                return (Server.ClientMod.Config.ClientPAKURL or "")
             end,
 
             ConvertFormatTags = function(self, sInput)
@@ -1003,7 +991,7 @@ Server:CreateComponent({
                         return (aMap[c] or c)  -- Use the mapped character or keep the original if not found
                     end)
                 end)
-                return sResult
+                return Server.Logger:FormatTags_Extended(sResult)
             end,
 
         },
@@ -1011,8 +999,8 @@ Server:CreateComponent({
         LoadMapLinks = function(self)
 
             local aLinks = {}
-            local sDir = self.Properties.MapLinkDir
-            local sFilter = self.Properties.MapLinkFile
+            local sDir = self.Config.MapLinkDir
+            local sFilter = self.Config.MapLinkFile
 
             if (not ServerLFS.DirExists(sDir)) then
                 return aLinks
@@ -1070,7 +1058,7 @@ Server:CreateComponent({
         end,
 
         GetPingLimit = function(self)
-            local aPingControl = self.PingControl
+            local aPingControl = self.Config.PingControl
             if (not aPingControl.Enabled) then
                 return 99999
             end
@@ -1080,14 +1068,14 @@ Server:CreateComponent({
 
         UpdatePingControl = function(self, hPlayer, iPing)
 
-            local aPingControl = self.PingControl
+            local aPingControl = self.Config.PingControl
             if (not aPingControl.Enabled) then
                 return
             end
 
             if (aPingControl.IssuedWarnings[hPlayer.id] == nil) then
-                aPingControl.IssuedWarnings[hPlayer.id] = { Timer = TimerNew(aPingControl.WarningDelay), Count = 0 }
-                aPingControl.IssuedWarnings[hPlayer.id].Timer.expire()
+                aPingControl.IssuedWarnings[hPlayer.id] = { Timer = Timer:New(aPingControl.WarningDelay), Count = 0 }
+                aPingControl.IssuedWarnings[hPlayer.id].Timer:Expire()
             end
 
             local tWarning = aPingControl.IssuedWarnings[hPlayer.id]
@@ -1119,7 +1107,7 @@ Server:CreateComponent({
 
         UpdateNetUsage = function(self)
             local aStatistics = ServerDLL.GetNetStatistics()
-            local tNetThresholds = self.Properties.NetworkUsageWarningThresholds
+            local tNetThresholds = self.Config.NetworkUsageWarningThresholds
             local bShowWarning = false
             local ColorUp = CRY_COLOR_GREEN
             local ColorDown = CRY_COLOR_GREEN
@@ -1168,7 +1156,7 @@ Server:CreateComponent({
                         local iChannel = hPlayer and hPlayer.actor:GetChannel()
                         if (iChannel) then
                             local iPing = math.floor((g_gameRules.game:GetPing(iChannel) or 0) * 1000 + 0.5)
-                            local iFinalPing = (iPing * self.Properties.PingMultiplier)
+                            local iFinalPing = (iPing * self.Config.PingControl.PingMultiplier)
 
                             if (hPlayer.Initialized) then
                                 hPlayer.Info.RealPing = iPing
@@ -1184,7 +1172,7 @@ Server:CreateComponent({
                     iAveragePing = (iAveragePing / iPlayerCount)
                 end
 
-                local iThreshold = self.Properties.AveragePingWarningThreshold
+                local iThreshold = self.Config.PingControl.AverageWarningThreshold
                 if (iAveragePing > iThreshold) then
                     if (self.Timers.PingWarning.expired_refresh()) then
                         self:LogEvent({
@@ -1194,7 +1182,7 @@ Server:CreateComponent({
                         })
                     end
                 else
-                    self.Timers.PingWarning.expire()
+                    self.Timers.PingWarning:Expire()
                 end
 
             end

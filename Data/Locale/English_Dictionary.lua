@@ -553,6 +553,12 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "userNotFound",
+        Languages = {
+            English = "User not Found"
+        }
+    },
+    {
         String = "insufficientPrestige",
         Languages = {
             English = "Insufficient Prestige"
@@ -1150,6 +1156,18 @@ Server.LocalizationManager:Add({
         }
     },
     {
+        String = "ammo_refilled_on",
+        Languages = {
+            English = "Ammo Refilled on {Target}"
+        }
+    },
+    {
+        String = "ammo_refilled_by",
+        Languages = {
+            English = "{admin} Refilled all your Ammunition"
+        }
+    },
+    {
         String = "you_are",
         Languages = {
             English = "You are"
@@ -1632,6 +1650,18 @@ Server.LocalizationManager:Add({
         String = "user_not_registered",
         Languages = {
             English = "User not Registered"
+        }
+    },
+    {
+        String = "user_promoted",
+        Languages = {
+            English = "{Red}{User}{Gray} Has been Promoted to {NewLevel}"
+        }
+    },
+    {
+        String = "user_demoted",
+        Languages = {
+            English = "{Red}{User}{Gray} Has been Demoted to {NewLevel}"
         }
     },
     {

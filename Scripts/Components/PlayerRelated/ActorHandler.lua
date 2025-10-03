@@ -60,6 +60,7 @@ Server:CreateComponent({
         OnProfileValidated = function(self, hPlayer, sId)
             local aData = self.PlayerData[sId]
             if (aData) then
+                self:Log("Found Player Data for '%s$9' with %d Keys", hPlayer:GetName(), table.Size(aData))
                 table.MergeInPlace(hPlayer.Data, aData)
                 local sLastName = aData.LastName
                 if (string.emptyN(sLastName)) then
@@ -131,12 +132,12 @@ Server:CreateComponent({
 
             hActor.IsPlayer = bIsPlayer
             hActor.Timers = {
-                Initialized = TimerNew(),
+                Initialized = Timer:New(),
                 Connection  = Server.Network:GetConnectionTimer(iChannel),
-                Spawn       = TimerNew(),
-                WallJump    = TimerNew(),
-                UnclaimedVehicle = TimerNew(),
-                ChatTimer   = TimerNew()
+                Spawn       = Timer:New(),
+                WallJump    = Timer:New(),
+                UnclaimedVehicle = Timer:New(),
+                ChatTimer   = Timer:New()
             }
 
             hActor.TagAward = {
@@ -183,7 +184,7 @@ Server:CreateComponent({
                 },
 
                 HitAccuracy = {
-                    Timer   = TimerNew(10), -- Expires after 10s..
+                    Timer   = Timer:New(10), -- Expires after 10s..
 
                     Hits    = 0,
                     Shots   = 0,
@@ -191,7 +192,7 @@ Server:CreateComponent({
                     OnHit   = function(this) this:Refresh(1) this.Hits = ((this.Hits or 0) + 1)  end,
                     OnShot  = function(this) this:Refresh(1) this.Shots = ((this.Shots or 0) + 1)  end,
                     Expired = function(this) return (this.Timer.expired())  end,
-                    Refresh = function(this, keep) this.Timer.refresh() if (not keep) then this.Shots = 0 this.Hits = 0 end  end,
+                    Refresh = function(this, keep) this.Timer:Refresh() if (not keep) then this.Shots = 0 this.Hits = 0 end  end,
                     Get     = function(this) if (this.Shots + this.Hits <= 0) then return 0 end return math.min(100, math.max(0, (this.Hits / this.Shots) * 100))  end,
                 }
             }
@@ -216,8 +217,9 @@ Server:CreateComponent({
                 ResetRS = function(this, id, def) def = (def or 0) if (id) then this.Repeats[id] = 0 else for i, v in pairs(this.Repeats) do this.Repeats[i] = def end end end,
             }
 
-            hActor.SpawnTimer = TimerNew()
-            hActor.KillMessageTimer = TimerNew(1)
+            -- FIXME: to .Timers
+            hActor.SpawnTimer = Timer:New()
+            hActor.KillMessageTimer = Timer:New(1)
             hActor.KillMessageCount = 0
 
             if (bIsPlayer) then
@@ -410,7 +412,7 @@ Server:CreateComponent({
             hActor.GetAccessColor = function(this) return Server.AccessHandler:GetAccessColor(this:GetAccess()) end
             hActor.GetAccess    = function(this, min) if (min) then if (min > this.Info.Access) then return min end end return this.Info.Access  end
             hActor.SetAccess    = function(this, iLevel, tInfo)  Server.AccessHandler:AssignAccess(this, iLevel, tInfo) end
-            hActor.HasAccess    = function(this, iLevel) return this.Info.Access >= iLevel  end
+            hActor.HasAccess    = function(this, iLevel) if (iLevel == nil) then error("invalid level") end return this.Info.Access >= iLevel  end
             hActor.IsAdministrator  = function(this, iAccessLevel) iAccessLevel = iAccessLevel or this.Info.Access return Server.AccessHandler:IsAdministrator(iAccessLevel)  end
             hActor.IsDeveloper      = function(this, iAccessLevel) iAccessLevel = iAccessLevel or this.Info.Access return Server.AccessHandler:IsDeveloper(iAccessLevel)  end
             hActor.IsPremium        = function(this, iAccessLevel) iAccessLevel = iAccessLevel or this.Info.Access return Server.AccessHandler:IsPremium(iAccessLevel)  end

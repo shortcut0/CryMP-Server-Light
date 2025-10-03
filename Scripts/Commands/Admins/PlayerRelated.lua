@@ -298,4 +298,110 @@ Server.ChatCommands:Add({
             return true
         end
     },
+
+    -- ================================================================
+    -- !GiveAmmo <Target>
+    {
+        Name = "GiveAmmo",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc", AcceptAll = true, AcceptSelf = true,Required = true, Type = CommandArg_TypePlayer,  },
+        },
+        Properties = {
+            CoolDown = 0,
+        },
+        Function = function(self, hTarget)
+            if (hTarget == ALL_PLAYERS) then
+                local aPlayers = Server.Utils:GetPlayers()
+                if (#aPlayers > 1) then
+                    for _, hPlayer in pairs(aPlayers) do
+                        local iRefilled = 0
+                        for _, hItemId in pairs(hPlayer.inventory:GetInventoryTable()) do
+                            local hItem = Server.Utils:GetEntity(hItemId)
+                            if (hItem and hItem.weapon and (hItem.weapon:GetClipSize() or 0) > 0) then
+                                iRefilled = (iRefilled + 1)
+                                Server.PlayerEquipment:RefillAmmo(hPlayer, hItemId)
+                            end
+                        end
+                        if (hPlayer ~= self) then
+                            Server.Chat:ChatMessage(ChatEntity_Server, hPlayer, "@ammo_refilled_by", {Admin = self:GetName()})
+                        end
+                    end
+                    return true, self:LocalizeText("@ammo_refilled_on", {Target = "@all_players"})
+                end
+                hTarget = self
+            end
+
+            local iRefilled = 0
+            for _, hItemId in pairs((hTarget or self).inventory:GetInventoryTable()) do
+                local hItem = Server.Utils:GetEntity(hItemId)
+                if (hItem and hItem.weapon and (hItem.weapon:GetClipSize() or 0) > 0) then
+                    iRefilled = (iRefilled + 1)
+                    Server.PlayerEquipment:RefillAmmo((hTarget or self), hItemId)
+                end
+            end
+
+            if (hTarget ~= self) then
+                Server.Chat:ChatMessage(ChatEntity_Server, hTarget, "@ammo_refilled_by", {Admin = self:GetName()})
+            end
+            return true, self:LocalizeText("@ammo_refilled_on", {Target = hTarget == self and "@yourself" or hTarget:GetName()})
+        end
+    },
+
+    -- ================================================================
+    -- !Promote <Target> <Level> <Reason>
+    {
+        Name = "Promote",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc",   Required = true, Type = CommandArg_TypePlayerOrString },
+            { Name = "@access",  Desc = "@arg_access_desc",  Required = true, Default = -1, Type = CommandArg_TypeAccessEqual, Oks = { "-1" } },
+            { Name = "@reason",  Desc = "@arg_reason_desc",  Required = true, Default = "@admin_decision", Type = CommandArg_TypeMessage},
+        },
+        Properties = {
+        },
+        Function = function(self, hTarget, iLevel, sReason)
+            local bDemote = false
+            local bTemporary = false
+            return Server.AccessHandler:Command_ChangeAccess(self, hTarget, iLevel, bDemote, bTemporary, sReason)
+        end
+    },
+
+    -- ================================================================
+    -- !Demote <Target> <Level> <Reason>
+    {
+        Name = "Demote",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc",   Required = true, Type = CommandArg_TypePlayerOrString },
+            { Name = "@access",  Desc = "@arg_access_desc",  Required = true, Default = -1, Type = CommandArg_TypeAccessEqual, Oks = { "-1" } },
+            { Name = "@reason",  Desc = "@arg_reason_desc",  Required = true, Default = "@admin_decision", Type = CommandArg_TypeMessage},
+        },
+        Properties = {
+        },
+        Function = function(self, hTarget, iLevel, sReason)
+            local bDemote = true
+            local bTemporary = false
+            return Server.AccessHandler:Command_ChangeAccess(self, hTarget, iLevel, bDemote, bTemporary, sReason)
+        end
+    },
+
+    -- ================================================================
+    -- !TempAccess <Target> <Level> <Reason>
+    {
+        Name = "TempAccess",
+        Access = ServerAccess_Admin,
+        Arguments = {
+            { Name = "@target", Desc = "@arg_target_desc",   Required = true, Type = CommandArg_TypePlayerOrString },
+            { Name = "@access",  Desc = "@arg_access_desc",  Required = true, Type = CommandArg_TypeAccessEqual },
+            { Name = "@reason",  Desc = "@arg_reason_desc",  Required = true, Default = "@admin_decision", Type = CommandArg_TypeMessage},
+        },
+        Properties = {
+        },
+        Function = function(self, hTarget, iLevel, sReason)
+            local bDemote = nil
+            local bTemporary = true
+            return Server.AccessHandler:Command_ChangeAccess(self, hTarget, iLevel, bDemote, bTemporary, sReason)
+        end
+    },
 })

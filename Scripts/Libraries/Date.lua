@@ -27,6 +27,7 @@ DateFormat_Hours = BitStep()
 DateFormat_Minutes = BitStep()
 DateFormat_Highest = BitStep()
 DateFormat_Cramped = BitStep()
+DateFormat_Spaced = BitStep()
 DateFormat_Comma = BitStop()
 
 
@@ -291,13 +292,16 @@ Date.Format = function(self, iTime, iType, iUnitLimit)
             end
         end
         for i = iFirstNonZero, #aResult do
-            table.insert(aFormatted, string.format("%" .. (aResult[i].PadZero and "02" or "") .. "d%s", aResult[i].Value, aResult[i].Name))
+            local bPZ = aResult[i].PadZero or (i ~= iFirstNonZero)
+            table.insert(aFormatted, string.format("%" .. (bPZ and "02" or "") .. "d%s", aResult[i].Value, aResult[i].Name))
         end
 
         if (BitAND(iStyle, DateFormat_Comma) ~= 0) then
             return table.concat(aFormatted, ", ")
         elseif (BitAND(iStyle, DateFormat_Cramped) ~= 0) then
             return table.concat(aFormatted, ":")
+        elseif (BitAND(iStyle, DateFormat_Spaced) ~= 0) then
+            return table.concat(aFormatted, " : ")
         end
         return table.concat(aFormatted, ": ")
 

@@ -1039,7 +1039,7 @@ Server:CreateComponent({
             local sLastVisit = hPlayer:GetLastConnect(true, "@str_Never", "@str_Today")
             local sServerTime = Date:Colorize(Date:Format(hPlayer.Data.ServerTime, (DateFormat_Cramped + (hPlayer.Data.ServerTime > ONE_HOUR and DateFormat_Hours or 0))), "$5")
             local sAdminStatus = table.empty(Server.AccessHandler:GetAdmins()) and "$4@str_offline" or "$3@str_online"
-            local sCountry = ("(%s) %s"):format(hPlayer:GetCountryCode(), hPlayer:GetCountryName())
+            local sCountry = ("({Orange}%s{Gray}) %s"):format(hPlayer:GetCountryCode(), hPlayer:GetCountryName())
 
             local sNextMap = ("{Red}%s{Gray} ({Red}%s{Gray})"):format(Server.MapRotation:GetNextMapName(), Server.MapRotation:GetNextMapRules():upper())
             local sUsageInfo = string.format("CPU: %d%%, %s", ServerDLL.GetCPUUsage(), Server.Utils:ByteSuffix(ServerDLL.GetMemUsage(), 0))

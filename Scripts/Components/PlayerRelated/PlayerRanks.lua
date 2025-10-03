@@ -129,7 +129,7 @@ Server:CreateComponent({
                 if (iActions and iActions > 1) then
                     self.XPActions[hEvent] = (self.XPActions[hEvent] or {})
                     self.XPActions[hEvent][hPlayer.id] = (self.XPActions[hEvent][hPlayer.id] or {
-                        Last = TimerNew(),
+                        Last = Timer:New(),
                         Count = 0
                     })
 
@@ -137,7 +137,7 @@ Server:CreateComponent({
                     if (tXPEvent.Timeout and tPlayerAction.Last.Expired_Refresh(tXPEvent.Timeout)) then
                         tPlayerAction.Count = 0
                     else
-                        tPlayerAction.Last.Refresh()
+                        tPlayerAction.Last:Refresh()
                     end
                     local iCompletedActions = (tPlayerAction.Count + 1)
                     if (iCompletedActions >= iActions) then

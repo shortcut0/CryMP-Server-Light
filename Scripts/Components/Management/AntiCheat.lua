@@ -141,11 +141,11 @@ Server:CreateComponent({
         Event_OnActorSpawn = function(self, tPlayer)
             tPlayer.AntiCheat = {
                 LastChatMessage     = "",
-                ChatMessageTimer    = TimerNew(1),
-                LastItemPurchase    = TimerNew(0.2),
-                LastVehiclePurchase = TimerNew(0.3),
-                MeleeTimer          = TimerNew(),
-                RadioTimer          = TimerNew(),
+                ChatMessageTimer    = Timer:New(1),
+                LastItemPurchase    = Timer:New(0.2),
+                LastVehiclePurchase = Timer:New(0.3),
+                MeleeTimer          = Timer:New(),
+                RadioTimer          = Timer:New(),
                 ItemBuySpam     = 0,
                 VehicleBuySpam  = 0,
                 WeaponFireSeq   = 0,
@@ -175,8 +175,8 @@ Server:CreateComponent({
 
             local tAC = tPlayer.AntiCheat
             local hTimer = tAC.ChatMessageTimer
-            local bExpiredFlood = hTimer.expired(20)
-            local bExpiredSpam = hTimer.expired(1)
+            local bExpiredFlood = hTimer:Expired(20)
+            local bExpiredSpam = hTimer:Expired(1)
 
             local iSpamThreshold  = self:GetThreshold("ChatSpam")
             local iFloodThreshold = self:GetThreshold("ChatFlood")
@@ -210,7 +210,7 @@ Server:CreateComponent({
             end
 
             tAC.LastChatMessage = sMessage
-            tAC.ChatMessageTimer.refresh()
+            tAC.ChatMessageTimer:Refresh()
 
             return bOk
         end,
@@ -294,7 +294,7 @@ Server:CreateComponent({
                 local tRadioTimer = tAC.RadioTimer
                 local bOk = true
 
-                if (not tRadioTimer.Expired(iRadioTime)) then
+                if (not tRadioTimer:Expired(iRadioTime)) then
                     tAC.RadioSeq = (tAC.RadioSeq + 1)
                     if (tAC.RadioSeq >= self:GetThreshold("RadioLimit")) then
                         self:LogWarning("Detected Radio Speed on %s{Gray} (%d Messages with in %0.2fs)", tChannel:GetName(), iRadioTime)
@@ -304,7 +304,7 @@ Server:CreateComponent({
                     tAC.RadioSeq = 0
                 end
 
-                tRadioTimer.Refresh()
+                tRadioTimer:Refresh()
                 return bOk
             end
 
@@ -333,7 +333,7 @@ Server:CreateComponent({
                 tAC.MeleeSeq = 0
             end
 
-            tMeleeTimer.Refresh()
+            tMeleeTimer:Refresh()
             return bOk
         end,
 
@@ -394,7 +394,7 @@ Server:CreateComponent({
 
             local tAC = tPlayer.AntiCheat
             local bExpired = tAC.LastVehiclePurchase.Expired()
-            tAC.LastVehiclePurchase.Refresh()
+            tAC.LastVehiclePurchase:Refresh()
 
             if (not bExpired) then
                 tAC.VehicleBuySpam = (tAC.VehicleBuySpam + 1)
@@ -412,7 +412,7 @@ Server:CreateComponent({
 
             local tAC = tPlayer.AntiCheat
             local bExpired = tAC.LastItemPurchase.Expired()
-            tAC.LastItemPurchase.Refresh()
+            tAC.LastItemPurchase:Refresh()
 
             if (not bExpired) then
                 tAC.ItemBuySpam = (tAC.ItemBuySpam + 1)

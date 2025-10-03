@@ -118,13 +118,6 @@ Server.Config:Create({
 
             }, ---< ForcedCVars
 
-            -- There is a few servers who clearly do this
-            -- This is just an option for the sake of adding it, using it is something else!
-            PingMultiplier = 1.0,
-
-            -- The threshold to start logging ping warnings
-            AveragePingWarningThreshold = 200,
-
             -- Warning Thresholds for net Usage
             NetworkUsageWarningThresholds = {
                 Up = 15000,  -- Per Player, so Warning will be shown >= this*player_count
@@ -136,6 +129,13 @@ Server.Config:Create({
 
                 Enabled = true,
 
+                -- There is a few servers who clearly do this
+                -- This is just an option for the sake of adding it, using it is something else!
+                Multiplier = 1.0,
+
+                -- The threshold to start logging ping warnings
+                AverageWarningThreshold = 350,
+
                 -- The maximum tolerated ping a player can have
                 Tolerance = 300,
 
@@ -146,7 +146,13 @@ Server.Config:Create({
                 WarningDelay = 10,
 
                 -- Enables resetting of warnings upon players ping recovering to tolerated levels
-                ResetWarnings = false
+                ResetWarnings = false,
+
+                -- If Set, will ban players instead of kicking them
+                BanPlayers = false,
+
+                -- The duration of the ping-ban
+                BanDuration = FIVE_MINUTES,
 
             }, ---< PingControl
 
@@ -184,7 +190,11 @@ Server.Config:Create({
             ServerName = "Lord Farquaad's {MapName} Dungeon",
 
             -- The Description which will appear on the Website
-            ServerDescription = "Hello there"
+            ServerDescription = "Hello there",
+            ServerDescription = "Welcome to Lord Farquaad's Humble abode\n\n\n[debug-info]\n > time1: {Stat_ServerLifetime}\n > time2: {ServerRuntime}\n > mem1: {ServerMemory}\n > mem2: {ServerPeakMemory}",
+
+            -- Game Version! DO NOT MODIFY
+            GameVersion = ServerDLL.GetGameVersion(),
 
         }, ---< Server
 

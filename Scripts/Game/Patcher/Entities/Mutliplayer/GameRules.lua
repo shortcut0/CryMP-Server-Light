@@ -68,7 +68,7 @@ Server.Patcher:HookClass({
 
 
                 self.LastHQHitTimeExtended = false
-                self.LastHQHitTimer = TimerNew(120) -- two minutes since last HQ hit when calling .Expired()
+                self.LastHQHitTimer = Timer:New(120) -- two minutes since last HQ hit when calling .Expired()
                 self.NoKillMessagePlayers = {}
                 self.TaggedExplosives = {}
                 self.TimedActions = {}
@@ -646,7 +646,7 @@ Server.Patcher:HookClass({
 
                 local hTimer = self.TimedActions[hId]
                 if (not hTimer) then
-                    self.TimedActions[hId] = TimerNew(iSeconds)
+                    self.TimedActions[hId] = Timer:New(iSeconds)
                     hTimer = self.TimedActions[hId]
                 end
 
@@ -760,7 +760,7 @@ Server.Patcher:HookClass({
                     local teamId = self.game:GetTeam(hHQ.id) or 0
                     if (teamId ~= 0) then
 
-                        self.LastHQHitTimer.Refresh()
+                        self.LastHQHitTimer:Refresh()
 
                         if (_time - self.lastHQHit[teamId] >= 5) then
                             self.lastHQHit[teamId] = _time
@@ -1515,7 +1515,7 @@ Server.Patcher:HookClass({
 
                     -- Only ONE first blood (TODO: Config, for each team?)
                     if ((aFirstBlood.Shooters[GameTeam_Neutral] == nil and aFirstBlood.Enabled)) then
-                        aFirstBlood.Shooters[GameTeam_Neutral] = TimerNew()
+                        aFirstBlood.Shooters[GameTeam_Neutral] = Timer:New()
 
                         local iRewardPP = aFirstBlood.RewardPP or 100
                         local iRewardCP = aFirstBlood.RewardCP or 10
@@ -2140,17 +2140,17 @@ Server.Patcher:HookClass({
 
                     hTarget.CollectedHits = (hTarget.CollectedHits or {})
                     hTarget.CollectedHits[hShooter.id] = (hTarget.CollectedHits[hShooter.id] or {
-                        Timer       = TimerNew(self.KillAssistConfig.Timeout),
+                        Timer       = Timer:New(self.KillAssistConfig.Timeout),
                         HitCount    = 0,
                         DamageCount = 0
                     })
 
-                    if (hTarget.CollectedHits[hShooter.id].Timer.expired()) then
+                    if (hTarget.CollectedHits[hShooter.id].Timer:Expired()) then
                         hTarget.CollectedHits[hShooter.id].HitCount     = 0
                         hTarget.CollectedHits[hShooter.id].DamageCount  = 0
                     end
 
-                    hTarget.CollectedHits[hShooter.id].Timer.refresh()
+                    hTarget.CollectedHits[hShooter.id].Timer:Refresh()
                     hTarget.CollectedHits[hShooter.id].HitCount     = (hTarget.CollectedHits[hShooter.id].DamageCount + 1)
                     hTarget.CollectedHits[hShooter.id].DamageCount  = (hTarget.CollectedHits[hShooter.id].DamageCount + tHitInfo.damage)
 
@@ -2420,7 +2420,7 @@ Server.Patcher:HookClass({
                 end
 
                 if (hPlayer.IsPlayer) then
-                    hPlayer.Timers.Spawn.refresh()
+                    hPlayer.Timers.Spawn:Refresh()
                 end
 
                 if (bForce) then
@@ -3307,9 +3307,9 @@ Server.Patcher:HookClass({
                         )) then
 
                             self.TaggedExplosives[hNearby.id] = {
-                                Timer       = TimerNew(),
-                                EffectTimer = TimerNew(),
-                                MsgTimer    = TimerNew(),
+                                Timer       = Timer:New(),
+                                EffectTimer = Timer:New(),
+                                MsgTimer    = Timer:New(),
                                 TeamID      = hShooter:GetTeam()
                             }
                             hShooter.TagAward.Num = hShooter.TagAward.Num + 1
@@ -3392,7 +3392,7 @@ Server.Patcher:HookClass({
                 if (hTurret and self:GetState() == "InGame") then
 
                     local teamId = (self.game:GetTeam(hTurret.id) or 0)
-                    hTurret.LastHitTimer = TimerNew()
+                    hTurret.LastHitTimer = Timer:New()
 
                     if (teamId ~= 0) then
                         if (_time - self.lastTurretHit[teamId] >= 5) then
