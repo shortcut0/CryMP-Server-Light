@@ -11,25 +11,26 @@
 -- ===================================================================================
 return {
  ["1073450"] = {
-  ["AccessLevel"] = 9,
-  ["NameProtected"] = true,
+  ["AccessLevel"] = 8,
+  ["IsHardcoded"] = true,
   ["Name"] = "shortcut0",
   ["ProfileID"] = "1073450",
+  ["NameProtected"] = true,
  },
  ["1"] = {
-  ["AccessLevel"] = 9,
+  ["AccessLevel"] = 8,
   ["NameProtected"] = true,
   ["Name"] = "protected_name",
   ["ProfileID"] = "1",
  },
  ["1073103"] = {
-  ["AccessLevel"] = 9,
+  ["AccessLevel"] = 8,
   ["NameProtected"] = true,
   ["Name"] = "shortcut0",
   ["ProfileID"] = "1073103",
  },
  ["127.0.0.1"] = {
-  ["AccessLevel"] = 9,
+  ["AccessLevel"] = 8,
   ["NameProtected"] = true,
   ["Name"] = "shortcut0",
   ["ProfileID"] = "127.0.0.1",

@@ -27,22 +27,26 @@ Server:CreateComponent({
 
         ChatEntity = "Map Rotation",
 
-        Properties = {
-
+        ComponentConfig = {
+            ConfigPrefix = "$",
+            { Config = "MapConfig.RotationEnabled", Key = "RotationEnabled", Default = true },
+            { Config = "MapConfig.DeleteClientEntities", Key = "DeleteClientEntities", Default = true },
+            { Config = "MapConfig.MapRotation.DefaultTimeLimits", Key = "DefaultTimeLimits", Default = { } },
+            { Config = "MapConfig.ForbiddenMaps", Key = "ForbiddenMaps", Default = { } },
+            { Config = "MapConfig", Key = "MapConfig", Default = { } },
+        },
+        Config = {
             MapPathPatterns = {
                 "^([^/]+)/([^/]+)/([^/]+)$",
                 "^([^\\]+)\\([^\\]+)\\([^\\]+)$",
             },
-
             DefaultTimeLimit = ONE_HOUR,
             DefaultTimeLimits = {
                 Other = ONE_HOUR,
                 PowerStruggle = ONE_HOUR,
                 InstantAction = ONE_HOUR
             },
-
             MaximumTimeLimit = ONE_DAY,
-
         },
 
         MapRules = {
@@ -91,7 +95,7 @@ Server:CreateComponent({
                 return aResults
             end,
             Exists = function(this, sMap)
-                local bIsPath = string.matchex(sMap, unpack(Server.MapRotation.Properties.MapPathPatterns))
+                local bIsPath = string.matchex(sMap, unpack(Server.MapRotation.Config.MapPathPatterns))
                 for _, aMaps in pairs(this.List) do
                     for __, tMap in pairs(aMaps) do
                         if (bIsPath) then
@@ -111,9 +115,7 @@ Server:CreateComponent({
 
         Initialize = function(self)
 
-            self.Properties.DeleteClientEntities = Server.Config:Get("MapConfig.DeleteClientEntities", true, ConfigType_Boolean)
-            self.Properties.DefaultTimeLimits = Server.Config:Get("MapConfig.MapRotation.DefaultTimeLimits", {}, ConfigType_Array)
-            self.Properties.DefaultTimeLimits.Default = (self.Properties.DefaultTimeLimit or ONE_HOUR)
+            self.Config.DefaultTimeLimits.Default = (self.Config.DefaultTimeLimit or ONE_HOUR)
             self:CollectMaps()
             self:InitRotation()
 
@@ -121,7 +123,7 @@ Server:CreateComponent({
         end,
 
         PostInitialize = function(self)
-            if (self.Properties.DeleteClientEntities) then
+            if (self.Config.DeleteClientEntities) then
                 local iDeletedCount = 0
                 local aDeletedClasses = {}
                 for _, hEntity in pairs(System.GetEntities()) do
@@ -163,7 +165,7 @@ Server:CreateComponent({
 
         InitRotation = function(self)
 
-            local aMapConfig = Server.Config:Get("MapConfig", {}, ConfigType_Array)
+            local aMapConfig = self.Config.MapConfig
             local aRotationConfig = (aMapConfig.MapRotation or {})
 
             local aRotationMapList = {}
@@ -175,18 +177,21 @@ Server:CreateComponent({
             elseif (aRotationConfig.MapList) then
                 for _, aMapInfo in pairs(aRotationConfig.MapList) do
                     if (aMapInfo.Enabled ~= false and aMapInfo.Enabled ~= 0) then
-                        table.insert(aRotationMapList, { Path = aMapInfo.Path, TimeLimit = self:GetDefaultTimeLimit(aMapInfo.Path) })
+                        table.insert(aRotationMapList, { Path = aMapInfo.Path, TimeLimit = aMapInfo.TimeLimit or self:GetDefaultTimeLimit(aMapInfo.Path) })
                     end
                 end
 
             else
-                aRotationMapList = {
-                    Path = ServerDLL.GetMapName(), TimeLimit = self:GetDefaultTimeLimit(ServerDLL.GetMapName())
+                local sDefaultMap = (ServerDLL.GetMapName() or "multiplayer/ps/mesa")
+                aRotationMapList =
+                {
+                    Path = sDefaultMap, TimeLimit = self:GetDefaultTimeLimit(sDefaultMap)
                 }
             end
 
             self.MapRotation = self:CreateRotation(aRotationMapList, { Shuffle = aRotationConfig.ShuffleRotation })
-            if (not ServerDLL.GetMapName()) then
+            if (not ServerDLL.GetMapName()) then -- no map has been loaded
+                self:Log("No Map Loaded, Starting Rotation")
                 self.MapRotation:StartCurrent()
             end
         end,
@@ -244,8 +249,8 @@ Server:CreateComponent({
                 if (self.MapList:Exists(aMapInfo.Path)) then
                     local tMap = self.MapList:GetMap(aMapInfo.Path)
                     local iTimeLimit = tMap:GetDefaultTimeLimit()
-                    if (tInfo.TimeLimit) then
-                        iTimeLimit = Date:ParseTime(tInfo.TimeLimit)
+                    if (aMapInfo.TimeLimit) then
+                        iTimeLimit = Date:ParseTime(aMapInfo.TimeLimit)
                     end
                     table.insert(aRotation.List, { Map = tMap, TimeLimit = iTimeLimit })
                 else
@@ -260,18 +265,18 @@ Server:CreateComponent({
         end,
 
         GetDefaultTimeLimit = function(self, sPath)
-            local sType, sMode, sName = string.matchex(sPath, unpack(self.Properties.MapPathPatterns))
+            local sType, sMode, sName = string.matchex(sPath, unpack(self.Config.MapPathPatterns))
             local sKey = "Other"
             if (sType and sMode and sName) then
                 sKey = ((self.MapRules.Long)[sMode:lower()] or "Other")
             end
-            return self.Properties.DefaultTimeLimits[sKey] or self.Properties.DefaultTimeLimit
+            return self.Config.DefaultTimeLimits[sKey] or self.Config.DefaultTimeLimit
         end,
 
         CollectMaps = function(self)
 
             self.ForbiddenMaps = {}
-            for sMode, aMaps in pairs(Server.Config:Get("MapConfig.ForbiddenMaps", {}, ConfigType_Array)) do
+            for sMode, aMaps in pairs(self.Config.ForbiddenMaps) do
                 self.ForbiddenMaps[sMode] = {
                     DisableAll = false,
                     List = {},
@@ -289,7 +294,7 @@ Server:CreateComponent({
 
             self.MapList.List = {}
             for _, tLevel in pairs(ServerDLL.GetLevels()) do
-                local sType, sMode, sName = string.matchex(tLevel[1], unpack(self.Properties.MapPathPatterns))
+                local sType, sMode, sName = string.matchex(tLevel[1], unpack(self.Config.MapPathPatterns))
                 if (sType and sMode and sName) then
                     self.MapList.List[sMode] = (self.MapList.List[sMode] or {})
                     table.insert(self.MapList.List[sMode], {
@@ -312,7 +317,7 @@ Server:CreateComponent({
         end,
 
         GetLongRules = function(self, sPath)
-            local sType, sMode, sName = string.matchex(sPath, unpack(self.Properties.MapPathPatterns))
+            local sType, sMode, sName = string.matchex(sPath, unpack(self.Config.MapPathPatterns))
             if (sType and sMode and sName) then
                 return ((self.MapRules.Long)[sMode:lower()] or "Unknown")
             end
@@ -320,7 +325,7 @@ Server:CreateComponent({
         end,
 
         GetShortRules = function(self, sPath)
-            local sType, sMode, sName = string.matchex(sPath, unpack(self.Properties.MapPathPatterns))
+            local sType, sMode, sName = string.matchex(sPath, unpack(self.Config.MapPathPatterns))
             if (sType and sMode and sName) then
                 return ((self.MapRules.Short)[sMode:lower()] or "Unknown")
             end
@@ -328,7 +333,7 @@ Server:CreateComponent({
         end,
 
         ResolveMapPath = function(self, sPath, sGameRules)
-            local sType, sMode, sName = string.matchex(sPath, unpack(self.Properties.MapPathPatterns))
+            local sType, sMode, sName = string.matchex(sPath, unpack(self.Config.MapPathPatterns))
             if (sType and sMode and sName) then
                 return sPath
             end
@@ -367,7 +372,7 @@ Server:CreateComponent({
         end,
 
         GetMapName = function(self)
-            local sType, sMode, sName = string.matchex(ServerDLL.GetMapName(), unpack(self.Properties.MapPathPatterns))
+            local sType, sMode, sName = string.matchex(ServerDLL.GetMapName(), unpack(self.Config.MapPathPatterns))
             if (sType and sMode and sName) then
                 return sName
             end
@@ -379,7 +384,10 @@ Server:CreateComponent({
 
         CanStartNextLevel = function(self)
 
-            if (not self.Properties.RotationEnabled) then
+            if (not self.Config.RotationEnabled) then
+                self:Log("Using Game Default Rotation System")
+                -- Manual Reset in this Case
+                Server:OnMapCommand()
                 return true -- Let C++ handle it
             end
 
@@ -399,10 +407,13 @@ Server:CreateComponent({
             self.MapStartTimer = nil
             self.NextMapTimer = nil
 
+            assert(iTimeLimit)
 
             Script.SetTimer(1, function()
-                self:Log("Starting Map '%s'", sPath)
-                Server.Utils:SetCVar("g_timeLimit", tostring(iTimeLimit / 60))
+                self:Log("Starting Map '%s' (Time Limit: %0.2f Minutes)", sPath, iTimeLimit / 60)
+                self:SetTimeLimit(iTimeLimit)
+
+                --Server.Utils:SetCVar("g_timeLimit", tostring(iTimeLimit / 60))
                 Server.Utils:SetCVar("sv_gameRules", sRules)
                 Server.Utils:ExecuteCommand("map " .. sPath)
             end)
@@ -423,9 +434,14 @@ Server:CreateComponent({
         end,
 
         SetTimeLimit = function(self, sDuration)
-            local iMinutes = math.max(0, math.min((self.Properties.MaximumTimeLimit / 60), Date:ParseTime(sDuration) / 60))
+
+            self:Log(debug.traceback())
+
+            local iMinutes = math.max(0, math.min((self.Config.MaximumTimeLimit / 60), Date:ParseTime(sDuration) / 60))
             Server.Utils:SetCVar("g_timelimit", iMinutes)
-            g_gameRules.game:ResetGameTime()
+            if (g_gameRules) then
+                g_gameRules.game:ResetGameTime()
+            end
         end,
 
         ListMapsToConsole = function(self, hPlayer, sFilter, aMaps)
@@ -534,7 +550,7 @@ Server:CreateComponent({
 
         Command_SetTimeLimit = function(self, hAdmin, sDuration)
 
-            local iTime = math.max(0, math.min(self.Properties.MaximumTimeLimit, Date:ParseTime(sDuration)))
+            local iTime = math.max(0, math.min(self.Config.MaximumTimeLimit, Date:ParseTime(sDuration)))
             local tFormat = { Time = Date:Colorize(Date:Format(iTime, DateFormat_Cramped)), Admin = hAdmin:GetName() }
             Server.Chat:ChatMessage(self.ChatEntity, ALL_PLAYERS, "@map_timeLimit_changed", tFormat)
             self:LogEvent({
@@ -607,7 +623,7 @@ Server:CreateComponent({
                     self.MapStartTimer = nil
                 end
                 self.MapStartTimer = Script.SetTimer((iTimer * 1000), function()
-                    self:StartMap(tMap:GetPath(), tMap:GetRules(), tMap:GetDefaultTimeLimit())
+                    self:StartMap(tMap:GetPath(), tMap:GetLongRules(), tMap:GetDefaultTimeLimit())
                 end)
 
                 local aFormat = { Next = "",Time = Date:Format(iTimer), Mode = tMap:GetRules():upper(), Map = tMap:GetName() }
@@ -616,7 +632,7 @@ Server:CreateComponent({
                 return true--, hPlayer:LocalizeText()
             end
 
-            self:StartMap(tMap:GetPath(), tMap:GetRules(), tMap:GetDefaultTimeLimit())
+            self:StartMap(tMap:GetPath(), tMap:GetLongRules(), tMap:GetDefaultTimeLimit())
             return true
         end,
 

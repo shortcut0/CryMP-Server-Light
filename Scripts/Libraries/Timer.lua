@@ -15,7 +15,7 @@ Timer = {}
 ---@param self Timer
 ---@param iMs number|nil expiry duration in seconds (default: 0)
 ---@return Timer newTimer a new timer instance
-Timer.New = function(self, iMs)
+Timer.New = function(self, iMs, sCall)
 
     if (type(self) == "number") then
         iMs = self
@@ -37,7 +37,11 @@ Timer.New = function(self, iMs)
         tTimer[sFunction] = Timer[sFunction]
     end
 
-
+    if (sCall) then
+        for i, sFunc in pairs(string.split(sCall, ",")) do
+            tTimer[sFunc](tTimer)
+        end
+    end
     return tTimer
 end
 

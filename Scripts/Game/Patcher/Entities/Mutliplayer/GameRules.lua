@@ -68,7 +68,7 @@ Server.Patcher:HookClass({
 
 
                 self.LastHQHitTimeExtended = false
-                self.LastHQHitTimer = Timer:New(120) -- two minutes since last HQ hit when calling :Expired()
+                self.LastHQHitTimer = Timer:New(120, "Expire") -- two minutes since last HQ hit when calling :Expired()
                 self.NoKillMessagePlayers = {}
                 self.TaggedExplosives = {}
                 self.TimedActions = {}

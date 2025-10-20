@@ -630,6 +630,9 @@ Server.Config:Create({
         --- Map Configuration
         MapConfig = {
 
+            -- Use the new Rotation System
+            RotationEnabled = true,
+
             -- If the server should delete all client-only entities
             -- Disabled for now. I suspect this can cause aspect errors during map change.
             -- Edit: aspect errors were caused a bug inside the c++ code.
@@ -671,10 +674,12 @@ Server.Config:Create({
 
                 -- The list of Maps
                 MapList = {
-                    { Path = "Multiplayer/PS/Mesa",     TimeLimit = "5m", Enabled = true },
-                    { Path = "Multiplayer/PS/Shore",    TimeLimit = "5m", Enabled = true },
-                    { Path = "Multiplayer/PS/Beach",    TimeLimit = "5m", Enabled = true },
-                    { Path = "Multiplayer/PS/Refinery", TimeLimit = "5m", Enabled = true },
+                    --{ Path = "Multiplayer/PS/Mesa",     TimeLimit = "10s", Enabled = true },
+                    --{ Path = "Multiplayer/PS/Shore",     TimeLimit = "10s", Enabled = true },
+                    { Path = "Multiplayer/PS/Mesa",     TimeLimit = "90m", Enabled = true },
+                    { Path = "Multiplayer/PS/Shore",    TimeLimit = "60m", Enabled = true },
+                    { Path = "Multiplayer/PS/Beach",    TimeLimit = "70m", Enabled = true },
+                    { Path = "Multiplayer/PS/Refinery", TimeLimit = "60m", Enabled = true },
                 } ---< MapList
 
             },

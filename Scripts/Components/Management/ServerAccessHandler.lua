@@ -102,7 +102,10 @@ Server:CreateComponent({
         Initialize = function(self)
             for _, aUserInfo in pairs(self.Properties.RegisteredUsers) do
                 self.SavedUsers[aUserInfo.ProfileID] = aUserInfo
+                self.SavedUsers[aUserInfo.ProfileID].IsHardcoded = true
             end
+
+            self:ValidateUsers()
 
             local iLoadedUsers = table.size(self.SavedUsers)
             self:LogEvent({
@@ -114,6 +117,25 @@ Server:CreateComponent({
         end,
 
         PostInitialize = function(self)
+        end,
+
+        ValidateUsers = function(self)
+            for _, tUser in pairs(self.SavedUsers or {}) do
+
+                if (not tUser.Name) then
+                    self:LogError("No Name specified for User on ID %s", tostring(tUser.ProfileID))
+                    tUser.Name = ("%s #%s"):format("User", tostring(tUser.ProfileID))
+                end
+
+                local iLevel = tUser.AccessLevel
+                if (not iLevel or iLevel < self:GetLowestAccess()) then
+                    self:LogError("None or too low Access Level for User %s (%s)", tUser.Name, tostring(iLevel or "<Null>"))
+                    tUser.AccessLevel = self:GetLowestAccess()
+                elseif (iLevel > self:GetHighestAccess()) then
+                    self:LogError("Too high Access Level for User %s (%s)", tUser.Name, tostring(iLevel))
+                    tUser.AccessLevel = self:GetHighestAccess()
+                end
+            end
         end,
 
         OnHardwareIDReceived = function(self, hPlayer)
@@ -219,11 +241,24 @@ Server:CreateComponent({
                 return tUserProfile.UniqueId
             end
 
-            self.UniqueUserIDs.Next = (self.UniqueUserIDs.Next + 1)
+            local function Increment()
+                self.UniqueUserIDs.Next = (self.UniqueUserIDs.Next + 1)
+            end
+            local function MakeID()
+                Increment()
+                return ("u%05d"):format(self.Properties.UniqueIDOffset + self.UniqueUserIDs.Next)
+            end
+
+            local sID = MakeID()
+            while (self:GetUniqueProfile(sID)) do
+                sID = MakeID()
+                self:LogWarning("Accidental duplicated UniqueID '%s' on index %d", sID, self.UniqueUserIDs.Next)
+            end
+
             table.insert(self.UniqueUserIDs.Profiles, {
                 RegisterDate = Date:GetTimestamp(),
                 UniqueName   = hPlayer:GetName(),
-                UniqueId     = ("u%05d"):format(self.Properties.UniqueIDOffset + self.UniqueUserIDs.Next),
+                UniqueId     = sID,
                 Identifiers  = table.copy(aIdentifiers),
             })
 
@@ -406,9 +441,27 @@ Server:CreateComponent({
             local sIPProfile = self.IPProfiles[iIPDecimal]
             if (sIPProfile == nil) then
 
-                local iNext = (self.IPProfiles["Next"] or 1)
-                sIPProfile = ("ip%d"):format(self.Properties.IPProfileOffset + iNext)
-                self.IPProfiles["Next"] = iNext
+                local function Increment()
+                    self.IPProfiles["Next"] = (self.IPProfiles["Next"] or 0) + 1
+                end
+                local function Exists(sID)
+                    for _, sOId in pairs(self.IPProfiles) do
+                        if (_ ~= "Next" and sOId == sID) then
+                            return true
+                        end
+                    end
+                end
+                local function MakeID()
+                    Increment()
+                    return ("ip%d"):format(self.Properties.IPProfileOffset + self.IPProfiles["Next"])
+                end
+
+                sIPProfile = MakeID()
+                while Exists(sIPProfile) do
+                    sIPProfile = MakeID()
+                    self:LogWarning("Accidental duplicated IP-Profile '%s' on index %d", sIPProfile, self.IPProfiles.Next)
+                end
+
                 self.IPProfiles[iIPDecimal] = sIPProfile
                 self:Log("Inserted new IP-Profile %s on Index %d", sIPProfile, self.IPProfiles["Next"])
             else
@@ -428,6 +481,14 @@ Server:CreateComponent({
 
         GetRegisteredUser = function(self, sProfileId)
             return self.SavedUsers[sProfileId]
+        end,
+
+        IsHardcodedUser = function(self, sProfileId)
+            local tUser = self:GetRegisteredUser(sProfileId)
+            if (not tUser) then
+                return false
+            end
+            return tUser.IsHardcoded
         end,
 
         DeleteRegisteredUser = function(self, sProfileId, sAdmin)
@@ -709,9 +770,12 @@ Server:CreateComponent({
         Command_ChangeAccess = function(self, hPlayer, hTarget, iLevel, bDemote, bTemporary, sReason)
             iLevel = tonumber(iLevel)
             sReason = sReason or "@admin_decision"
+
+            local bIsDeveloper = hPlayer:IsDeveloper()
             if (type(hTarget) == "table") then
 
                 local iTargetAccess = hTarget:GetAccess()
+                local sTargetId = hTarget:GetProfileId()
 
                 if (iLevel == -1) then
                     iLevel = (iTargetAccess + (bDemote and -1 or 1))
@@ -721,27 +785,41 @@ Server:CreateComponent({
 
                 if (iLevel > self:GetHighestAccess() or iLevel < self:GetLowestAccess()) then
                     return false, "@command_argNotAccess"
+                elseif (iLevel < self:GetHighestAccess() and iTargetAccess >= hPlayer:GetAccess()) then
+                    return false, "@insufficientAccess"
                 end
 
                 local sNewName = self:GetAccessName(iLevel)
                 local sOldName = self:GetAccessName(iTargetAccess)
-                if (iLevel == hTarget:GetAccess()) then
+                if (iLevel == iTargetAccess) then
                     return false, (hPlayer:LocalizeText("@alreadyAccess", { Class = sNewName }))
                 end
 
                 local bLogEvent = true
                 bTemporary = (bTemporary or (not hTarget:IsValidated()))
                 if (not bTemporary) then
-                    bLogEvent = (self:GetRegisteredUser(hTarget:GetProfileId()))
+
+                    bLogEvent = (self:GetRegisteredUser(sTargetId))
+                    local bIsHCUser = (bLogEvent and self:IsHardcodedUser(sTargetId))
+
+                    if (bLogEvent and not bIsDeveloper) then
+                        return false, hPlayer:Localize("@l_ui_cannotModifyHCUsers") -- fixme: locale
+                    end
                     if (iLevel == self:GetLowestAccess()) then
+
+                        -- Only Devs can overwrite hardcoded users (but even them cant delete one)
+                        if (bLogEvent and bIsHCUser) then
+                            return false, (hPlayer:LocalizeText("@cannotDeleteHCUser"))-- fixme: locale
+                        end
+
                         -- 'not' means user does not exist
-                        if (self:DeleteRegisteredUser(hTarget:GetProfileId(), hPlayer:GetName())) then
+                        if (self:DeleteRegisteredUser(sTargetId, hPlayer:GetName())) then
                             bLogEvent = false -- so we log the event
                             return true
                         end
                     else
                         -- Log the "Promoted" (below) only if the user exists already, else show the user registered message
-                        self:AddRegisteredUser(hTarget:GetName(), hTarget:GetProfileId(), iLevel, hPlayer:GetName(), (bLogEvent)) -- Quiet
+                        self:AddRegisteredUser(hTarget:GetName(), sTargetId, iLevel, hPlayer:GetName(), (bLogEvent)) -- Quiet
                     end
                 else
                     bLogEvent = nil
@@ -763,6 +841,7 @@ Server:CreateComponent({
                 end
                 return true
             end
+            error("implementation missing.")
             return self:Command_PromoteUser(hPlayer, hTarget, iLevel, sReason)
         end,
 

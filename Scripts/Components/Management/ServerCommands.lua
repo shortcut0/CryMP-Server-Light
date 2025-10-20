@@ -122,6 +122,10 @@ Server:CreateComponent({
             })
         end,
 
+        OnReset = function(self)
+            self.CommandMap = {}
+        end,
+
         Add = function(self, aInfo)
             if (table.IsRecursive(aInfo)) then
                 for _, tInfo in pairs(aInfo) do
@@ -725,6 +729,10 @@ Server:CreateComponent({
                 self:SendHelp(hPlayer, aCommand)
                 return true -- Block message
             end
+
+            -- TODO:
+            local sConfirmvtion = tProperties.ConfirmvtionText
+            --RequireConfirmation
 
             if (not bInTestMode) then
 

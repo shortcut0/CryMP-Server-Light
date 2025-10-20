@@ -44,7 +44,8 @@ Server.ChatCommands:Add({
                 return true, self:LocalizeText("@cvar_setRestored", { CVar = sCVar, Value = sValue })
             end
 
-            Server.Utils:SetCVar(sCVar, sValue, self, true)
+            local bCache = true
+            Server.Utils:SetCVar(sCVar, sValue, self, bCache)
             return true, self:LocalizeText("@cvar_setTo_chat", { CVar = sCVar, Value = sValue })
         end
     },

@@ -268,8 +268,10 @@ Server.LocalizationManager:Add({
         Languages = {
             -- (CA) PirateSoftware Connected on Channel 5 (16s)
             English = {
-                Regular = "{Red}{Name}{Gray} Connected on Channel {Red}{Channel}{Gray} In {Red}{Time}{Gray} ({Red}{CountryCode}{Gray}, {Red}{CountryName}{Gray})",
-                Extended = "{Red}{Name}{Gray} Connected on Channel {Red}{Channel}{Gray} In {Red}{Time}{Gray} ({Red}{CountryCode}{Gray}, {Red}{CountryName}{Gray})",
+                --Regular = "{Red}{Name}{Gray} Connected on Channel {Red}{Channel}{Gray} In {Red}{Time}{Gray} ({Red}{CountryCode}{Gray}, {Red}{CountryName}{Gray})",
+                --Extended = "{Red}{Name}{Gray} Connected on Channel {Red}{Channel}{Gray} In {Red}{Time}{Gray} ({Red}{CountryCode}{Gray}, {Red}{CountryName}{Gray})",
+                Regular = "{Red}{Name}{Gray} Connected on Channel {Red}{Channel}{Gray} In {Red}{Time}{Gray} ({Red}{CountryName}{Gray}, {Red}{ISP}{Gray})",
+                Extended = "{Red}{Name}{Gray} Connected on Channel {Red}{Channel}{Gray} In {Red}{Time}{Gray} ({Red}{CountryName}{Gray}, {Red}{ISP}{Gray})",
             },
         },
     },

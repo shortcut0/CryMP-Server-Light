@@ -106,7 +106,8 @@ Server:CreateComponent({
             end
         end,
 
-        PostInitialize = function()
+        PostInitialize = function(self)
+            self.Config.EntityUpdateRates.__Logged = {}
         end,
 
         SnapshotEnvironment = function(self, sId)
@@ -176,7 +177,10 @@ Server:CreateComponent({
             local hClass = _G[sClass]
             if (aClassInfo.ReplaceBody) then
                 for sKey in pairs(hClass) do
-                    hClass[sKey] = nil
+                    -- (!) Keep backups (some hooks backup game functions, so removing them here would make them inaccessible!)
+                    if (not string.match(sKey, "_Backup$")) then
+                        hClass[sKey] = nil
+                    end
                 end
             end
 
@@ -418,19 +422,45 @@ Server:CreateComponent({
                 return
             end
 
-            local iFixedCount = 0
+            local tFixedFlags = {
+                [POST_ATTACH] = NO_ATTACH,
+                --[NO_ATTACH] = POST_ATTACH
+            }
+
+            local function ReplaceFlags(tMethods, nIndex)
+                if (nIndex == nil) then nIndex = 2 end
+                local iFixed = 0
+                for _, aParams in pairs(tMethods) do
+                    for iBadFlag, iGoodFlag in pairs(tFixedFlags) do
+                        if (aParams[nIndex] == iBadFlag) then
+                            aParams[nIndex] = iGoodFlag
+                            iFixed = iFixed + 1
+                        end
+                    end
+                end
+                return iFixed
+            end
+
+            local iFixedCount = (ReplaceFlags(tInfo.ClientMethods) + ReplaceFlags(tInfo.ServerMethods))
+
+            --[[
             for _, aMethodParams in pairs(tInfo.ClientMethods) do
-                if (aMethodParams[2] == POST_ATTACH) then
-                    aMethodParams[2] = NO_ATTACH
-                    iFixedCount = (iFixedCount + 1)
+                for iBadFlag, iGoodFlag in pairs(tFixedFlags) do
+                    if (aMethodParams[2] == iBadFlag) then
+                        aMethodParams[2] = iGoodFlag
+                        iFixedCount = iFixedCount + 1
+                    end
                 end
             end
             for _, aMethodParams in pairs(tInfo.ServerMethods) do
-                if (aMethodParams[2] == POST_ATTACH) then
-                    aMethodParams[2] = NO_ATTACH
-                    iFixedCount = (iFixedCount + 1)
+                for iBadFlag, iGoodFlag in pairs(tFixedFlags) do
+                    if (aMethodParams[2] == iBadFlag) then
+                        aMethodParams[2] = iGoodFlag
+                        iFixedCount = iFixedCount + 1
+                    end
                 end
             end
+            ]]
 
             if (iFixedCount > 0) then
                 self:LogEvent({

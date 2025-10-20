@@ -11,10 +11,10 @@
 -- ===================================================================================
 return {
  ["PlayerRecord"] = 2,
- ["ClientDataTransferred"] = 3208304,
- ["ServerLifetime"] = 119362,
  ["TotalWallJumps"] = 498,
- ["ChatCommandsUsed"] = 15924,
- ["ChannelCount"] = 417,
+ ["ServerLifetime"] = 126283,
+ ["ClientDataTransferred"] = 3218667,
+ ["ChatCommandsUsed"] = 15976,
+ ["ChannelCount"] = 420,
  ["ChannelRecord"] = 45,
 }

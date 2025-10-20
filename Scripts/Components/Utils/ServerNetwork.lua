@@ -374,17 +374,20 @@ Server:CreateComponent({
             local iChannel = hPlayer:GetChannel()
 
             if (sMessage == "Connected") then
+
+                local tFormat = {
+                    Name        = hPlayer:GetName(),
+                    Channel     = hPlayer:GetChannel(),
+                    CountryCode = sCountryCode,
+                    CountryName = sCountryName,
+                    Time        = Date:Format(hPlayer.Timers.Connection:Diff()),
+                    ISP         = hPlayer:GetISP()
+                }
                 Server.Network:LogEvent({
                     Message = "@player_connected",
-                    MessageFormat = {
-                        Name = sPlayerName,
-                        Channel = iChannel,
-                        Time = Date:Format(hPlayer.Timers.Connection:Diff()),
-                        CountryCode = sCountryCode,
-                        CountryName = sCountryName,
-                    }
+                    MessageFormat = tFormat
                 })
-                Server.Chat:ChatMessage(ChatEntity_Server, Server.Utils:GetPlayers(), "@player_connectedChat", { Name = hPlayer:GetName(), Channel = hPlayer:GetChannel(), CountryCode = sCountryCode, ISP = hPlayer:GetISP() })
+                Server.Chat:ChatMessage(ChatEntity_Server, Server.Utils:GetPlayers(), "@player_connectedChat", tFormat)
             elseif (sMessage == "Disconnected") then
 
                 local sReasonShort, sReason = self:ParseDisconnectReason(aInfo.Description)

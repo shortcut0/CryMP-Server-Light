@@ -28,6 +28,14 @@ Server.Patcher:HookClass({
             end,
         },
         {
+            Name = "Quit",
+            Backup = true,
+            Value = function(sMsg, ...)
+                Server.Log("Quitting: " .. (sMsg or "<Null>"), ...)
+                System.Quit_Backup()
+            end,
+        },
+        {
             Name = "Log",
             Backup = true,
             Value = function(sMsg, ...)

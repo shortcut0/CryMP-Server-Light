@@ -693,7 +693,7 @@ Server:CreateComponent({
             hClient.Data.LastCMId = tModelInfo.ID
 
             self:ExecuteCode({
-                Code = ("CryMP_Client:Log('hi')CryMP_Client:Log('hi')CryMP_Client:Log('hi')CryMP_Client:Log('hi')local x=CryMP_Client:GP(%d)if(not x)then return;end;x.CM=%d;x.CM_P='%s';if(x.actor:GetHealth()>0)then x.actor:Revive()end"):format(hClient:GetChannel(), tModelInfo.ID, sPath),
+                Code = ("local x=CryMP_Client:GP(%d)if(not x)then return;end;x.CM=%d;x.CM_P='%s';CryMP_Client:CM_REVIVE(x)"):format(hClient:GetChannel(), tModelInfo.ID, sPath),
                 Clients = ALL_PLAYERS,
                 Sync = {
                     BoundID = hClient.id,

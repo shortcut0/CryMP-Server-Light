@@ -10,6 +10,25 @@
 
 Server.ChatCommands:Add({
     -- =================================================================
+    -- !SHUTDOWN
+    {
+        Name = "Shutdown",
+        Access = ServerAccess_Developer,
+        Properties = {
+            --RequireConfirmation = true
+        },
+        Function = function(self)
+            if (not self.SystemQuitConfirmation) then
+                self.SystemQuitConfirmation = true
+                return false, "Confirmation Required, use this Command again to proceed."
+            end
+
+            ServerLog(LOG_STARS .. LOG_STARS .. LOG_STARS)
+            ServerLog("User %s Shutting down Server..", self:GetName())
+            System.Quit("By User")
+        end
+    },
+    -- =================================================================
     -- !RELOAD
     {
         Name = "reload",

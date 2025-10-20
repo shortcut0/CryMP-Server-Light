@@ -38,7 +38,7 @@ return {
     ["Kills"] = 0,
     ["Deaths"] = 0,
     ["PP"] = 0,
-    ["Timestamp"] = 1762044814,
+    ["Timestamp"] = 1762216831,
     ["ID"] = "ip10001",
     ["Headshots"] = 0,
     ["XP"] = 0,

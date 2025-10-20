@@ -72,6 +72,8 @@ Server:CreateComponent({
             OnTimer = function(self, iTimerID)
 
                 if (iTimerID == 1) then
+
+                    Server:OnTimerSecond()
                     Server.Events:CheckComponentEvents("TimerSecond")
                     for _, hPlayer in pairs(Server.Utils:GetPlayers()) do
                         Server.Events:CheckComponentEvents("OnActorTick", hPlayer)

@@ -23,6 +23,15 @@ Server:CreateComponent({
             self.Game = g_gameRules.game
         end,
 
+        Reset = function(self)
+
+            for _, tCache in pairs(self.CVarCache) do
+                if (tCache.Reset) then
+                    self:FSetCVar(_, tCache.Value)
+                end
+            end
+        end,
+
         Protected = {
             CVarCache = {},
             Counters = {},
@@ -342,7 +351,7 @@ Server:CreateComponent({
             end
 
             local hCache = self.CVarCache[sCVar:lower()]
-            return hCache
+            return hCache and hCache.Value
         end,
 
         SetCVar = function(self, sCVar, sValue, hAdmin, bCacheOldValue)
@@ -353,24 +362,33 @@ Server:CreateComponent({
 
             if (bCacheOldValue) then
                 if (self.CVarCache[sCVar:lower()] == nil) then
-                    self.CVarCache[sCVar:lower()] = hValue
+                    self.CVarCache[sCVar:lower()] = {
+                        Value = hValue,
+                        Admin = hAdmin,
+                        Reset =true or (hAdmin and not hAdmin:IsDeveloper()) -- CVars changed by non-Developers will be reset upon map change
+                    }
                 end
             end
 
             if (hAdmin) then
-                ServerLog("%s Sets CVar %s to %s", hAdmin:GetName(), sCVar, sValue)
                 self:LogEvent({
                     Recipients = ServerAccess_Developer,
                     Message = "@cvar_setTo",
                     MessageFormat = { Admin = hAdmin:GetName(), CVar = sCVar, Value = sValue }
                 })
+            else
+                self:LogV(LogVerbosity_High, "%s Sets CVar %s to %s", "Server", sCVar, sValue)
             end
             self:FSetCVar(sCVar, sValue)
         end,
 
         FSetCVar = function(self, sCVar, sValue)
-            if (System.GetCVar(sCVar) == nil) then
+            local hValue = System.GetCVar(sCVar)
+            if (hValue == nil) then
                 ServerLogError("CVar '%s' not Found", sCVar)
+            elseif (hValue == sValue) then
+                self:LogV(LogVerbosity_High, "CVar '%s' Value not Changed (%s)", tostring(sCVar), tostring(sValue))
+                return
             end
             ServerDLL.FSetCVar(tostring(sCVar), tostring(sValue))
         end,

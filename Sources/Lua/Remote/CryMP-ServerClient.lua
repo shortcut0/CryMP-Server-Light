@@ -36,11 +36,7 @@ CryMP_Client = {
     Timers={
      --   Second=osclock-1
     },
-    Requests={
-        ClientInstalled=10,
-        OpenChat=11,
-        OpenTeamChat=12,
-    },
+    --,
 
     HIT_MARKER = nil, -- hit marker info, can be reset, np
     ---HIT_MARKERS = {}, -- hit marker info, can be reset, np
@@ -87,7 +83,11 @@ CryMP_Client = {
         return self._RND[i]
     end,
 }
-
+CryMP_Client.Requests={
+    ClientInstalled=10,
+    OpenChat=11,
+    OpenTeamChat=12,
+}
 ClEvents={
     XP=0,
 }
@@ -116,6 +116,7 @@ _S=System
  g_la=g_localActor
 g_laChan=g_localActor.actor:GetChannel()
  g_game=g_gameRules.game
+_gg=g_game
 _gr=g_gameRules
 LAYER_CLOAK=4
 
@@ -161,6 +162,7 @@ CryMP_Client.INSTALL = function(self)
     self:rnd("hit_scree_blood",0.75,1.85)
 
 
+    _AddComm("crymp_test_menudimXY",[[CryMP_Client:_test_menu_dims(%1, %2)]])
     _AddComm("crymp_test_sb",[[CryMP_Client:SCREEN_BLOOD()]])
     _AddComm("crymp_test_flip",[[CryMP_Client:FLIP_MY_WHIP(%%)]])
     _AddComm("crymp_lload",[[CryMP_Client:LoadLocal()]])
@@ -763,6 +765,13 @@ CryMP_Client.CLOAK_VEHICLE = function(self,v,e)--p,v,e)
     end]]
 end
 
+CryMP_Client.CM_REVIVE = function(self, p,new,old)
+    if(p.actor:GetHealth()<=0)then return end
+
+    -- vehicle check (revive in vehicle will bug pose)
+    p.actor:Revive()
+end
+
 CryMP_Client.FIX_CM_MAT = function(self, p,new,old)
     local cm=p.CM
     local cm_p=p.CM_P
@@ -963,6 +972,8 @@ CryMP_Client.OnUpdate = function(self)
     end
 
 
+    --self:_test_box_on_wts()
+
     for _,tm in pairs(self._MENUS) do
         if(tm.Update) then tm:Update() end
     end
@@ -1013,7 +1024,7 @@ CryMP_Client.OnUpdate = function(self)
 
 
         local use_msg = self.USABILITY_MSG or g_game:GetSynchedEntityValue(g_laId,ClGlobalKeys.PlayerUsabilityMessage)
-        if (use_msg) then
+        if (use_msg and #use_msg>0) then
             self.USABILITY_MSG_ON=1
             HUD.SetUsability(1,use_msg)
         elseif(self.USABILITY_MSG_ON) then
@@ -1098,7 +1109,7 @@ CryMP_Client.UPDATE_FLIPS = function(self)
     local v=flip.v
     local flip_start=flip.start
     local up=(v:GetPos().z-flip_start.z)
-    local down=nil
+    local down
     if (flip.last_up and up < flip.last_up) then
       --  return self:STOP_FLIP()
         down=1
@@ -1256,7 +1267,7 @@ CryMP_Client.OnHit = function(self, p, hit)
     local melee = ht == "melee"
     local explo = hit.explosion
     local hs = g_gameRules:IsHeadShot(hit)
-    local wc = hit.weapon and hit.weapon.class
+    --local wc = hit.weapon and hit.weapon.class
 
     if (hit.target and hit.shooter and hit.targetId ~= hit.shooterId) then
      --   ATOMClient.AnimationHandler:OnAnimationEvent(hit.target, eCE_AnimHit, hit, (idIsBullet or idIsMelee))
@@ -1284,7 +1295,7 @@ CryMP_Client.OnHit = function(self, p, hit)
 
 end
 
-CryMP_Client.SCREEN_BLOOD = function(self,a,b)
+CryMP_Client.SCREEN_BLOOD = function(self)--,a,b)
     if (timerexpired(self.Timers.hit_scree_blood, self:rnd("hit_scree_blood").v))then
         self.Timers.hit_scree_blood=timerinit()
         self:rnd("hit_scree_blood"):new()
@@ -1292,6 +1303,49 @@ CryMP_Client.SCREEN_BLOOD = function(self,a,b)
         CryAction.ActivateEffect("BloodSplats_Human");
         self:PlaySoundEvent("sounds/interface:hud:hud_blood", g_Vectors.v000, g_Vectors.v010, SOUND_2D, SOUND_SEMANTIC_PLAYER_FOLEY);
     end
+end
+
+
+VecSub=function(a,b)return{x=a.x-b.x,y=a.y-b.y,z=a.z-b.z}end
+VecDot=function(a,b)return a.x*b.x+a.y*b.y+a.z*b.z end
+VecCross=function(a,b)return{x=a.y*b.z-a.z*b.y,y=a.z*b.x-a.x*b.z,z=a.x*b.y-a.y*b.x}end
+VecLen=function(v)return math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z)end
+VecNorm=function(v)local l=VecLen(v)return{x=v.x/l,y=v.y/l,z=v.z/l}end
+
+WorldToScreen=function(worldPos)
+    local camPos=System.GetViewCameraPos()
+    local f=(System.GetViewCameraDir())
+    local up={x=0,y=0,z=1}               -- Z-up
+    local r=VecNorm(VecCross(f,up))      -- right = forward × up
+    local u=VecCross(r,f)                -- up = right × forward
+
+    local rel=VecSub(worldPos,camPos)
+    local x,y,z=VecDot(rel,r),VecDot(rel,u),VecDot(rel,f)
+    if z<=0 then return nil end -- behind camera
+
+    local sw,sh=System.GetCVar("r_width"),System.GetCVar("r_height")
+    local fov=math.rad(System.GetCVar("cl_fov"))
+    local aspect=sw/sh
+    local tanFov=math.tan(fov*0.5)
+
+    local ndcX=(x/(z*tanFov*aspect))*0.5+0.5
+    local ndcY=(-y/(z*tanFov))*0.5+0.5
+
+    return ndcX*sw,ndcY*sh
+end
+
+
+
+CryMP_Client._test_menu_dims = function(self,a,b)
+
+    --800
+    --600
+    a=tonumber(a)
+    b=tonumber(b)
+
+    if (MENU_DIM_ID1) then CPPAPI.RemoveTextOrImageById(MENU_DIM_ID1) end
+
+    MENU_DIM_ID1=CPPAPI.DrawText(a, b, 1.2, 1.2, 1, 0.2,1,1, "[]")
 end
 
 CryMP_Client.CALC_DIST = function(self,a,b)
@@ -1388,6 +1442,59 @@ end
 CryMP_Client.Tick = function(self)
 
 
+    --do return end
+
+
+  --  self:CornerMsg("hi..".._time)
+end
+
+CryMP_Client._test_box_on_wts = function(self)
+
+
+    local e=self:GE("test_wts")
+    if (not e) then return self:DLog("no e") end
+
+    local epos=e:GetBonePos("Bip01 Spine")
+    local x,y=WorldToScreen(epos)
+
+
+    local e_pos_down = e:GetBonePos("Bip01 R Foot")
+    local e_pos_up = e:GetBonePos("Bip01 Head")
+
+    local x_up, y_up = WorldToScreen(e_pos_up)
+    local x_down, y_down = WorldToScreen(e_pos_down)
+
+    if (not (x_up or x_down)) then
+        return self:DLog("off screen")
+    end
+
+    x_up=(x_up/_S.GetCVar("r_height"))*800
+    y_up=(y_up/_S.GetCVar("r_height"))*800
+    x_down=(x_down/_S.GetCVar("r_width"))*600
+    y_down=(y_down/_S.GetCVar("r_width"))*600
+
+
+    local dist=VecLen(VecSub(System.GetViewCameraPos(),epos))
+    local x_len = (10)
+    local x_height
+
+
+
+    local sizeX=10
+    local sizeY=10
+
+    self:DLog("%f,%f,%d",dist,x,y)
+
+    if (MENU_DIM_ID1) then CPPAPI.RemoveTextOrImageById(MENU_DIM_ID1) end
+    if (MENU_DIM_ID2) then CPPAPI.RemoveTextOrImageById(MENU_DIM_ID2) end
+    if (MENU_DIM_ID3) then CPPAPI.RemoveTextOrImageById(MENU_DIM_ID3) end
+    if (MENU_DIM_ID4) then CPPAPI.RemoveTextOrImageById(MENU_DIM_ID4) end
+    --MENU_DIM_ID1=CPPAPI.DrawText(x-11,y-9, sizeX, sizeY, 1, 0.2,1,1, "[ ]")
+    --(300, 300, 300, 200, 0, 0, 0,0.5)
+    MENU_DIM_ID1=CPPAPI.DrawColorBox(x-11,y-9, 30, 3, 1, 0.2,1,1)--, "[ ]")
+    MENU_DIM_ID2=CPPAPI.DrawColorBox(x-11,y-9, 3, 30, 1, 0.2,1,1)--, "[ ]")
+    MENU_DIM_ID3=CPPAPI.DrawColorBox(x-11,y-9+30, 33, 3, 1, 0.2,1,1)--, "[ ]")
+    MENU_DIM_ID4=CPPAPI.DrawColorBox(x-11+30,y-9, 3, 30, 1, 0.2,1,1)--, "[ ]")
 
   --  self:CornerMsg("hi..".._time)
 end
